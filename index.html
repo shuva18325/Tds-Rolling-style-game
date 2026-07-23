@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Realm Siege — A Medieval Tower Defense</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2016%2016'%3E%3Ctext%20y='13'%20font-size='13'%3E%E2%9A%94%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Menu / screens overlay -->
+  <div id="app"></div>
+
+  <!-- In-match canvas + HUD (populated by UI) -->
+  <div id="matchWrap" style="display:none"></div>
+
+  <!-- Transient notifications -->
+  <div id="toasts"></div>
+
+  <!-- Data tables first (declarative, no logic) -->
+  <script src="js/core.js"></script>
+  <script src="data/palette.js"></script>
+  <script src="data/config.js"></script>
+  <script src="data/towers.js"></script>
+  <script src="data/enemies.js"></script>
+  <script src="data/maps.js"></script>
+
+  <!-- Engine + systems -->
+  <script src="js/combat.js"></script>
+  <script src="js/match.js"></script>
+  <script src="js/meta.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
