@@ -5480,6 +5480,14 @@ button:hover::after { transform: translateX(120%); }
     },
 
     selectPlacement(id) {
+      // Clicking the tray icon that's already active cancels placement mode
+      // instead of re-arming it — lets you back out without Esc or a stray click.
+      if (this.placing && this.placing.id === id) {
+        this.placing = null; this.renderer.ghost = null;
+        $$('.trayitem', document).forEach((b) => b.classList.remove('active'));
+        this.refreshSelected();
+        return;
+      }
       const t = RS.TOWER_BY_ID[id];
       if (Meta.ownedCount(id) <= 0) { this.toast('You do not own this tower', RS.PALETTE.bad); return; }
       this.placing = t; this.renderer.ghost = t; this.selectedTower = null; this.renderer.selected = null;
@@ -5524,9 +5532,49 @@ button:hover::after { transform: translateX(120%); }
       else if ((this._pvWave !== m.waveIndex) ) { this._refreshPreview(); this._pvWave = m.waveIndex; }
       // trays enable/disable by affordability
       $$('.trayitem', document).forEach((b) => { const t = RS.TOWER_BY_ID[b.dataset.place]; b.classList.toggle('poor', m.gold < t.cost); });
-      // keep selected tower panel live
-      if (this.selectedTower && this.selectedTower._live !== undefined) this.refreshSelected();
-      else if (this.selectedTower) this.refreshSelected();
+      // keep the selected-tower panel live WITHOUT tearing it down every frame —
+      // full innerHTML rebuilds here used to replace #upBtn/#sellBtn ~60x/sec,
+      // so a click's mousedown/mouseup could land on two different DOM nodes and
+      // the browser silently dropped it (the "upgrade/sell don't work" bug).
+      this._syncSelected();
+    },
+
+    // Rebuilds the panel only when its structural shape actually changed
+    // (selection swapped, placement toggled, tower leveled up); otherwise just
+    // patches live numbers on the EXISTING nodes so buttons stay clickable.
+    _selSignature(sel) {
+      if (this.placing) return 'placing:' + this.placing.id;
+      if (!sel) return 'none';
+      return ['sel', sel.uid, sel.level, sel.ascended ? 1 : 0, sel.def.traits.active ? 1 : 0].join(':');
+    },
+    _syncSelected() {
+      const sig = this._selSignature(this.selectedTower);
+      if (sig !== this._selRenderedSig) { this.refreshSelected(); return; }
+      this._liveUpdateSelected();
+    },
+    _liveUpdateSelected() {
+      const sel = this.selectedTower; const m = this.match;
+      if (!sel || this.placing || !m) return;
+      const box = $('#hSelected'); if (!box) return;
+      const statsEl = box.querySelector('.sel-stats');
+      if (statsEl) statsEl.textContent = `DPS ${fmt(sel.damage * sel.fireRate * sel.buff.dmg)} · rng ${Math.round(m._effectiveRange(sel))} · ${sel.def.damageType}`;
+      const upBtn = $('#upBtn', box);
+      if (upBtn) {
+        const upCost = m.upgradeCost(sel);
+        const needBranch = sel.level === 3;
+        const needDup = sel.level === 4 && Meta.ownedCount(sel.def.id) < 2;
+        const canUp = sel.level < 5 && m.gold >= upCost && !needDup;
+        upBtn.classList.toggle('disabled', !canUp);
+        upBtn.textContent = `${needBranch ? 'Choose Path' : 'Upgrade'} (${upCost}g)`;
+      }
+      const sellBtn = $('#sellBtn', box);
+      if (sellBtn) sellBtn.textContent = `Sell (+${Math.round(sel.invested * 0.7)}g)`;
+      const actBtn = $('#actBtn', box);
+      if (actBtn && sel.def.traits.active) {
+        actBtn.classList.toggle('active-ready', sel.activeReady);
+        actBtn.classList.toggle('disabled', !sel.activeReady);
+        actBtn.textContent = `${sel.def.traits.active.name}${sel.activeReady ? '' : ' (' + Math.ceil(sel.activeCd) + 's)'}`;
+      }
     },
 
     _refreshPreview() {
@@ -5540,11 +5588,12 @@ button:hover::after { transform: translateX(120%); }
     refreshSelected() {
       const sel = this.selectedTower;
       const box = $('#hSelected'); if (!box) return;
+      this._selRenderedSig = this._selSignature(sel); // full rebuild below matches this shape now
       if (this.placing) {
         const t = this.placing;
         box.innerHTML = `<div class="sel-head"><b>Placing: ${t.name}</b><button class="cancel" id="cancelPlace">✕</button></div>
           <div class="sel-stats">${t.rarity} · ${t.cost}g · ${t.damageType} · range ${t.rangeT}t</div>
-          <div class="sel-hint">Click a valid tile. Esc to cancel.</div>`;
+          <div class="sel-hint">Click a valid tile to place · click the tray icon again to cancel · Esc also cancels.</div>`;
         $('#cancelPlace').onclick = () => { this.placing = null; this.renderer.ghost = null; $$('.trayitem').forEach((b) => b.classList.remove('active')); this.refreshSelected(); };
         return;
       }
