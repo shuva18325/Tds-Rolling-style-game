@@ -30,11 +30,33 @@
       codex: { towers: [], enemies: [] },
       stats: { rolls: 0, kills: 0, mapsCleared: 0, mythicPlus: 0 },
       rollHistory: [],
+      // Local profile — a display identity for this device. No password: this
+      // is a static page with no server, so there's nothing to protect and
+      // nothing worth pretending to. See RS.Meta.CLAUDE_RECORDS for why.
+      profile: { name: '', avatar: '⚔️', createdAt: 0 },
+      // Hall of Champions personal-best records (all derivable at match end).
+      records: { highestWave: 0, kills: 0, fastestVictory: 0, goldBanked: 0, topTowerDamage: 0, totalRolls: 0 },
     };
     RS.MAPS.forEach((m) => { p.unlocked[m.id] = 0; });
     RS.OBJECTIVES.forEach((o) => { p.objectives[o.id] = 0; });
     return p;
   }
+
+  // The permanent benchmark row shown at the top of every Hall of Champions
+  // category — a built-in target, not a real player. Framed and styled as
+  // such everywhere it's displayed (crown icon, distinct gold treatment).
+  const CLAUDE_RECORDS = {
+    name: 'Claude', avatar: '👑',
+    highestWave: 62, kills: 8500, fastestVictory: 421, goldBanked: 48000, topTowerDamage: 210000, totalRolls: 1800,
+  };
+  const RECORD_META = {
+    highestWave:    { label: 'Highest Wave Reached', icon: '🏆', fmt: (v) => v, better: 'higher' },
+    kills:          { label: 'Total Enemies Slain',  icon: '⚔️', fmt: (v) => v.toLocaleString(), better: 'higher' },
+    fastestVictory: { label: 'Fastest Victory',       icon: '⏱️', fmt: (v) => v ? Math.floor(v / 60) + 'm ' + Math.round(v % 60) + 's' : '—', better: 'lower' },
+    goldBanked:     { label: 'Most Gold at Victory',  icon: '💰', fmt: (v) => v.toLocaleString(), better: 'higher' },
+    topTowerDamage: { label: 'Highest Tower Damage',  icon: '💥', fmt: (v) => v.toLocaleString(), better: 'higher' },
+    totalRolls:     { label: 'Total Rolls Made',      icon: '🎲', fmt: (v) => v.toLocaleString(), better: 'higher' },
+  };
 
   const Meta = {
     p: null,
@@ -64,6 +86,8 @@
       out.codex = s.codex || base.codex;
       out.loadouts = s.loadouts || [];
       out.rollHistory = s.rollHistory || [];
+      out.profile = Object.assign({}, base.profile, s.profile);
+      out.records = Object.assign({}, base.records, s.records);
       return out;
     },
     exportSave() { return RS.Save.export(this.p); },
@@ -290,7 +314,39 @@
         }
       }
     },
+
+    /* ----------------------- profile & leaderboard --------------------- */
+    hasProfile() { return !!this.p.profile.name; },
+    setProfile(name, avatar) {
+      name = ('' + name).trim().slice(0, 18) || 'Champion';
+      this.p.profile = { name, avatar: avatar || '⚔️', createdAt: this.p.profile.createdAt || Date.now() };
+      this.save();
+    },
+    // Called once at match end (win or lose) with the finished Match. Reads
+    // final state only — never mutates the sim. Returns the record ids beaten.
+    updateRecords(m) {
+      const r = this.p.records; const beat = [];
+      const maybe = (key, val, better) => {
+        if (val == null) return;
+        const cur = r[key];
+        const isBetter = better === 'lower' ? (cur === 0 || val < cur) : val > cur;
+        if (isBetter) { r[key] = val; beat.push(key); }
+      };
+      maybe('highestWave', m.waveIndex, 'higher');
+      r.kills = this.p.stats.kills; // lifetime counter, always synced
+      r.totalRolls = this.p.stats.rolls;
+      if (m.state === 'won') {
+        maybe('fastestVictory', Math.round(m.time), 'lower');
+        maybe('goldBanked', Math.round(m.gold), 'higher');
+      }
+      let topDmg = 0; for (const uid in m.dmgByTower) topDmg = Math.max(topDmg, m.dmgByTower[uid]);
+      maybe('topTowerDamage', Math.round(topDmg), 'higher');
+      this.save();
+      return beat;
+    },
   };
+  Meta.CLAUDE_RECORDS = CLAUDE_RECORDS;
+  Meta.RECORD_META = RECORD_META;
 
   RS.Meta = Meta;
 })();

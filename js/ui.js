@@ -35,6 +35,7 @@
       this._bindCanvas();
       this._bindBus();
       this.show('menu');
+      if (!Meta.hasProfile()) this._showProfileModal(false); // first visit: name your champion
     },
 
     toast(msg, color) {
@@ -57,13 +58,13 @@
         loadout: () => this.renderLoadout(arg), roll: () => this.renderRoll(),
         forge: () => this.renderForge(), collection: () => this.renderCollection(),
         codex: () => this.renderCodex(), settings: () => this.renderSettings(),
-        summary: () => this.renderSummary(arg),
+        summary: () => this.renderSummary(arg), leaderboard: () => this.renderLeaderboard(),
       };
       (map[screen] || map.menu)();
     },
 
     _topbar() {
-      const t = Meta.p.tokens, a = Meta.p.account;
+      const t = Meta.p.tokens, a = Meta.p.account, p = Meta.p.profile;
       const need = RS.ACCOUNT.xpCurve(a.level);
       return `<div class="topbar">
         <div class="brand">⚔ REALM SIEGE</div>
@@ -73,8 +74,59 @@
           <span class="tk gold" title="Gold">🟡 ${fmt(t.gold)}</span>
           <span class="tk relic" title="Mythic Relics">🔮 ${fmt(t.relic)}</span>
           <span class="tk lvl" title="Account level">Lv ${a.level} <span class="xpbar"><i style="width:${Math.min(100, a.xp / need * 100)}%"></i></span></span>
+          <button class="profchip" id="topProfile" title="Edit your local profile"><span class="pav">${p.avatar || '⚔️'}</span>${p.name || 'Set Name'}</button>
         </div>
       </div>`;
+    },
+
+    /* ------------------------- profile & leaderboard -------------------- */
+    _AVATARS: ['⚔️', '🛡️', '🏹', '🗡️', '🔮', '👑', '🐉', '🦅', '🦉', '🐺', '🦁', '🧙', '🧝', '🧛', '💀', '🔥', '❄️', '⚡', '🌟', '🏰', '⚜️', '🦇', '🐴', '🦊'],
+    _showProfileModal(dismissible) {
+      const cur = Meta.p.profile;
+      let picked = cur.avatar || this._AVATARS[0];
+      const modal = h(`<div class="modal-bg"><div class="modal profile-modal">
+        ${dismissible ? '<button class="modal-x">✕</button>' : ''}
+        <h3>${dismissible ? 'Edit Your Champion' : 'Create Your Champion'}</h3>
+        <p class="lore" style="margin-top:0">A local profile for this device — no password, nothing to protect, nothing to type but a name. New champions who open this game each get their own.</p>
+        <input id="profName" maxlength="18" placeholder="Champion name" value="${(cur.name || '').replace(/"/g, '')}">
+        <div class="avatar-grid">${this._AVATARS.map((av) => `<button class="avbtn ${av === picked ? 'on' : ''}" data-av="${av}">${av}</button>`).join('')}</div>
+        <button class="bigbtn" id="profSave">${dismissible ? 'Save' : 'Begin Your Legend'}</button>
+      </div></div>`);
+      document.body.appendChild(modal);
+      $$('.avbtn', modal).forEach((b) => b.onclick = () => { picked = b.dataset.av; $$('.avbtn', modal).forEach((x) => x.classList.toggle('on', x === b)); });
+      const close = () => modal.remove();
+      const xBtn = $('.modal-x', modal); if (xBtn) xBtn.onclick = close;
+      if (dismissible) modal.onclick = (e) => { if (e.target === modal) close(); };
+      $('#profSave', modal).onclick = () => {
+        Meta.setProfile($('#profName', modal).value, picked);
+        close();
+        this._refreshTopbar();
+        if (this.screen === 'leaderboard') this.renderLeaderboard();
+      };
+    },
+
+    renderLeaderboard() {
+      const RM = Meta.RECORD_META, CR = Meta.CLAUDE_RECORDS, mine = Meta.p.records, prof = Meta.p.profile;
+      const rows = Object.keys(RM).map((key) => {
+        const meta = RM[key], claudeVal = CR[key], mineVal = mine[key];
+        const beat = mineVal > 0 && (meta.better === 'lower' ? mineVal <= claudeVal : mineVal >= claudeVal);
+        return `<div class="lbrow ${beat ? 'beat' : ''}">
+          <div class="lbcat">${meta.icon} ${meta.label}</div>
+          <div class="lbval lbclaude"><span class="lbav">👑</span><b>${meta.fmt(claudeVal)}</b></div>
+          <div class="lbval lbmine"><span class="lbav">${prof.avatar || '⚔️'}</span><b>${mineVal ? meta.fmt(mineVal) : '—'}</b>${beat ? ' <em>🏅 beaten!</em>' : ''}</div>
+        </div>`;
+      }).join('');
+      const beatCount = Object.keys(RM).filter((key) => { const meta = RM[key]; const v = mine[key]; return v > 0 && (meta.better === 'lower' ? v <= CR[key] : v >= CR[key]); }).length;
+      this.root.innerHTML = this._topbar() + `
+        <div class="page">
+          <div class="page-head"><button class="back" data-go="menu">← Menu</button><h2>🏆 Hall of Champions</h2></div>
+          <p class="lb-note">Local records for this device — there's no shared server behind this page, so these are yours alone. Claude's benchmark row is a permanent target, not a live player: every new champion who opens the game starts the same chase.</p>
+          <div class="lbheader"><div></div><div class="lbclaude">👑 Claude · The Realm's Champion</div><div class="lbmine">${prof.avatar || '⚔️'} ${prof.name || 'You'} <button class="editlink" id="lbEdit">edit</button></div></div>
+          <div class="lbtable">${rows}</div>
+          <div class="lbfoot">${beatCount}/${Object.keys(RM).length} records beaten</div>
+        </div>`;
+      this._wireGo();
+      $('#lbEdit').onclick = () => this._showProfileModal(true);
     },
 
     /* ------------------------------- menu ----------------------------- */
@@ -91,6 +143,7 @@
             <button class="mbtn" data-go="collection"><b>🏰 Collection</b><span>${Meta.ownedTowerDefs().length}/26 towers</span></button>
             <button class="mbtn" data-go="forge"><b>🔨 Forge</b><span>${Meta.forgeUnlocked ? 'Convert & craft' : 'Unlocks Lv 2'}</span></button>
             <button class="mbtn" data-go="codex"><b>📖 Codex</b><span>${Math.round(Meta.codexPct() * 100)}% complete</span></button>
+            <button class="mbtn" data-go="leaderboard"><b>🏆 Hall of Champions</b><span>Beat Claude's records</span></button>
             <button class="mbtn" data-go="settings"><b>⚙ Settings</b><span>Save & options</span></button>
           </div>
           <div class="objectives">
@@ -101,7 +154,10 @@
       this._wireGo();
     },
     _rewardStr(r) { return Object.entries(r).map(([k, v]) => `+${v} ${k}`).join(', '); },
-    _wireGo() { $$('[data-go]', this.root).forEach((b) => b.onclick = () => this.show(b.dataset.go)); },
+    _wireGo() {
+      $$('[data-go]', this.root).forEach((b) => b.onclick = () => this.show(b.dataset.go));
+      const pc = $('#topProfile', this.root); if (pc) pc.onclick = () => this._showProfileModal(true);
+    },
 
     /* ---------------------------- map select -------------------------- */
     // Difficulty is now picked GLOBALLY here; each map carries its OWN inherent
@@ -446,10 +502,12 @@
 
     /* ---------------------------- settings ---------------------------- */
     renderSettings() {
-      const s = Meta.p.settings;
+      const s = Meta.p.settings; const prof = Meta.p.profile;
       this.root.innerHTML = this._topbar() + `
         <div class="page">
           <div class="page-head"><button class="back" data-go="menu">← Menu</button><h2>Settings & Save</h2></div>
+          <h3>Profile</h3>
+          <div class="profrow"><span class="pav-lg">${prof.avatar || '⚔️'}</span><b>${prof.name || 'Unnamed Champion'}</b><button class="bigbtn" id="editProfBtn">Edit Profile</button></div>
           <div class="settings">
             <label class="toggle"><input type="checkbox" id="setRange" ${s.showRange ? 'checked' : ''}> Show range overlays by default</label>
             <label class="toggle"><input type="checkbox" id="setPart" ${s.particles ? 'checked' : ''}> Particles</label>
@@ -464,6 +522,7 @@
           <textarea id="saveText" placeholder="Exported save appears here / paste a save to import" spellcheck="false"></textarea>
         </div>`;
       this._wireGo();
+      $('#editProfBtn').onclick = () => this._showProfileModal(true);
       $('#setRange').onchange = (e) => { s.showRange = e.target.checked; Meta.save(); };
       $('#setPart').onchange = (e) => { s.particles = e.target.checked; Meta.save(); };
       $('#setSfx').onchange = (e) => { s.sfx = e.target.checked; Meta.save(); };
@@ -744,6 +803,7 @@
       for (const fam in m.killsByFamily) Meta.updateObjective('killFamily', m.killsByFamily[fam], fam);
       Meta.updateObjective('kill', m.totalKills);
       Meta.p.stats.kills += m.totalKills;
+      this._newRecords = Meta.updateRecords(m); // Hall of Champions personal bests
       Meta.save();
       this._lastRewards = rewards; this._lastLeveled = leveled;
       setTimeout(() => { this._ended = false; this.show('summary'); }, 400);
@@ -769,6 +829,7 @@
           </div>
           ${this._lastLeveled ? `<div class="levelup">⬆ Account Level ${Meta.p.account.level}! ${RS.ACCOUNT.unlocks[Meta.p.account.level] || ''}</div>` : ''}
           ${this._newCosmetic ? `<div class="levelup" style="border-color:#9b59b6;color:#c79bff">👑 Cosmetic unlocked: ${this._newCosmetic}!</div>` : ''}
+          ${this._newRecords && this._newRecords.length ? `<div class="levelup" style="border-color:#f0a92e;color:#f0a92e">🏆 New personal best: ${this._newRecords.map((k) => Meta.RECORD_META[k].label).join(', ')}!</div>` : ''}
           <h3>Damage by Tower</h3>
           <div class="dmgchart">
             ${rows.length ? rows.map((row) => `<div class="dmgrow"><span>${row.name}</span><div class="bar"><i style="width:${row.dmg / maxDmg * 100}%"></i></div><em>${fmt(row.dmg)} · ${Math.round(row.dmg / total * 100)}%</em></div>`).join('') : '<em>No damage recorded.</em>'}
@@ -783,7 +844,7 @@
       this._wireGo();
       const nb = $('#nextTier'); if (nb) nb.onclick = () => { this.selectedDiff = RS.DIFF_BY_ID[this._nextDiffId(m.diff)]; this.workingLoadout = this.workingLoadout.slice(); this.show('loadout'); };
       $('#replayBtn').onclick = () => { this.show('loadout'); };
-      this._newCosmetic = null;
+      this._newCosmetic = null; this._newRecords = null;
       this.match = null;
     },
     _nextDiffId(diff) { const order = Math.min(3, diff.order + 1); return RS.DIFFICULTY[order].id; },

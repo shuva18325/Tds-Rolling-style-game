@@ -238,6 +238,35 @@ button:hover::after { transform: translateX(120%); }
 .quickroll .toggle { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; }
 .quickroll .toggle small { color: var(--dim); }
 
+/* ===== profile chip + modal ===== */
+.profchip { display: flex; align-items: center; gap: 5px; background: #201d18; border: 1px solid var(--line); border-radius: 16px; padding: 3px 10px 3px 4px; font-size: 13px; }
+.profchip .pav { font-size: 15px; }
+.profile-modal { max-width: 380px; text-align: center; }
+.profile-modal h3 { color: var(--gold); }
+.profile-modal input { width: 100%; margin: 10px 0; padding: 10px; background: #151412; border: 1px solid var(--line); border-radius: 6px; color: var(--text); font-size: 15px; text-align: center; }
+.avatar-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin: 10px 0 16px; }
+.avbtn { font-size: 20px; padding: 8px 0; border-radius: 8px; }
+.avbtn.on { box-shadow: 0 0 0 2px var(--gold); background: #3a2f1c; }
+.profrow { display: flex; align-items: center; gap: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; margin-bottom: 18px; }
+.profrow b { flex: 1; font-size: 15px; }
+.pav-lg { font-size: 28px; }
+
+/* ===== leaderboard ===== */
+.lb-note { color: var(--dim); font-size: 13px; max-width: 640px; margin-bottom: 16px; line-height: 1.5; }
+.lbheader, .lbrow { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 10px; align-items: center; }
+.lbheader { padding: 6px 12px; font-size: 12px; color: var(--dim); text-transform: uppercase; letter-spacing: .5px; }
+.lbheader .lbclaude { color: #f0a92e; } .lbheader .lbmine { color: var(--text); display: flex; align-items: center; gap: 8px; }
+.editlink { font-size: 11px; padding: 2px 8px; }
+.lbtable { display: flex; flex-direction: column; gap: 6px; }
+.lbrow { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.lbrow.beat { border-color: #f0a92e; box-shadow: 0 0 12px -4px #f0a92e; }
+.lbcat { font-size: 13px; }
+.lbval { display: flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
+.lbval .lbav { font-size: 16px; }
+.lbclaude { color: #ffd98a; } .lbclaude b { color: #f0a92e; }
+.lbmine em { color: var(--good); font-style: normal; font-size: 11px; }
+.lbfoot { margin-top: 12px; color: var(--dim); font-size: 12px; text-align: right; }
+
 /* respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001s !important; animation-iteration-count: 1 !important; }

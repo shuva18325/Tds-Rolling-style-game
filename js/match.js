@@ -1005,8 +1005,13 @@
       if (b.respawnT > 0) { b.respawnT -= dt; if (b.respawnT <= 0) b.hp = b.maxHp; return; }
       // release dead engagements
       b.engaged = b.engaged.filter((uid) => { const e = this.enemies.find((x) => x.uid === uid && x.alive); if (!e) return false; return e.engagedByUid === t.uid; });
-      // engage new enemies within reach
-      const reach = Math.max(t.range, 0.9 * TILE);
+      // Engage new enemies within reach. Path-adjacent-only blockers sit one
+      // tile OFF the road (never on it — see Design Decision #4), so their
+      // engage radius must clear at least a full tile centre-to-centre (48px
+      // orthogonal, ~68px diagonal). The previous 0.9-tile floor (43px) was
+      // smaller than that minimum distance, so Peasant Militia / Man-at-Arms
+      // could never reach the road at all — this floor guarantees they can.
+      const reach = Math.max(t.range, 1.8 * TILE);
       if (b.engaged.length < b.capacity) {
         this.grid.query(t.x, t.y, reach, this._tmp);
         for (const e of this._tmp) {
