@@ -20,6 +20,15 @@ npx http-server -c-1 .        # then visit http://localhost:8080
 off disk (`file://`) because the scripts are plain classic scripts, not ES
 modules — see Design Decision #1. Progress autosaves to `localStorage`.
 
+**Single-file build:** `realm-siege.html` is the whole game bundled into one
+self-contained file (all CSS + JS inlined, zero external requests) — generated
+by `node build-artifact.js`. It's what gets published as a shareable playable
+artifact. Just open it; nothing else needed.
+
+**Signature foes:** every map has one **unique enemy that appears only there**
+(Farmstead's Scarecrow Marauder, Frostvale's Frost Revenant, …) — shown on each
+map-select card and wired via `map.signature` in `data/maps.js`.
+
 Starter account: 4 Common towers, 500 Copper, 20 Silver, 5 Gold. Roll for more.
 
 ---

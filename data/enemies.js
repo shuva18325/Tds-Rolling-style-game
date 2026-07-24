@@ -63,6 +63,23 @@
     E({ id: 'broodling', name: 'Wyvern Broodling', family: 'Aerial', hp: 240, speed: 58, armor: 10, magicResist: 0.10, bounty: 24, traits: ['Flying'], abilities: { destroyBlockers: true }, motif: 'wyvern', cost: 34 }),
     E({ id: 'stormroc', name: 'Storm Roc', family: 'Aerial', hp: 900, speed: 44, armor: 12, magicResist: 0.15, bounty: 54, traits: ['Flying', 'Immune-Slow'], abilities: {}, motif: 'griffon', cost: 72 }),
 
+    /* ---------------- SIGNATURE ENEMIES (one per map) ------------------ */
+    // Each appears ONLY on its home map (wired via map.signature), giving every
+    // battlefield a unique menace. Motif's family drives colour, so motif↔family
+    // are kept consistent. hp/speed are base (difficulty scales them).
+    E({ id: 'sig_scarecrow', name: 'Scarecrow Marauder', family: 'Bandit', hp: 110, speed: 60, armor: 4, magicResist: 0, bounty: 12, traits: ['Fast'], abilities: { rageAtLowHp: { hpPct: 0.5, speed: 1.6 } }, motif: 'humanoid', cost: 14 }),
+    E({ id: 'sig_drowned', name: 'Drowned Reaver', family: 'Undead', hp: 260, speed: 40, armor: 6, magicResist: 0.10, bounty: 18, traits: ['Regenerating'], abilities: { regen: 26 }, motif: 'zombie', cost: 24 }),
+    E({ id: 'sig_lurker', name: 'Forest Lurker', family: 'Demon', hp: 220, speed: 52, armor: 6, magicResist: 0.15, bounty: 20, traits: ['Stealth', 'Fast'], abilities: {}, motif: 'demon', cost: 26 }),
+    E({ id: 'sig_wallbreaker', name: 'Wall Breaker', family: 'Orc', hp: 540, speed: 34, armor: 26, magicResist: 0.05, bounty: 30, traits: ['Armored'], abilities: { destroyBlockers: true }, motif: 'ogre', cost: 46 }),
+    E({ id: 'sig_frostrevenant', name: 'Frost Revenant', family: 'Undead', hp: 300, speed: 46, armor: 10, magicResist: 0.10, bounty: 22, traits: ['Immune-Slow', 'Ethereal'], abilities: {}, motif: 'skeleton', cost: 30 }),
+    E({ id: 'sig_boghorror', name: 'Bog Horror', family: 'Orc', hp: 480, speed: 30, armor: 8, magicResist: 0.15, bounty: 28, traits: ['Regenerating'], abilities: { regen: 34, bilePuddle: { dps: 12, dur: 4 } }, motif: 'ogre', cost: 42 }),
+    E({ id: 'sig_cinderfiend', name: 'Cinder Fiend', family: 'Demon', hp: 280, speed: 54, armor: 8, magicResist: 0.15, bounty: 22, traits: ['Immune-Fire', 'Fast'], abilities: {}, motif: 'demon', cost: 30 }),
+    E({ id: 'sig_rubblewight', name: 'Rubble Wight', family: 'Arcane', hp: 340, speed: 36, armor: 18, magicResist: 0.25, bounty: 26, traits: ['Splitter'], abilities: { splitInto: { id: 'skelwarrior', count: 3 } }, motif: 'golem', cost: 38 }),
+    E({ id: 'sig_cliffharrier', name: 'Cliff Harrier', family: 'Aerial', hp: 200, speed: 78, armor: 6, magicResist: 0.05, bounty: 20, traits: ['Flying', 'Fast'], abilities: {}, motif: 'harpy', cost: 28 }),
+    E({ id: 'sig_penitent', name: 'Chained Penitent', family: 'Undead', hp: 320, speed: 38, armor: 12, magicResist: 0.10, bounty: 24, traits: ['Cursed'], abilities: { curseAura: { radius: 120, dmg: 0.15 } }, motif: 'zombie', cost: 40 }),
+    E({ id: 'sig_magmabrute', name: 'Magma Brute', family: 'Demon', hp: 620, speed: 32, armor: 24, magicResist: 0.20, bounty: 34, traits: ['Immune-Fire', 'Armored'], abilities: {}, motif: 'demon', cost: 50 }),
+    E({ id: 'sig_thronesentinel', name: 'Throne Sentinel', family: 'Arcane', hp: 460, speed: 36, armor: 16, magicResist: 0.50, bounty: 36, traits: [], abilities: { suppressAbilities: { radius: 150 } }, motif: 'golem', cost: 52 }),
+
     /* ------------------------------- BOSSES ---------------------------- */
     E({ id: 'boss_corvin', name: 'Bandit King Corvin', family: 'Bandit', hp: 4200, speed: 40, armor: 14, magicResist: 0.10, bounty: 300, traits: ['Boss'],
       abilities: { boss: true, summon: { id: 'highwayman', count: 20, atHpPct: 0.5 } }, motif: 'boss', cost: 400 }),

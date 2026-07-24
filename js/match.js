@@ -163,11 +163,15 @@
 
     /* ---------------------------- wave gen ---------------------------- */
     // Candidate enemy pool for this map (family-weighted, no hidden/bosses).
+    // Signature enemies (sig_*) are excluded from the generic pool and only the
+    // map's OWN signature is injected — so each map has a unique menace.
     _candidatePool() {
       if (this._pool) return this._pool;
       const fam = this.map.families;
-      this._pool = RS.ENEMIES.filter((e) => !e.hidden && !e.traits.includes('Boss') && (fam[e.family] || 0) > 0)
+      this._pool = RS.ENEMIES.filter((e) => !e.hidden && !e.traits.includes('Boss') && e.id.indexOf('sig_') !== 0 && (fam[e.family] || 0) > 0)
         .map((e) => ({ def: e, w: fam[e.family] }));
+      const sig = this.map.signature && RS.ENEMY_BY_ID[this.map.signature];
+      if (sig) this._pool.push({ def: sig, w: 3.5 });
       return this._pool;
     }
 

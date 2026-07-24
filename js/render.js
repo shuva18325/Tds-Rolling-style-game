@@ -168,39 +168,63 @@
       for (let i = 0; i < m.tiles.length; i++) { h ^= m.tiles[i].kind.charCodeAt(0); h = Math.imul(h, 16777619); }
       return (h >>> 0) + '|' + (m.pathShorten | 0) + '|' + m.map.id;
     }
+    // Smooth, grid-free terrain: one continuous grass field, soft rounded
+    // patches for special terrain, and a flowing rounded path spline. No tile
+    // outlines — the board reads as a landscape, not a checkerboard.
     _buildTerrain(m) {
       const cv = document.createElement('canvas'); cv.width = m.cols * TILE; cv.height = m.rows * TILE;
-      const c = cv.getContext('2d');
-      for (let r = 0; r < m.rows; r++) for (let col = 0; col < m.cols; col++) {
-        const k = m.tileKind(col, r), x = col * TILE, y = r * TILE;
-        this._tileBase(c, k, x, y, col, r);
+      const c = cv.getContext('2d'); const W = cv.width, H = cv.height;
+      // 1) continuous grass field with a soft top-lit vertical gradient
+      const gg = c.createLinearGradient(0, 0, 0, H);
+      gg.addColorStop(0, RS.RAMP.grass.light); gg.addColorStop(0.55, RS.RAMP.grass.mid); gg.addColorStop(1, RS.RAMP.grass.shadow);
+      c.fillStyle = gg; c.fillRect(0, 0, W, H);
+      // scattered deterministic tufts across the whole field (no per-tile grid)
+      for (let gy = 8; gy < H; gy += 11) for (let gx = 6; gx < W; gx += 13) {
+        const s = ((gx * 73856093) ^ (gy * 19349663)) >>> 0;
+        const jx = gx + (s & 7) - 3, jy = gy + ((s >> 3) & 7) - 3;
+        c.fillStyle = (s & 1) ? RS.RAMP.grass.shadow : A.alpha(RS.RAMP.grass.light, 0.5);
+        c.fillRect(jx, jy, 1, 2 + (s & 1));
       }
-      // path top gloss + goal/spawn glow baked lightly
+      // 2) special terrain as soft, slightly-overlapping rounded blobs (merge)
+      // Two-pass patch so neighbouring tiles of a kind merge into one smooth
+      // blob: first a big overlapping base (mid), then a soft inner highlight.
+      const patch = (k, ramp, raised) => {
+        const cells = [];
+        for (let r = 0; r < m.rows; r++) for (let col = 0; col < m.cols; col++) if (m.tileKind(col, r) === k) cells.push([col * TILE, r * TILE]);
+        if (!cells.length) return;
+        if (raised) { c.fillStyle = 'rgba(0,0,0,0.30)'; for (const [x, y] of cells) { this._roundRect(c, x - 6, y + 2, TILE + 12, TILE + 10, 16); c.fill(); } }
+        c.fillStyle = ramp.mid; for (const [x, y] of cells) { this._roundRect(c, x - 7, y - 7, TILE + 14, TILE + 14, 16); c.fill(); }
+        c.fillStyle = raised ? ramp.light : A.alpha(ramp.light, 0.55); for (const [x, y] of cells) { this._roundRect(c, x - 1, y - 1, TILE + 2, TILE - (raised ? 6 : 2), 12); c.fill(); }
+      };
+      patch('water', RS.RAMP.water); patch('unbuildable', RS.RAMP.stoneDark);
+      patch('highground', RS.RAMP.stone, true); patch('holy', RS.RAMP.holy);
+      patch('cursed', RS.RAMP.void); patch('hazard', RS.RAMP.lava);
+      // 3) flowing path splines
+      for (const p of m.paths) this._smoothPath(c, p.pts);
       this._terrain = cv;
     }
-    _tileBase(c, k, x, y, col, r) {
-      let ramp = RS.RAMP.grass;
-      if (k === 'buildable') ramp = RS.RAMP.grass;
-      else if (k === 'path') ramp = RS.RAMP.road;
-      else if (k === 'water') ramp = RS.RAMP.water;
-      else if (k === 'unbuildable') ramp = RS.RAMP.stoneDark;
-      else if (k === 'highground') ramp = RS.RAMP.stone;
-      else if (k === 'hazard') ramp = RS.RAMP.lava;
-      else if (k === 'holy') ramp = RS.RAMP.holy;
-      else if (k === 'cursed') ramp = RS.RAMP.void;
-      // side (shadow) then top (lit) face for a beveled low-poly look
-      c.fillStyle = ramp.shadow; c.fillRect(x, y, TILE, TILE);
-      const inset = k === 'highground' ? 5 : 2;
-      c.fillStyle = k === 'path' ? ramp.mid : ramp.light;
-      c.fillRect(x + inset, y + inset, TILE - inset * 2, TILE - inset - 4);
-      // deterministic per-tile detail (tufts / specks / cracks)
-      const seed = (col * 73856093 ^ r * 19349663) >>> 0;
-      const rr = () => { let s = (seed + 0x9e3779b9) >>> 0; s = Math.imul(s ^ (s >>> 15), 1 | s); return ((s >>> 14) % 1000) / 1000; };
-      if (k === 'buildable') { c.fillStyle = ramp.mid; for (let i = 0; i < 3; i++) { const gx = x + 6 + ((seed >> (i * 3)) & 31), gy = y + 10 + ((seed >> (i * 4)) & 27); c.fillRect(gx, gy, 1, 3); } }
-      else if (k === 'path') { c.fillStyle = ramp.shadow; c.fillRect(x + 4 + ((seed) & 15), y + 8 + ((seed >> 4) & 20), 3, 2); }
-      else if (k === 'highground') { c.strokeStyle = 'rgba(255,255,255,0.12)'; c.strokeRect(x + inset, y + inset, TILE - inset * 2, TILE - inset * 2); }
-      // tile outline
-      c.strokeStyle = 'rgba(0,0,0,0.14)'; c.strokeRect(x + 0.5, y + 0.5, TILE, TILE);
+    _roundRect(c, x, y, w, h, r) {
+      if (c.roundRect) { c.beginPath(); c.roundRect(x, y, w, h, r); return; }
+      r = Math.min(r, w / 2, h / 2); c.beginPath();
+      c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
+      c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+    }
+    _smoothPath(c, pts) {
+      if (pts.length < 2) return;
+      const trace = () => {
+        c.beginPath(); c.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length - 1; i++) { const mx = (pts[i].x + pts[i + 1].x) / 2, my = (pts[i].y + pts[i + 1].y) / 2; c.quadraticCurveTo(pts[i].x, pts[i].y, mx, my); }
+        c.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+      };
+      c.lineJoin = 'round'; c.lineCap = 'round';
+      // soft cast shadow
+      c.strokeStyle = 'rgba(0,0,0,0.25)'; c.lineWidth = TILE * 0.92; trace(); c.stroke();
+      // road edge (dark rim)
+      c.strokeStyle = RS.RAMP.road.shadow; c.lineWidth = TILE * 0.86; trace(); c.stroke();
+      // road surface
+      c.strokeStyle = RS.RAMP.road.mid; c.lineWidth = TILE * 0.64; trace(); c.stroke();
+      // subtle worn center highlight
+      c.strokeStyle = A.alpha(RS.RAMP.road.light, 0.35); c.lineWidth = TILE * 0.22; trace(); c.stroke();
     }
     _terrainLayer(ctx, m) {
       const sig = this._terrainSignature(m);

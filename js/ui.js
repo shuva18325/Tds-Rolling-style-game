@@ -116,6 +116,7 @@
               <div class="mapnum">${i + 1}</div>
               <h3>${m.name}</h3>
               <p>${m.desc}</p>
+              ${m.signature && RS.ENEMY_BY_ID[m.signature] ? `<div class="sigfoe">☠ Signature foe: <b>${RS.ENEMY_BY_ID[m.signature].name}</b></div>` : ''}
               <div class="difrow">
                 ${RS.DIFFICULTY.map((d) => {
                   const unlocked = Meta.diffUnlocked(m.id, d.id);
