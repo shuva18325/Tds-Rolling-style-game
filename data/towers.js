@@ -63,7 +63,7 @@
     T({ id: 'scout', name: 'Watchtower Scout', rarity: 'Common', cost: 60,
       damage: 3, fireRate: 0.8, rangeT: 3.0, targeting: 'First', damageType: 'Physical',
       splashT: 0, status: ['Mark'], placement: 'High-ground-only',
-      traits: { support: { rangeAura: 0.15, radiusT: 3 }, mark: 0.10 },
+      traits: { support: { rangeAura: 0.15, radiusT: 3 }, mark: 0.10, reveal: 3.2 },
       upgrades: { branch: [
         { name: 'Spyglass', desc: 'bigger aura radius', mods: { auraRadiusT: 2 } },
         { name: 'Signal Fire', desc: 'stronger mark', mods: { mark: 0.10 } } ] },
@@ -135,7 +135,7 @@
     T({ id: 'cleric', name: 'Cleric', rarity: 'Rare', cost: 425,
       damage: 10, fireRate: 0.8, rangeT: 3.2, targeting: 'First', damageType: 'Holy',
       splashT: 0, status: [], placement: 'Ground',
-      traits: { support: { attackSpeedAura: 0.20, radiusT: 3, healBlockers: 20 }, purge: true, light: 2 },
+      traits: { support: { attackSpeedAura: 0.20, radiusT: 3, healBlockers: 20 }, purge: true, light: 2, reveal: 2.8 },
       upgrades: { branch: [
         { name: 'Zealotry', desc: 'stronger haste', mods: { atkSpeedAura: 0.15 } },
         { name: 'Sanctuary', desc: 'stronger heals', mods: { heal: 25, auraRadiusT: 1 } } ] },
@@ -307,5 +307,40 @@
     if (t.traits.splash) hits = 2.2;
     if (t.traits.summon) hits += 1.5;
     return Math.round(t.damage * t.fireRate * hits);
+  };
+
+  /* ---------------------- NAMED UPGRADES (flavour) ----------------------
+   * Unique names + plain-language descriptions for the L2 & L3 stat upgrades
+   * and the L5 Ascension. Purely presentational — no stat values live here
+   * (L1-3 apply the same +22% dmg / +12% range / +8% rate defined in config).
+   * L4 branch names/descs already live on each tower's upgrades.branch.       */
+  const std = (n, d) => ({ n, d });
+  RS.TOWER_UPGRADES = {
+    peasant:   { l2: std('Whetted Pitchforks', 'Sharper tools bite deeper. +22% dmg, +12% range, +8% attack speed.'), l3: std('Village Muster', 'More hands to the wall. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Endless Levy' },
+    archer:    { l2: std('Keen Fletching', 'Truer arrows. +22% dmg, +12% range, +8% attack speed.'), l3: std('Master Bowyer', 'A finer bow. +22% dmg, +12% range, +8% attack speed.'), ascend: "Yeoman's Eye" },
+    torch:     { l2: std('Pitch & Tar', 'A hotter, longer burn. +22% dmg, +12% range, +8% attack speed.'), l3: std('Watchfire', 'Farther reach, brighter reveal. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Wildfire Spread' },
+    slinger:   { l2: std('River Stones', 'Denser shot. +22% dmg, +12% range, +8% attack speed.'), l3: std('Practiced Arc', 'Better lob. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Shatterstone' },
+    scout:     { l2: std('Far Sight', 'Sees further. +22% dmg, +12% range, +8% attack speed.'), l3: std('Signal Discipline', 'Sharper marks. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Eagle Watch' },
+    crossbow:  { l2: std('Steel Windlass', 'Faster spanning. +22% dmg, +12% range, +8% attack speed.'), l3: std('Armor-Piercer', 'Punches plate. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Executioner Bolt' },
+    menatarms: { l2: std("Sergeant's Drill", 'Steadier line. +22% dmg, +12% range, +8% attack speed.'), l3: std('Tempered Steel', 'Tougher, sharper. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Unbreakable Wall' },
+    hedge:     { l2: std('Static Charge', 'Bigger jolt. +22% dmg, +12% range, +8% attack speed.'), l3: std('Storm Weaving', 'Longer arcs. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Chain Cataclysm' },
+    ballista:  { l2: std('Iron Bolts', 'Heavier shot. +22% dmg, +12% range, +8% attack speed.'), l3: std('Torsion Tuning', 'Faster loose. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Line Splitter' },
+    longbow:   { l2: std('Yew Heartwood', 'Deeper draw. +22% dmg, +12% range, +8% attack speed.'), l3: std('Cloth-Yard Shaft', 'Longer range. +22% dmg, +12% range, +8% attack speed.'), ascend: "Sky-Piercer's Oath" },
+    knight:    { l2: std("Knight's Oath", 'Bolder charge. +22% dmg, +12% range, +8% attack speed.'), l3: std('Destrier', 'A stronger steed. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Twin Lances' },
+    cleric:    { l2: std('Blessed Rites', 'Stronger blessings. +22% dmg, +12% range, +8% attack speed.'), l3: std('Consecration', 'Wider grace. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Divine Aegis' },
+    trebuchet: { l2: std('Heavier Counterweight', 'Bigger payload. +22% dmg, +12% range, +8% attack speed.'), l3: std('Master Ranging', 'Truer arc. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Triple Barrage' },
+    templar:   { l2: std('Blessed Bolts', 'Radiant strikes. +22% dmg, +12% range, +8% attack speed.'), l3: std('Oath of Light', 'Farther faith. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Everliving Martyr' },
+    frostmagus:{ l2: std('Frostheart Surge', 'Colder core. +22% dmg, +12% range, +8% attack speed.'), l3: std('Deepwinter', 'Wider chill. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Absolute Zero' },
+    bombard:   { l2: std('Corned Powder', 'Bigger blast. +22% dmg, +12% range, +8% attack speed.'), l3: std('Rifled Bore', 'Longer reach. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Doomsday Charge' },
+    falconer:  { l2: std('Prized Hunters', 'Keener birds. +22% dmg, +12% range, +8% attack speed.'), l3: std('Wide Cast', 'Longer flights. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Sky Sovereigns' },
+    paladin:   { l2: std("Champion's Resolve", 'Greater might. +22% dmg, +12% range, +8% attack speed.'), l3: std('Rallying Banner', 'Wider aura. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Aegis of Kings' },
+    archmage:  { l2: std('Arcane Mastery', 'Mightier spells. +22% dmg, +12% range, +8% attack speed.'), l3: std('Ley-Line Tap', 'Longer reach. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Trinity Cast' },
+    engineer:  { l2: std('Reinforced Turrets', 'Sturdier builds. +22% dmg, +12% range, +8% attack speed.'), l3: std('Assembly Line', 'Faster works. +22% dmg, +12% range, +8% attack speed.'), ascend: 'War Foundry' },
+    wyvernrider:{ l2: std('Firebreath Tonic', 'Hotter breath. +22% dmg, +12% range, +8% attack speed.'), l3: std('Ace Flight', 'Swifter strafe. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Trail of Cinders' },
+    marshal:   { l2: std('War Council', 'Stronger command. +22% dmg, +12% range, +8% attack speed.'), l3: std('Grand Strategy', 'Wider reach. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Banner of the Realm' },
+    wyrm:      { l2: std('Molten Gullet', 'Fiercer breath. +22% dmg, +12% range, +8% attack speed.'), l3: std('Ancient Fury', 'Wider cone. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Elder Cataclysm' },
+    lich:      { l2: std('Grave Bind', 'Stronger raise. +22% dmg, +12% range, +8% attack speed.'), l3: std('Death Dominion', 'Wider grasp. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Undying Legion' },
+    grail:     { l2: std('Radiant Ascension', 'Holier light. +22% dmg, +12% range, +8% attack speed.'), l3: std('Eternal Grace', 'Farther reach. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Judgment Eternal' },
+    sovereign: { l2: std('Reality Weave', 'Warped might. +22% dmg, +12% range, +8% attack speed.'), l3: std('Worldforge Core', 'Wider warp. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Reforge the World' },
   };
 })();

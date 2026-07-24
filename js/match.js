@@ -20,6 +20,7 @@
     constructor(mapDef, diffDef, loadoutIds, meta) {
       this.map = mapDef;
       this.diff = diffDef;
+      this.coldness = !!mapDef.coldness; // Winter map only — Cold shroud on foes
       this.loadout = loadoutIds.slice();
       this.meta = meta; // player meta profile (roster, tokens...) read-only here
       this.rng = new RS.RNG((this._hashSeed(mapDef.id) ^ (diffDef.order * 2654435761)) >>> 0);
@@ -134,6 +135,7 @@
       applySpecial(this.map.hazard, 'hazard');
       applySpecial(this.map.holy, 'holy');
       applySpecial(this.map.cursed, 'cursed');
+      applySpecial(this.map.houses, 'house'); // Winter map: the only buildable tiles
 
       // Precompute path-adjacency (for blocker placement & siegebreaker).
       this.pathAdjacent = new Set();
@@ -292,6 +294,8 @@
         if (t.occupied) return { ok: false, reason: 'Occupied' };
         const k = t.kind;
         if (k === 'path') return { ok: false, reason: 'Path Blocked' };
+        // Winter map: build ONLY inside the campfire-lit houses (overrides other rules).
+        if (this.map.houseOnly) { if (k !== 'house') return { ok: false, reason: '🔥 Build inside a house' }; continue; }
         if (k === 'unbuildable') return { ok: false, reason: 'Unbuildable' };
         if (k === 'water' && towerDef.placement !== 'Water-capable') return { ok: false, reason: 'Water: needs water tower' };
         if (towerDef.placement === 'High-ground-only' && k !== 'highground') return { ok: false, reason: 'High ground only' };
@@ -537,7 +541,11 @@
         splitsLeft: def.abilities.splitsLeft || 0,
         abilT: {}, buffSpeed: 1, revived: false, isBoss: def.traits.includes('Boss'),
         bossPhase: 1, adaptResist: 0, killerType: null,
+        coldHp: 0, coldMax: 0, _coldBroke: 0,
       };
+      // Coldness (Winter map): a Cold shroud equal to 50% max HP that must be
+      // melted with Fire/Holy before HP can be reduced.
+      if (this.coldness) { e.coldMax = e.maxHp * 0.5; e.coldHp = e.coldMax; }
       // adaptive resist (Hardcore)
       if (this.diff.adaptive && this._adaptType && def.family) {
         // enemies gain resist to whichever type killed most last wave
@@ -700,6 +708,15 @@
     _damageEnemy(e, amount, type, opts) {
       if (!e.alive) return;
       opts = opts || {};
+      // Coldness (Winter map only): the Cold shroud absorbs all damage until
+      // melted. Fire/Holy melt it at full rate; other damage chips it slowly.
+      if (this.coldness && e.coldHp > 0) {
+        const warm = (type === 'Fire' || type === 'Holy');
+        e.coldHp -= amount * (warm ? 1 : 0.35);
+        if (e.coldHp <= 0) { e.coldHp = 0; e._coldBroke = 0.35; if (!opts.silent) this.addFloater(e.x, e.y - 14, 'CRACK!', '#bfeaf5'); }
+        else if (!opts.fromDot && !opts.silent && warm) this.addFloater(e.x, e.y - 10, '❄' + Math.round(amount), '#bfeaf5');
+        return; // no HP damage while the shroud holds
+      }
       const vuln = C.Status.vulnMult(e);
       let dmg = amount * vuln;
       e.hp -= dmg;

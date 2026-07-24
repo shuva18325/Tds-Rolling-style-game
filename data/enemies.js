@@ -79,6 +79,7 @@
     E({ id: 'sig_penitent', name: 'Chained Penitent', family: 'Undead', hp: 320, speed: 38, armor: 12, magicResist: 0.10, bounty: 24, traits: ['Cursed'], abilities: { curseAura: { radius: 120, dmg: 0.15 } }, motif: 'zombie', cost: 40 }),
     E({ id: 'sig_magmabrute', name: 'Magma Brute', family: 'Demon', hp: 620, speed: 32, armor: 24, magicResist: 0.20, bounty: 34, traits: ['Immune-Fire', 'Armored'], abilities: {}, motif: 'demon', cost: 50 }),
     E({ id: 'sig_thronesentinel', name: 'Throne Sentinel', family: 'Arcane', hp: 460, speed: 36, armor: 16, magicResist: 0.50, bounty: 36, traits: [], abilities: { suppressAbilities: { radius: 150 } }, motif: 'golem', cost: 52 }),
+    E({ id: 'sig_wendigo', name: 'Wendigo', family: 'Undead', hp: 440, speed: 46, armor: 8, magicResist: 0.10, bounty: 34, traits: ['Fast', 'Regenerating'], abilities: { regen: 32 }, motif: 'wraith', cost: 44 }),
 
     /* ------------------------------- BOSSES ---------------------------- */
     E({ id: 'boss_corvin', name: 'Bandit King Corvin', family: 'Bandit', hp: 4200, speed: 40, armor: 14, magicResist: 0.10, bounty: 300, traits: ['Boss'],

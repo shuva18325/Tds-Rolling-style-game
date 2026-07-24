@@ -118,8 +118,24 @@
       env: { weather: ['Clear', 'Ashfall', 'Storm', 'Blizzard'], dayNight: true, gimmick: 'finale' },
       families: { Bandit: 1, Orc: 2, Undead: 3, Demon: 4, Arcane: 3, Aerial: 3 },
       desc: 'Every system at once. The Ember Throne, where Azhrakoth waits.' }),
+
+    // 💜 WINTER MAP — plays ONLY on the Purple Nightmare tier. Build inside the
+    // campfire-lit ruined houses; the Coldness map modifier shrouds every foe.
+    M({ id: 'winterhold', name: 'Winterhold Ruins', order: 13, signature: 'sig_wendigo',
+      paths: [[[0, 7], [5, 7], [5, 3], [11, 3], [11, 11], [16, 11], [16, 6], [19, 6]]],
+      water: [], highground: [], hazard: [], holy: [], cursed: [], unbuildable: [],
+      houses: [[3, 8], [4, 8], [3, 9], [8, 5], [9, 5], [8, 6], [13, 9], [14, 9], [13, 8], [7, 10], [8, 10], [17, 8], [17, 9], [2, 5], [13, 2], [14, 2]],
+      env: { weather: ['Blizzard'], dayNight: true, gimmick: 'winter' },
+      coldness: true, houseOnly: true, winter: true, fixedDiff: 'Purple Nightmare',
+      families: { Bandit: 0, Orc: 2, Undead: 4, Demon: 2, Arcane: 2, Aerial: 2 },
+      desc: 'A frozen ruin under endless blizzard. Towers can be built ONLY inside the campfire-lit houses — everywhere else, the cold kills. Every foe wears a Cold shroud that only Fire or Holy damage can melt.' }),
   ];
 
   RS.MAP_BY_ID = {};
   RS.MAPS.forEach((m) => { RS.MAP_BY_ID[m.id] = m; });
+
+  // Each map carries its OWN difficulty rating (1-6, harder = more reward),
+  // independent of the chosen game difficulty. (Presentational + reward mult.)
+  const RATING = { farmstead: 1, riverford: 2, blackforest: 2, highkeep: 3, frostvale: 3, sunkenbog: 3, ashen: 4, aldermere: 4, dragonspine: 4, cathedral: 5, obsidian: 5, emberthrone: 6, winterhold: 6 };
+  RS.MAPS.forEach((m) => { m.rating = RATING[m.id] || Math.max(1, Math.ceil(m.order / 2)); m.rewardMult = +(1 + (m.rating - 1) * 0.14).toFixed(2); });
 })();

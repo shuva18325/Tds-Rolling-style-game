@@ -75,13 +75,17 @@
       const curIds = new Set();
       for (const e of m.enemies) {
         if (!e.alive) continue;
-        if (!e.vis) e.vis = { id: ++this._visId, gait: Math.random() * TAU, faceLeft: false, px: e.x, py: e.y };
+        if (!e.vis) e.vis = { id: ++this._visId, gait: Math.random() * TAU, faceLeft: false, px: e.x, py: e.y, revealFlash: 0, wasRevealed: false, crackDone: false };
         const v = e.vis; curIds.add(v.id);
         const moved = dist(e.x, e.y, v.px, v.py);
         // gait advances with actual movement so slow/frozen enemies slow/stop
         v.gait += (moved / TILE) * RS.ANIM.gaitHzBase * TAU;
         if (Math.abs(e.x - v.px) > 0.2) v.faceLeft = e.x < v.px;
         v.px = e.x; v.py = e.y;
+        if (v.revealFlash > 0) v.revealFlash = Math.max(0, v.revealFlash - dt);
+        // cold shroud: ambient frost + one-shot shatter when it breaks
+        if (e.coldHp > 0 && Math.random() < 0.04) VFX.frost(e.x + (Math.random() - 0.5) * 12, e.y - 6, 1);
+        if (e._coldBroke > 0 && !v.crackDone) { v.crackDone = true; VFX.frost(e.x, e.y - 6, 10); VFX.ring(e.x, e.y - 6, '#bfeaf5', 4, 26, 0.4, 2); }
         // boss entrance detection
         if (e.isBoss && !v.entered) { v.entered = true; this._bossEntrance(m, e); }
         this._enemyPrev.set(v.id, { x: e.x, y: e.y, motif: e.def.motif, family: e.def.family, isBoss: e.isBoss });
@@ -174,16 +178,18 @@
     _buildTerrain(m) {
       const cv = document.createElement('canvas'); cv.width = m.cols * TILE; cv.height = m.rows * TILE;
       const c = cv.getContext('2d'); const W = cv.width, H = cv.height;
-      // 1) continuous grass field with a soft top-lit vertical gradient
+      const winter = !!m.map.winter;
+      // 1) continuous ground field — snow on the Winter map, grass elsewhere
       const gg = c.createLinearGradient(0, 0, 0, H);
-      gg.addColorStop(0, RS.RAMP.grass.light); gg.addColorStop(0.55, RS.RAMP.grass.mid); gg.addColorStop(1, RS.RAMP.grass.shadow);
+      if (winter) { gg.addColorStop(0, '#e9f1f7'); gg.addColorStop(0.55, '#cdd9e6'); gg.addColorStop(1, '#aab8ca'); }
+      else { gg.addColorStop(0, RS.RAMP.grass.light); gg.addColorStop(0.55, RS.RAMP.grass.mid); gg.addColorStop(1, RS.RAMP.grass.shadow); }
       c.fillStyle = gg; c.fillRect(0, 0, W, H);
-      // scattered deterministic tufts across the whole field (no per-tile grid)
+      // scattered deterministic detail across the whole field (no per-tile grid)
       for (let gy = 8; gy < H; gy += 11) for (let gx = 6; gx < W; gx += 13) {
         const s = ((gx * 73856093) ^ (gy * 19349663)) >>> 0;
         const jx = gx + (s & 7) - 3, jy = gy + ((s >> 3) & 7) - 3;
-        c.fillStyle = (s & 1) ? RS.RAMP.grass.shadow : A.alpha(RS.RAMP.grass.light, 0.5);
-        c.fillRect(jx, jy, 1, 2 + (s & 1));
+        if (winter) { c.fillStyle = (s & 1) ? A.alpha('#ffffff', 0.6) : A.alpha('#9fb0c4', 0.5); c.beginPath(); c.arc(jx, jy, 1 + (s & 1), 0, TAU); c.fill(); }
+        else { c.fillStyle = (s & 1) ? RS.RAMP.grass.shadow : A.alpha(RS.RAMP.grass.light, 0.5); c.fillRect(jx, jy, 1, 2 + (s & 1)); }
       }
       // 2) special terrain as soft, slightly-overlapping rounded blobs (merge)
       // Two-pass patch so neighbouring tiles of a kind merge into one smooth
@@ -201,7 +207,25 @@
       patch('cursed', RS.RAMP.void); patch('hazard', RS.RAMP.lava);
       // 3) flowing path splines
       for (const p of m.paths) this._smoothPath(c, p.pts);
+      // 4) ruined houses (Winter map) — the only buildable tiles; static shell
+      for (let r = 0; r < m.rows; r++) for (let col = 0; col < m.cols; col++) if (m.tileKind(col, r) === 'house') this._drawHouseShell(c, col * TILE, r * TILE, col, r);
       this._terrain = cv;
+    }
+    // Static ruined-house shell baked into the terrain cache (fire drawn live).
+    _drawHouseShell(c, x, y, col, r) {
+      const s = ((col * 73856093) ^ (r * 19349663)) >>> 0;
+      // snow-cleared warm dirt floor
+      c.fillStyle = '#3a2c22'; this._roundRect(c, x + 3, y + 6, TILE - 6, TILE - 9, 6); c.fill();
+      c.fillStyle = '#2a1f18'; this._roundRect(c, x + 7, y + 10, TILE - 14, TILE - 15, 4); c.fill();
+      // broken timber walls (a few planks, snow-capped)
+      c.strokeStyle = RS.RAMP.timber.shadow; c.lineWidth = 3;
+      c.beginPath(); c.moveTo(x + 5, y + TILE - 5); c.lineTo(x + 5, y + 8); c.lineTo(x + 16, y + 3); c.stroke();
+      c.beginPath(); c.moveTo(x + TILE - 5, y + TILE - 5); c.lineTo(x + TILE - 5, y + 10); c.stroke();
+      c.strokeStyle = RS.RAMP.timber.mid; c.lineWidth = 2;
+      c.beginPath(); c.moveTo(x + 5, y + 12 + (s & 3)); c.lineTo(x + TILE - 8, y + 9); c.stroke();
+      // snow caps on the beams
+      c.strokeStyle = 'rgba(255,255,255,0.85)'; c.lineWidth = 2;
+      c.beginPath(); c.moveTo(x + 5, y + 7); c.lineTo(x + 16, y + 2); c.stroke();
     }
     _roundRect(c, x, y, w, h, r) {
       if (c.roundRect) { c.beginPath(); c.roundRect(x, y, w, h, r); return; }
@@ -211,11 +235,10 @@
     }
     _smoothPath(c, pts) {
       if (pts.length < 2) return;
-      const trace = () => {
-        c.beginPath(); c.moveTo(pts[0].x, pts[0].y);
-        for (let i = 1; i < pts.length - 1; i++) { const mx = (pts[i].x + pts[i + 1].x) / 2, my = (pts[i].y + pts[i + 1].y) / 2; c.quadraticCurveTo(pts[i].x, pts[i].y, mx, my); }
-        c.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
-      };
+      // Trace the EXACT waypoint centreline (the line enemies actually walk).
+      // Round joins/caps round the corners visually without moving the centre,
+      // so the road always sits under the enemies. (Fixes corner desync.)
+      const trace = () => { c.beginPath(); c.moveTo(pts[0].x, pts[0].y); for (let i = 1; i < pts.length; i++) c.lineTo(pts[i].x, pts[i].y); };
       c.lineJoin = 'round'; c.lineCap = 'round';
       // soft cast shadow
       c.strokeStyle = 'rgba(0,0,0,0.25)'; c.lineWidth = TILE * 0.92; trace(); c.stroke();
@@ -258,27 +281,50 @@
           if (Math.random() < 0.1) VFX.smoke(cx, cy, 1, '#7b4fb5');
         } else if (k === 'highground') {
           ctx.fillStyle = A.alpha('#fff', 0.05); ctx.fillRect(x + 4, y + 4, TILE - 8, 3);
+        } else if (k === 'house') {
+          // warm campfire light pooling out of the ruined house
+          const fl = 0.7 + Math.sin(t * 7 + col) * 0.25;
+          const g = ctx.createRadialGradient(cx, cy + 4, 1, cx, cy + 4, 26); g.addColorStop(0, A.alpha('#ffb457', 0.5 * fl)); g.addColorStop(0.6, A.alpha('#ff7a2a', 0.2 * fl)); g.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = g; ctx.fillRect(x - 8, y - 8, TILE + 16, TILE + 16); ctx.restore();
+          // the fire itself (logs + flame) — only when no tower occupies the tile
+          const occupied = m._tile(col, r) && m._tile(col, r).occupied;
+          if (!occupied) {
+            ctx.fillStyle = '#3a2018'; ctx.fillRect(cx - 6, cy + 6, 12, 3);
+            const fh = 7 + Math.sin(t * 12 + col) * 2.5;
+            ctx.fillStyle = '#e8722c'; ctx.beginPath(); ctx.moveTo(cx - 5, cy + 6); ctx.quadraticCurveTo(cx, cy + 6 - fh - 4, cx + 5, cy + 6); ctx.fill();
+            ctx.fillStyle = '#ffcf5a'; ctx.beginPath(); ctx.moveTo(cx - 2.5, cy + 6); ctx.quadraticCurveTo(cx, cy + 6 - fh, cx + 2.5, cy + 6); ctx.fill();
+            if (Math.random() < 0.3) VFX.embers(cx + (Math.random() - 0.5) * 8, cy + 2, 1, '#ffb457');
+          }
         }
       }
-      // grass sway hint on buildable edges near path (cheap: draw a few swaying tufts along path tiles)
-      ctx.strokeStyle = A.alpha('#6fa048', 0.5);
-      // (kept subtle; heavy grass would cost — the cached base already reads as grass)
     }
 
     /* ------------------------- range + ghost ------------------------ */
     _rangeAndGhost(ctx, m) {
       const sel = this.selected;
       if (sel && !sel.def.traits.globalAura) this._rangeRing(ctx, sel.x, sel.y, m._effectiveRange(sel), RS.rarityPal(sel.def.rarity).glow, 0.5);
+      // reveal-radius overlay for a selected Reveal tower (Torch / Scout / Cleric)
+      if (sel && sel.def.traits.reveal) this._revealRing(ctx, sel.x, sel.y, sel.def.traits.reveal * TILE);
       if (this.showRange && !sel) for (const t of m.towers) if (!t.def.traits.globalAura) this._rangeRing(ctx, t.x, t.y, m._effectiveRange(t), '#ffffff', 0.12);
       if (this.ghost && this.hover) {
         const def = this.ghost, { c, r } = this.hover, chk = m.canPlace(def, c, r);
         const fp = def.traits.footprint || 1;
+        // Winter: warm "safe from cold" aura when the ghost sits on a house
+        if (chk.ok && m.map.houseOnly) { const cx0 = c * TILE + fp * TILE / 2, cy0 = r * TILE + fp * TILE / 2; ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(cx0, cy0, 2, cx0, cy0, 30); g.addColorStop(0, 'rgba(255,170,80,0.4)'); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx0, cy0, 30, 0, TAU); ctx.fill(); ctx.restore(); }
         ctx.fillStyle = chk.ok ? 'rgba(95,168,85,0.28)' : 'rgba(224,75,43,0.28)'; ctx.fillRect(c * TILE, r * TILE, TILE * fp, TILE * fp);
         const cx = c * TILE + fp * TILE / 2, cy = r * TILE + fp * TILE / 2;
         if (!def.traits.globalAura) this._rangeRing(ctx, cx, cy, def.rangeT * TILE, chk.ok ? '#5fa855' : '#e04b4b', 0.4);
+        if (def.traits.reveal) this._revealRing(ctx, cx, cy, def.traits.reveal * TILE);
         ctx.save(); ctx.globalAlpha = 0.7; S.drawTower(ctx, def, cx, cy, { t: this.clock, aim: -0.3 }); ctx.restore();
         if (!chk.ok) { ctx.fillStyle = '#fff'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(chk.reason, cx, cy - fp * TILE / 2 - 6); ctx.textAlign = 'left'; }
       }
+    }
+    _revealRing(ctx, x, y, r) {
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const g = ctx.createRadialGradient(x, y, r * 0.4, x, y, r); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(120,200,255,0.10)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+      ctx.setLineDash([2, 6]); ctx.lineDashOffset = this.clock * 16; ctx.strokeStyle = 'rgba(150,210,255,0.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(150,210,255,0.7)'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('👁 reveal', x, y - r - 3); ctx.textAlign = 'left';
+      ctx.restore();
     }
     _rangeRing(ctx, x, y, r, color, str) {
       ctx.save();
@@ -320,15 +366,52 @@
       const arr = m.enemies.slice().sort((a, b) => a.y - b.y);
       for (const e of arr) {
         if (!e.alive) continue;
+        // Stealth foes ride a faint ghost path until a Reveal tower exposes them.
+        const stealth = e.def.traits.includes('Stealth');
+        let alpha = 1;
+        if (stealth) {
+          const revealed = this._enemyRevealed(m, e);
+          if (e.vis) { if (revealed && !e.vis.wasRevealed) { e.vis.revealFlash = 0.4; VFX.ring(e.x, e.y, '#9fd0ff', 4, 30, 0.4, 2); } e.vis.wasRevealed = revealed; }
+          alpha = revealed ? 1 : 0.28 + Math.sin(this.clock * 5 + (e.vis ? e.vis.id : 0)) * 0.06;
+          if (!revealed) { // shimmer distortion trail
+            ctx.save(); ctx.globalAlpha = 0.15; ctx.strokeStyle = '#9fd0ff'; ctx.setLineDash([3, 5]); ctx.beginPath(); const p = m.paths[e.lane]; ctx.moveTo(e.x, e.y); ctx.lineTo(p.goal.x, p.goal.y); ctx.stroke(); ctx.setLineDash([]); ctx.restore(); }
+        }
+        ctx.save(); ctx.globalAlpha = alpha;
         if (e.isBoss) this._drawBoss(ctx, e); else S.drawEnemy(ctx, e, this.clock);
-        this._hpBar(ctx, e);
+        if (e.vis && e.vis.revealFlash > 0) { ctx.globalAlpha = e.vis.revealFlash; VFX.enabled && S.circ(ctx, e.x, e.y - 8, 10, A.alpha('#dff0ff', 0.6)); }
+        ctx.restore();
+        this._bars(ctx, e, m);
       }
     }
-    _hpBar(ctx, e) {
-      const w = e.isBoss ? 46 : 16, hp = Math.max(0, e.hp / e.maxHp);
-      const by = e.y - (e.isBoss ? 34 : (RS.Sprites.getSheet(e.def.motif).size * 0.5 + 4));
-      ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(e.x - w / 2, by, w, e.isBoss ? 4 : 3);
-      ctx.fillStyle = hp > 0.5 ? RS.PALETTE.good : hp > 0.25 ? RS.PALETTE.warn : RS.PALETTE.bad; ctx.fillRect(e.x - w / 2, by, w * hp, e.isBoss ? 4 : 3);
+    _enemyRevealed(m, e) {
+      for (const t of m.towers) { const rv = t.def.traits.reveal; if (rv && dist2(t.x, t.y, e.x, e.y) < (rv * TILE) ** 2) return true; }
+      return false;
+    }
+    // Stacked bars above an enemy: Cold (Winter only) → Metal (Shielded) → HP.
+    _bars(ctx, e, m) {
+      const w = e.isBoss ? 46 : 16, h = e.isBoss ? 4 : 3;
+      let by = e.y - (e.isBoss ? 34 : (RS.Sprites.getSheet(e.def.motif).size * 0.5 + 4));
+      const bar = (frac, col, extra) => {
+        ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(e.x - w / 2, by, w, h);
+        ctx.fillStyle = col; ctx.fillRect(e.x - w / 2, by, w * Math.max(0, Math.min(1, frac)), h);
+        if (extra) extra(by);
+        by -= h + 1.5;
+      };
+      // HP (drawn first = bottom)
+      const hp = Math.max(0, e.hp / e.maxHp);
+      bar(hp, hp > 0.5 ? RS.PALETTE.good : hp > 0.25 ? RS.PALETTE.warn : RS.PALETTE.bad);
+      // Metal armour bar (Shielded foes — blocks physical until broken)
+      if (e.shieldHits > 0 && e.def.abilities.shieldHits) {
+        bar(e.shieldHits / e.def.abilities.shieldHits, '#c6ccd4', (y) => {
+          // moving metallic shine
+          const sx = e.x - w / 2 + ((this.clock * 30) % w);
+          ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(sx, y, 2, h);
+        });
+      }
+      // Cold shroud bar (Winter map only — melt with Fire/Holy)
+      if (e.coldMax > 0 && e.coldHp > 0) {
+        bar(e.coldHp / e.coldMax, '#8fd4e8', (y) => { ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.strokeRect(e.x - w / 2 + 0.5, y + 0.5, w - 1, h - 1); });
+      }
     }
     _drawBoss(ctx, e) {
       // bosses drawn live at big scale with ambient embers
@@ -430,6 +513,11 @@
       if (this.lightning > 0) { ctx.fillStyle = A.alpha('#eaf0ff', this.lightning * 3); ctx.fillRect(0, 0, W, H); }
     }
     _post(ctx, W, H, m) {
+      // Winter frost overlay: cold blue cast + icy corners
+      if (m.map.winter) {
+        ctx.fillStyle = 'rgba(120,180,220,0.12)'; ctx.fillRect(0, 0, W, H);
+        const fg = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.8); fg.addColorStop(0, 'rgba(0,0,0,0)'); fg.addColorStop(1, 'rgba(180,215,240,0.18)'); ctx.fillStyle = fg; ctx.fillRect(0, 0, W, H);
+      }
       // vignette
       const g = ctx.createRadialGradient(W / 2, H / 2, H * 0.4, W / 2, H / 2, H * 0.75); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.35)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
       if (m.freeze > 0) { ctx.fillStyle = A.alpha('#ffffff', m.freeze * 0.15); ctx.fillRect(0, 0, W, H); }

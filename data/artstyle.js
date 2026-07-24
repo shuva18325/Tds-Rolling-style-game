@@ -147,6 +147,25 @@
     Frost: 'frost', Holy: 'holy', Necrotic: 'necrotic', True: 'prism',
   };
 
+  // Damage-type + armour-type glyphs for the UI (emoji, no external assets).
+  const DMG_ICON = {
+    Physical: '⚔️', Piercing: '🏹', Magic: '🔮', Fire: '🔥',
+    Frost: '❄️', Holy: '✨', Necrotic: '💀', True: '⭐',
+  };
+  // Armour categories derived from an enemy's traits/family (visual only).
+  const ARMOR_ICON = { Metal: '🛡️', Bone: '🦴', Demonhide: '😈', Frost: '🧊' };
+  RS.dmgIcon = (t) => DMG_ICON[t] || '⚔️';
+  RS.armorClass = (e) => {
+    if (!e) return null;
+    const d = e.def || e;
+    if (d.family === 'Undead') return 'Bone';
+    if (d.family === 'Demon') return 'Demonhide';
+    if (d.traits && (d.traits.includes('Armored') || d.traits.includes('Shielded'))) return 'Metal';
+    if (d.armor >= 16) return 'Metal';
+    return null;
+  };
+  RS.armorIcon = (cls) => ARMOR_ICON[cls] || '';
+
   RS.art = { hexToRgb, rgbToStr, mul, mix, toward, alpha, prismatic, makeRamp, shade, clamp };
   RS.LIGHT = LIGHT;
   RS.EASE = EASE;

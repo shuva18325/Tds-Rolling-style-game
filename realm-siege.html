@@ -391,6 +391,75 @@ button:hover::after { transform: translateX(120%); }
 .sigfoe { font-size: 11px; color: #c98a6a; margin: 4px 0 2px; letter-spacing: .3px; }
 .sigfoe b { color: #e0a878; }
 
+/* ===== bigger battlefield ===== */
+#game { max-height: 90vh !important; max-width: 98vw !important; border-radius: 6px;
+  box-shadow: 0 0 0 3px #1a1712, 0 0 0 5px #3a2f1c, 0 0 60px rgba(0,0,0,.7); }
+#matchWrap { background: radial-gradient(circle at 50% 35%, #201d16, #070605 75%) !important; }
+
+/* ===== global difficulty selector ===== */
+.diffbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: linear-gradient(#26241f,#1a1815); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; }
+.diffbar-lbl { font-family: Georgia, serif; color: var(--dim); font-size: 13px; }
+.diffchip { padding: 7px 16px; font-weight: 700; border-radius: 20px; border: 1px solid var(--line); background: #201d18; }
+.diffchip.on { box-shadow: 0 0 0 2px currentColor, 0 0 14px -3px currentColor; }
+.diffchip.d-easy.on { color: #5fa855; } .diffchip.d-medium.on { color: #4a90d9; }
+.diffchip.d-hard.on { color: #9b59b6; } .diffchip.d-hardcore.on { color: #e04b4b; }
+.diffchip.locked { opacity: .45; }
+.diffbar-info { margin-left: auto; font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; }
+
+/* ===== map cards (bigger, own difficulty rating) ===== */
+.mapgrid { grid-template-columns: repeat(3, 1fr); }
+.mapcard-lg { display: flex; flex-direction: column; min-height: 210px; transition: transform .14s, box-shadow .14s; }
+.mapcard-lg:hover { transform: translateY(-4px); box-shadow: 0 10px 26px -10px rgba(217,164,65,.5), inset 0 0 0 1px rgba(217,164,65,.12); }
+.map-rate { letter-spacing: 1px; font-size: 13px; filter: drop-shadow(0 0 3px rgba(0,0,0,.6)); }
+.map-rate .sk-off { opacity: .18; filter: grayscale(1); }
+.map-loot { font-size: 12px; color: var(--gold); margin: 3px 0 6px; font-weight: 600; }
+.map-loot .cleared { color: #d9a441; }
+.mapcard-lg p { min-height: 40px; font-size: 12.5px; }
+.playbtn { margin-top: auto; width: 100%; padding: 10px; font-weight: 700; border-radius: 8px;
+  background: linear-gradient(#3a2f1c,#241d12); border: 1px solid var(--gold); color: var(--gold); }
+.playbtn.d-easy { border-color: #5fa855; color: #7bd070; } .playbtn.d-medium { border-color: #4a90d9; color: #6fb0f5; }
+.playbtn.d-hard { border-color: #9b59b6; color: #c07fe0; } .playbtn.d-hardcore { border-color: #e04b4b; color: #ff6a4a; }
+.playbtn.locked { border-color: var(--line); color: var(--dim); }
+.special-h { color: var(--gold); margin: 22px 0 10px; border-top: 1px solid var(--line); padding-top: 16px; }
+
+/* ===== Winter / Purple Nightmare card ===== */
+.mapcard.purple { position: relative; overflow: hidden; border-color: #9b59b6;
+  background: linear-gradient(160deg, #241633, #141018); }
+.mapcard.purple.locked-card { opacity: .7; filter: grayscale(.3); }
+.mapcard.purple h3 { color: #c79bff; }
+.purple-loot { color: #c79bff !important; font-weight: 700; }
+.playbtn.d-purple { border-color: #9b59b6; color: #d9b6ff; background: linear-gradient(#2a1a3a,#160f22);
+  animation: purplePulse 2s ease-in-out infinite; }
+@keyframes purplePulse { 50% { box-shadow: 0 0 20px -3px #9b59b6; } }
+.frostaura { position: absolute; inset: -40%; pointer-events: none; z-index: 0;
+  background: radial-gradient(circle, rgba(143,212,232,.14), transparent 60%);
+  animation: frostSpin 8s linear infinite; }
+@keyframes frostSpin { to { transform: rotate(360deg); } }
+.mapcard.purple > *:not(.frostaura) { position: relative; z-index: 1; }
+.pill.d-purple, .d-purple { color: #c79bff; border-color: #9b59b6; }
+
+/* ===== damage-type icon badge on tower cards ===== */
+.tchip-icon { position: relative; width: 44px; height: 44px; }
+.dmgicon { position: absolute; bottom: -3px; right: -4px; font-size: 13px; line-height: 1;
+  filter: drop-shadow(0 0 3px rgba(0,0,0,.8)); animation: diPulse 1.8s ease-in-out infinite; }
+@keyframes diPulse { 50% { transform: scale(1.18); } }
+.sel-head .dmgicon { position: static; font-size: 15px; }
+
+/* animated rarity treatment on tower chips */
+.tchip.rc-shimmer { animation: rarShimmer 2.4s ease-in-out infinite; }
+.tchip.rc-ember { animation: rarEmber 1.3s ease-in-out infinite; }
+.tchip.rc-prism { border: 2px solid transparent;
+  border-image: linear-gradient(90deg,#ff5a5a,#f0a92e,#5fa855,#4a90d9,#9b59b6,#ff5a5a) 1;
+  animation: prismSpin 3s linear infinite; }
+
+/* ===== named upgrade block (selected tower panel) ===== */
+.sel-upname { background: #151217; border: 1px solid var(--rc); border-left: 3px solid var(--rc);
+  border-radius: 6px; padding: 5px 8px; margin: 6px 0; }
+.sel-upname b { display: block; color: var(--rc); font-size: 12.5px; }
+.sel-upname span { font-size: 11px; color: var(--dim); line-height: 1.35; }
+.sel-head { border-bottom: 1px solid var(--rc); padding-bottom: 3px; }
+.r-mythicplus { animation: prismSpin 3s linear infinite; }
+
 /* respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001s !important; animation-iteration-count: 1 !important; }
@@ -667,6 +736,12 @@ button:hover::after { transform: translateX(120%); }
     { id: 'Hardcore', order: 3, waves: 50, hpMult: 14, speedMult: 1.4, startGold: 400, lives: 1,
       boss: 'boss_azhrakoth', copperMult: 5.0, tokenMult: 6.0, modifiers: ['Unbroken', 'Adaptive', 'Siegebreaker', 'No-Sell'],
       addArmor: 20, magicResist: 0.25, countMult: 1.6, night: false, noSell: true, noLeak: true, siegebreaker: true, adaptive: true },
+    // 💜 Purple Nightmare — a tier ABOVE Hardcore, exclusive to the Winter Map.
+    // Applies the Coldness map modifier and rewards a cosmetic crown.
+    { id: 'Purple Nightmare', order: 4, waves: 45, hpMult: 20, speedMult: 1.5, startGold: 650, lives: 3,
+      boss: 'boss_herald', copperMult: 8.0, tokenMult: 12.0, modifiers: ['Coldness', 'Frostbound', 'No-Sell'],
+      addArmor: 25, magicResist: 0.30, countMult: 1.7, night: true, noSell: true, noLeak: false, siegebreaker: false, adaptive: true,
+      purple: true, cosmetic: 'Frostcrown' },
   ];
   RS.DIFF_BY_ID = {};
   RS.DIFFICULTY.forEach((d) => { RS.DIFF_BY_ID[d.id] = d; });
@@ -952,6 +1027,25 @@ button:hover::after { transform: translateX(120%); }
     Frost: 'frost', Holy: 'holy', Necrotic: 'necrotic', True: 'prism',
   };
 
+  // Damage-type + armour-type glyphs for the UI (emoji, no external assets).
+  const DMG_ICON = {
+    Physical: '⚔️', Piercing: '🏹', Magic: '🔮', Fire: '🔥',
+    Frost: '❄️', Holy: '✨', Necrotic: '💀', True: '⭐',
+  };
+  // Armour categories derived from an enemy's traits/family (visual only).
+  const ARMOR_ICON = { Metal: '🛡️', Bone: '🦴', Demonhide: '😈', Frost: '🧊' };
+  RS.dmgIcon = (t) => DMG_ICON[t] || '⚔️';
+  RS.armorClass = (e) => {
+    if (!e) return null;
+    const d = e.def || e;
+    if (d.family === 'Undead') return 'Bone';
+    if (d.family === 'Demon') return 'Demonhide';
+    if (d.traits && (d.traits.includes('Armored') || d.traits.includes('Shielded'))) return 'Metal';
+    if (d.armor >= 16) return 'Metal';
+    return null;
+  };
+  RS.armorIcon = (cls) => ARMOR_ICON[cls] || '';
+
   RS.art = { hexToRgb, rgbToStr, mul, mix, toward, alpha, prismatic, makeRamp, shade, clamp };
   RS.LIGHT = LIGHT;
   RS.EASE = EASE;
@@ -1032,7 +1126,7 @@ button:hover::after { transform: translateX(120%); }
     T({ id: 'scout', name: 'Watchtower Scout', rarity: 'Common', cost: 60,
       damage: 3, fireRate: 0.8, rangeT: 3.0, targeting: 'First', damageType: 'Physical',
       splashT: 0, status: ['Mark'], placement: 'High-ground-only',
-      traits: { support: { rangeAura: 0.15, radiusT: 3 }, mark: 0.10 },
+      traits: { support: { rangeAura: 0.15, radiusT: 3 }, mark: 0.10, reveal: 3.2 },
       upgrades: { branch: [
         { name: 'Spyglass', desc: 'bigger aura radius', mods: { auraRadiusT: 2 } },
         { name: 'Signal Fire', desc: 'stronger mark', mods: { mark: 0.10 } } ] },
@@ -1104,7 +1198,7 @@ button:hover::after { transform: translateX(120%); }
     T({ id: 'cleric', name: 'Cleric', rarity: 'Rare', cost: 425,
       damage: 10, fireRate: 0.8, rangeT: 3.2, targeting: 'First', damageType: 'Holy',
       splashT: 0, status: [], placement: 'Ground',
-      traits: { support: { attackSpeedAura: 0.20, radiusT: 3, healBlockers: 20 }, purge: true, light: 2 },
+      traits: { support: { attackSpeedAura: 0.20, radiusT: 3, healBlockers: 20 }, purge: true, light: 2, reveal: 2.8 },
       upgrades: { branch: [
         { name: 'Zealotry', desc: 'stronger haste', mods: { atkSpeedAura: 0.15 } },
         { name: 'Sanctuary', desc: 'stronger heals', mods: { heal: 25, auraRadiusT: 1 } } ] },
@@ -1277,6 +1371,41 @@ button:hover::after { transform: translateX(120%); }
     if (t.traits.summon) hits += 1.5;
     return Math.round(t.damage * t.fireRate * hits);
   };
+
+  /* ---------------------- NAMED UPGRADES (flavour) ----------------------
+   * Unique names + plain-language descriptions for the L2 & L3 stat upgrades
+   * and the L5 Ascension. Purely presentational — no stat values live here
+   * (L1-3 apply the same +22% dmg / +12% range / +8% rate defined in config).
+   * L4 branch names/descs already live on each tower's upgrades.branch.       */
+  const std = (n, d) => ({ n, d });
+  RS.TOWER_UPGRADES = {
+    peasant:   { l2: std('Whetted Pitchforks', 'Sharper tools bite deeper. +22% dmg, +12% range, +8% attack speed.'), l3: std('Village Muster', 'More hands to the wall. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Endless Levy' },
+    archer:    { l2: std('Keen Fletching', 'Truer arrows. +22% dmg, +12% range, +8% attack speed.'), l3: std('Master Bowyer', 'A finer bow. +22% dmg, +12% range, +8% attack speed.'), ascend: "Yeoman's Eye" },
+    torch:     { l2: std('Pitch & Tar', 'A hotter, longer burn. +22% dmg, +12% range, +8% attack speed.'), l3: std('Watchfire', 'Farther reach, brighter reveal. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Wildfire Spread' },
+    slinger:   { l2: std('River Stones', 'Denser shot. +22% dmg, +12% range, +8% attack speed.'), l3: std('Practiced Arc', 'Better lob. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Shatterstone' },
+    scout:     { l2: std('Far Sight', 'Sees further. +22% dmg, +12% range, +8% attack speed.'), l3: std('Signal Discipline', 'Sharper marks. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Eagle Watch' },
+    crossbow:  { l2: std('Steel Windlass', 'Faster spanning. +22% dmg, +12% range, +8% attack speed.'), l3: std('Armor-Piercer', 'Punches plate. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Executioner Bolt' },
+    menatarms: { l2: std("Sergeant's Drill", 'Steadier line. +22% dmg, +12% range, +8% attack speed.'), l3: std('Tempered Steel', 'Tougher, sharper. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Unbreakable Wall' },
+    hedge:     { l2: std('Static Charge', 'Bigger jolt. +22% dmg, +12% range, +8% attack speed.'), l3: std('Storm Weaving', 'Longer arcs. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Chain Cataclysm' },
+    ballista:  { l2: std('Iron Bolts', 'Heavier shot. +22% dmg, +12% range, +8% attack speed.'), l3: std('Torsion Tuning', 'Faster loose. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Line Splitter' },
+    longbow:   { l2: std('Yew Heartwood', 'Deeper draw. +22% dmg, +12% range, +8% attack speed.'), l3: std('Cloth-Yard Shaft', 'Longer range. +22% dmg, +12% range, +8% attack speed.'), ascend: "Sky-Piercer's Oath" },
+    knight:    { l2: std("Knight's Oath", 'Bolder charge. +22% dmg, +12% range, +8% attack speed.'), l3: std('Destrier', 'A stronger steed. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Twin Lances' },
+    cleric:    { l2: std('Blessed Rites', 'Stronger blessings. +22% dmg, +12% range, +8% attack speed.'), l3: std('Consecration', 'Wider grace. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Divine Aegis' },
+    trebuchet: { l2: std('Heavier Counterweight', 'Bigger payload. +22% dmg, +12% range, +8% attack speed.'), l3: std('Master Ranging', 'Truer arc. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Triple Barrage' },
+    templar:   { l2: std('Blessed Bolts', 'Radiant strikes. +22% dmg, +12% range, +8% attack speed.'), l3: std('Oath of Light', 'Farther faith. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Everliving Martyr' },
+    frostmagus:{ l2: std('Frostheart Surge', 'Colder core. +22% dmg, +12% range, +8% attack speed.'), l3: std('Deepwinter', 'Wider chill. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Absolute Zero' },
+    bombard:   { l2: std('Corned Powder', 'Bigger blast. +22% dmg, +12% range, +8% attack speed.'), l3: std('Rifled Bore', 'Longer reach. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Doomsday Charge' },
+    falconer:  { l2: std('Prized Hunters', 'Keener birds. +22% dmg, +12% range, +8% attack speed.'), l3: std('Wide Cast', 'Longer flights. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Sky Sovereigns' },
+    paladin:   { l2: std("Champion's Resolve", 'Greater might. +22% dmg, +12% range, +8% attack speed.'), l3: std('Rallying Banner', 'Wider aura. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Aegis of Kings' },
+    archmage:  { l2: std('Arcane Mastery', 'Mightier spells. +22% dmg, +12% range, +8% attack speed.'), l3: std('Ley-Line Tap', 'Longer reach. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Trinity Cast' },
+    engineer:  { l2: std('Reinforced Turrets', 'Sturdier builds. +22% dmg, +12% range, +8% attack speed.'), l3: std('Assembly Line', 'Faster works. +22% dmg, +12% range, +8% attack speed.'), ascend: 'War Foundry' },
+    wyvernrider:{ l2: std('Firebreath Tonic', 'Hotter breath. +22% dmg, +12% range, +8% attack speed.'), l3: std('Ace Flight', 'Swifter strafe. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Trail of Cinders' },
+    marshal:   { l2: std('War Council', 'Stronger command. +22% dmg, +12% range, +8% attack speed.'), l3: std('Grand Strategy', 'Wider reach. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Banner of the Realm' },
+    wyrm:      { l2: std('Molten Gullet', 'Fiercer breath. +22% dmg, +12% range, +8% attack speed.'), l3: std('Ancient Fury', 'Wider cone. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Elder Cataclysm' },
+    lich:      { l2: std('Grave Bind', 'Stronger raise. +22% dmg, +12% range, +8% attack speed.'), l3: std('Death Dominion', 'Wider grasp. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Undying Legion' },
+    grail:     { l2: std('Radiant Ascension', 'Holier light. +22% dmg, +12% range, +8% attack speed.'), l3: std('Eternal Grace', 'Farther reach. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Judgment Eternal' },
+    sovereign: { l2: std('Reality Weave', 'Warped might. +22% dmg, +12% range, +8% attack speed.'), l3: std('Worldforge Core', 'Wider warp. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Reforge the World' },
+  };
 })();
 
 ;
@@ -1362,6 +1491,7 @@ button:hover::after { transform: translateX(120%); }
     E({ id: 'sig_penitent', name: 'Chained Penitent', family: 'Undead', hp: 320, speed: 38, armor: 12, magicResist: 0.10, bounty: 24, traits: ['Cursed'], abilities: { curseAura: { radius: 120, dmg: 0.15 } }, motif: 'zombie', cost: 40 }),
     E({ id: 'sig_magmabrute', name: 'Magma Brute', family: 'Demon', hp: 620, speed: 32, armor: 24, magicResist: 0.20, bounty: 34, traits: ['Immune-Fire', 'Armored'], abilities: {}, motif: 'demon', cost: 50 }),
     E({ id: 'sig_thronesentinel', name: 'Throne Sentinel', family: 'Arcane', hp: 460, speed: 36, armor: 16, magicResist: 0.50, bounty: 36, traits: [], abilities: { suppressAbilities: { radius: 150 } }, motif: 'golem', cost: 52 }),
+    E({ id: 'sig_wendigo', name: 'Wendigo', family: 'Undead', hp: 440, speed: 46, armor: 8, magicResist: 0.10, bounty: 34, traits: ['Fast', 'Regenerating'], abilities: { regen: 32 }, motif: 'wraith', cost: 44 }),
 
     /* ------------------------------- BOSSES ---------------------------- */
     E({ id: 'boss_corvin', name: 'Bandit King Corvin', family: 'Bandit', hp: 4200, speed: 40, armor: 14, magicResist: 0.10, bounty: 300, traits: ['Boss'],
@@ -1505,10 +1635,26 @@ button:hover::after { transform: translateX(120%); }
       env: { weather: ['Clear', 'Ashfall', 'Storm', 'Blizzard'], dayNight: true, gimmick: 'finale' },
       families: { Bandit: 1, Orc: 2, Undead: 3, Demon: 4, Arcane: 3, Aerial: 3 },
       desc: 'Every system at once. The Ember Throne, where Azhrakoth waits.' }),
+
+    // 💜 WINTER MAP — plays ONLY on the Purple Nightmare tier. Build inside the
+    // campfire-lit ruined houses; the Coldness map modifier shrouds every foe.
+    M({ id: 'winterhold', name: 'Winterhold Ruins', order: 13, signature: 'sig_wendigo',
+      paths: [[[0, 7], [5, 7], [5, 3], [11, 3], [11, 11], [16, 11], [16, 6], [19, 6]]],
+      water: [], highground: [], hazard: [], holy: [], cursed: [], unbuildable: [],
+      houses: [[3, 8], [4, 8], [3, 9], [8, 5], [9, 5], [8, 6], [13, 9], [14, 9], [13, 8], [7, 10], [8, 10], [17, 8], [17, 9], [2, 5], [13, 2], [14, 2]],
+      env: { weather: ['Blizzard'], dayNight: true, gimmick: 'winter' },
+      coldness: true, houseOnly: true, winter: true, fixedDiff: 'Purple Nightmare',
+      families: { Bandit: 0, Orc: 2, Undead: 4, Demon: 2, Arcane: 2, Aerial: 2 },
+      desc: 'A frozen ruin under endless blizzard. Towers can be built ONLY inside the campfire-lit houses — everywhere else, the cold kills. Every foe wears a Cold shroud that only Fire or Holy damage can melt.' }),
   ];
 
   RS.MAP_BY_ID = {};
   RS.MAPS.forEach((m) => { RS.MAP_BY_ID[m.id] = m; });
+
+  // Each map carries its OWN difficulty rating (1-6, harder = more reward),
+  // independent of the chosen game difficulty. (Presentational + reward mult.)
+  const RATING = { farmstead: 1, riverford: 2, blackforest: 2, highkeep: 3, frostvale: 3, sunkenbog: 3, ashen: 4, aldermere: 4, dragonspine: 4, cathedral: 5, obsidian: 5, emberthrone: 6, winterhold: 6 };
+  RS.MAPS.forEach((m) => { m.rating = RATING[m.id] || Math.max(1, Math.ceil(m.order / 2)); m.rewardMult = +(1 + (m.rating - 1) * 0.14).toFixed(2); });
 })();
 
 ;
@@ -1719,6 +1865,7 @@ button:hover::after { transform: translateX(120%); }
     constructor(mapDef, diffDef, loadoutIds, meta) {
       this.map = mapDef;
       this.diff = diffDef;
+      this.coldness = !!mapDef.coldness; // Winter map only — Cold shroud on foes
       this.loadout = loadoutIds.slice();
       this.meta = meta; // player meta profile (roster, tokens...) read-only here
       this.rng = new RS.RNG((this._hashSeed(mapDef.id) ^ (diffDef.order * 2654435761)) >>> 0);
@@ -1833,6 +1980,7 @@ button:hover::after { transform: translateX(120%); }
       applySpecial(this.map.hazard, 'hazard');
       applySpecial(this.map.holy, 'holy');
       applySpecial(this.map.cursed, 'cursed');
+      applySpecial(this.map.houses, 'house'); // Winter map: the only buildable tiles
 
       // Precompute path-adjacency (for blocker placement & siegebreaker).
       this.pathAdjacent = new Set();
@@ -1991,6 +2139,8 @@ button:hover::after { transform: translateX(120%); }
         if (t.occupied) return { ok: false, reason: 'Occupied' };
         const k = t.kind;
         if (k === 'path') return { ok: false, reason: 'Path Blocked' };
+        // Winter map: build ONLY inside the campfire-lit houses (overrides other rules).
+        if (this.map.houseOnly) { if (k !== 'house') return { ok: false, reason: '🔥 Build inside a house' }; continue; }
         if (k === 'unbuildable') return { ok: false, reason: 'Unbuildable' };
         if (k === 'water' && towerDef.placement !== 'Water-capable') return { ok: false, reason: 'Water: needs water tower' };
         if (towerDef.placement === 'High-ground-only' && k !== 'highground') return { ok: false, reason: 'High ground only' };
@@ -2236,7 +2386,11 @@ button:hover::after { transform: translateX(120%); }
         splitsLeft: def.abilities.splitsLeft || 0,
         abilT: {}, buffSpeed: 1, revived: false, isBoss: def.traits.includes('Boss'),
         bossPhase: 1, adaptResist: 0, killerType: null,
+        coldHp: 0, coldMax: 0, _coldBroke: 0,
       };
+      // Coldness (Winter map): a Cold shroud equal to 50% max HP that must be
+      // melted with Fire/Holy before HP can be reduced.
+      if (this.coldness) { e.coldMax = e.maxHp * 0.5; e.coldHp = e.coldMax; }
       // adaptive resist (Hardcore)
       if (this.diff.adaptive && this._adaptType && def.family) {
         // enemies gain resist to whichever type killed most last wave
@@ -2399,6 +2553,15 @@ button:hover::after { transform: translateX(120%); }
     _damageEnemy(e, amount, type, opts) {
       if (!e.alive) return;
       opts = opts || {};
+      // Coldness (Winter map only): the Cold shroud absorbs all damage until
+      // melted. Fire/Holy melt it at full rate; other damage chips it slowly.
+      if (this.coldness && e.coldHp > 0) {
+        const warm = (type === 'Fire' || type === 'Holy');
+        e.coldHp -= amount * (warm ? 1 : 0.35);
+        if (e.coldHp <= 0) { e.coldHp = 0; e._coldBroke = 0.35; if (!opts.silent) this.addFloater(e.x, e.y - 14, 'CRACK!', '#bfeaf5'); }
+        else if (!opts.fromDot && !opts.silent && warm) this.addFloater(e.x, e.y - 10, '❄' + Math.round(amount), '#bfeaf5');
+        return; // no HP damage while the shroud holds
+      }
       const vuln = C.Status.vulnMult(e);
       let dmg = amount * vuln;
       e.hp -= dmg;
@@ -4086,13 +4249,17 @@ button:hover::after { transform: translateX(120%); }
       const curIds = new Set();
       for (const e of m.enemies) {
         if (!e.alive) continue;
-        if (!e.vis) e.vis = { id: ++this._visId, gait: Math.random() * TAU, faceLeft: false, px: e.x, py: e.y };
+        if (!e.vis) e.vis = { id: ++this._visId, gait: Math.random() * TAU, faceLeft: false, px: e.x, py: e.y, revealFlash: 0, wasRevealed: false, crackDone: false };
         const v = e.vis; curIds.add(v.id);
         const moved = dist(e.x, e.y, v.px, v.py);
         // gait advances with actual movement so slow/frozen enemies slow/stop
         v.gait += (moved / TILE) * RS.ANIM.gaitHzBase * TAU;
         if (Math.abs(e.x - v.px) > 0.2) v.faceLeft = e.x < v.px;
         v.px = e.x; v.py = e.y;
+        if (v.revealFlash > 0) v.revealFlash = Math.max(0, v.revealFlash - dt);
+        // cold shroud: ambient frost + one-shot shatter when it breaks
+        if (e.coldHp > 0 && Math.random() < 0.04) VFX.frost(e.x + (Math.random() - 0.5) * 12, e.y - 6, 1);
+        if (e._coldBroke > 0 && !v.crackDone) { v.crackDone = true; VFX.frost(e.x, e.y - 6, 10); VFX.ring(e.x, e.y - 6, '#bfeaf5', 4, 26, 0.4, 2); }
         // boss entrance detection
         if (e.isBoss && !v.entered) { v.entered = true; this._bossEntrance(m, e); }
         this._enemyPrev.set(v.id, { x: e.x, y: e.y, motif: e.def.motif, family: e.def.family, isBoss: e.isBoss });
@@ -4185,16 +4352,18 @@ button:hover::after { transform: translateX(120%); }
     _buildTerrain(m) {
       const cv = document.createElement('canvas'); cv.width = m.cols * TILE; cv.height = m.rows * TILE;
       const c = cv.getContext('2d'); const W = cv.width, H = cv.height;
-      // 1) continuous grass field with a soft top-lit vertical gradient
+      const winter = !!m.map.winter;
+      // 1) continuous ground field — snow on the Winter map, grass elsewhere
       const gg = c.createLinearGradient(0, 0, 0, H);
-      gg.addColorStop(0, RS.RAMP.grass.light); gg.addColorStop(0.55, RS.RAMP.grass.mid); gg.addColorStop(1, RS.RAMP.grass.shadow);
+      if (winter) { gg.addColorStop(0, '#e9f1f7'); gg.addColorStop(0.55, '#cdd9e6'); gg.addColorStop(1, '#aab8ca'); }
+      else { gg.addColorStop(0, RS.RAMP.grass.light); gg.addColorStop(0.55, RS.RAMP.grass.mid); gg.addColorStop(1, RS.RAMP.grass.shadow); }
       c.fillStyle = gg; c.fillRect(0, 0, W, H);
-      // scattered deterministic tufts across the whole field (no per-tile grid)
+      // scattered deterministic detail across the whole field (no per-tile grid)
       for (let gy = 8; gy < H; gy += 11) for (let gx = 6; gx < W; gx += 13) {
         const s = ((gx * 73856093) ^ (gy * 19349663)) >>> 0;
         const jx = gx + (s & 7) - 3, jy = gy + ((s >> 3) & 7) - 3;
-        c.fillStyle = (s & 1) ? RS.RAMP.grass.shadow : A.alpha(RS.RAMP.grass.light, 0.5);
-        c.fillRect(jx, jy, 1, 2 + (s & 1));
+        if (winter) { c.fillStyle = (s & 1) ? A.alpha('#ffffff', 0.6) : A.alpha('#9fb0c4', 0.5); c.beginPath(); c.arc(jx, jy, 1 + (s & 1), 0, TAU); c.fill(); }
+        else { c.fillStyle = (s & 1) ? RS.RAMP.grass.shadow : A.alpha(RS.RAMP.grass.light, 0.5); c.fillRect(jx, jy, 1, 2 + (s & 1)); }
       }
       // 2) special terrain as soft, slightly-overlapping rounded blobs (merge)
       // Two-pass patch so neighbouring tiles of a kind merge into one smooth
@@ -4212,7 +4381,25 @@ button:hover::after { transform: translateX(120%); }
       patch('cursed', RS.RAMP.void); patch('hazard', RS.RAMP.lava);
       // 3) flowing path splines
       for (const p of m.paths) this._smoothPath(c, p.pts);
+      // 4) ruined houses (Winter map) — the only buildable tiles; static shell
+      for (let r = 0; r < m.rows; r++) for (let col = 0; col < m.cols; col++) if (m.tileKind(col, r) === 'house') this._drawHouseShell(c, col * TILE, r * TILE, col, r);
       this._terrain = cv;
+    }
+    // Static ruined-house shell baked into the terrain cache (fire drawn live).
+    _drawHouseShell(c, x, y, col, r) {
+      const s = ((col * 73856093) ^ (r * 19349663)) >>> 0;
+      // snow-cleared warm dirt floor
+      c.fillStyle = '#3a2c22'; this._roundRect(c, x + 3, y + 6, TILE - 6, TILE - 9, 6); c.fill();
+      c.fillStyle = '#2a1f18'; this._roundRect(c, x + 7, y + 10, TILE - 14, TILE - 15, 4); c.fill();
+      // broken timber walls (a few planks, snow-capped)
+      c.strokeStyle = RS.RAMP.timber.shadow; c.lineWidth = 3;
+      c.beginPath(); c.moveTo(x + 5, y + TILE - 5); c.lineTo(x + 5, y + 8); c.lineTo(x + 16, y + 3); c.stroke();
+      c.beginPath(); c.moveTo(x + TILE - 5, y + TILE - 5); c.lineTo(x + TILE - 5, y + 10); c.stroke();
+      c.strokeStyle = RS.RAMP.timber.mid; c.lineWidth = 2;
+      c.beginPath(); c.moveTo(x + 5, y + 12 + (s & 3)); c.lineTo(x + TILE - 8, y + 9); c.stroke();
+      // snow caps on the beams
+      c.strokeStyle = 'rgba(255,255,255,0.85)'; c.lineWidth = 2;
+      c.beginPath(); c.moveTo(x + 5, y + 7); c.lineTo(x + 16, y + 2); c.stroke();
     }
     _roundRect(c, x, y, w, h, r) {
       if (c.roundRect) { c.beginPath(); c.roundRect(x, y, w, h, r); return; }
@@ -4222,11 +4409,10 @@ button:hover::after { transform: translateX(120%); }
     }
     _smoothPath(c, pts) {
       if (pts.length < 2) return;
-      const trace = () => {
-        c.beginPath(); c.moveTo(pts[0].x, pts[0].y);
-        for (let i = 1; i < pts.length - 1; i++) { const mx = (pts[i].x + pts[i + 1].x) / 2, my = (pts[i].y + pts[i + 1].y) / 2; c.quadraticCurveTo(pts[i].x, pts[i].y, mx, my); }
-        c.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
-      };
+      // Trace the EXACT waypoint centreline (the line enemies actually walk).
+      // Round joins/caps round the corners visually without moving the centre,
+      // so the road always sits under the enemies. (Fixes corner desync.)
+      const trace = () => { c.beginPath(); c.moveTo(pts[0].x, pts[0].y); for (let i = 1; i < pts.length; i++) c.lineTo(pts[i].x, pts[i].y); };
       c.lineJoin = 'round'; c.lineCap = 'round';
       // soft cast shadow
       c.strokeStyle = 'rgba(0,0,0,0.25)'; c.lineWidth = TILE * 0.92; trace(); c.stroke();
@@ -4269,27 +4455,50 @@ button:hover::after { transform: translateX(120%); }
           if (Math.random() < 0.1) VFX.smoke(cx, cy, 1, '#7b4fb5');
         } else if (k === 'highground') {
           ctx.fillStyle = A.alpha('#fff', 0.05); ctx.fillRect(x + 4, y + 4, TILE - 8, 3);
+        } else if (k === 'house') {
+          // warm campfire light pooling out of the ruined house
+          const fl = 0.7 + Math.sin(t * 7 + col) * 0.25;
+          const g = ctx.createRadialGradient(cx, cy + 4, 1, cx, cy + 4, 26); g.addColorStop(0, A.alpha('#ffb457', 0.5 * fl)); g.addColorStop(0.6, A.alpha('#ff7a2a', 0.2 * fl)); g.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = g; ctx.fillRect(x - 8, y - 8, TILE + 16, TILE + 16); ctx.restore();
+          // the fire itself (logs + flame) — only when no tower occupies the tile
+          const occupied = m._tile(col, r) && m._tile(col, r).occupied;
+          if (!occupied) {
+            ctx.fillStyle = '#3a2018'; ctx.fillRect(cx - 6, cy + 6, 12, 3);
+            const fh = 7 + Math.sin(t * 12 + col) * 2.5;
+            ctx.fillStyle = '#e8722c'; ctx.beginPath(); ctx.moveTo(cx - 5, cy + 6); ctx.quadraticCurveTo(cx, cy + 6 - fh - 4, cx + 5, cy + 6); ctx.fill();
+            ctx.fillStyle = '#ffcf5a'; ctx.beginPath(); ctx.moveTo(cx - 2.5, cy + 6); ctx.quadraticCurveTo(cx, cy + 6 - fh, cx + 2.5, cy + 6); ctx.fill();
+            if (Math.random() < 0.3) VFX.embers(cx + (Math.random() - 0.5) * 8, cy + 2, 1, '#ffb457');
+          }
         }
       }
-      // grass sway hint on buildable edges near path (cheap: draw a few swaying tufts along path tiles)
-      ctx.strokeStyle = A.alpha('#6fa048', 0.5);
-      // (kept subtle; heavy grass would cost — the cached base already reads as grass)
     }
 
     /* ------------------------- range + ghost ------------------------ */
     _rangeAndGhost(ctx, m) {
       const sel = this.selected;
       if (sel && !sel.def.traits.globalAura) this._rangeRing(ctx, sel.x, sel.y, m._effectiveRange(sel), RS.rarityPal(sel.def.rarity).glow, 0.5);
+      // reveal-radius overlay for a selected Reveal tower (Torch / Scout / Cleric)
+      if (sel && sel.def.traits.reveal) this._revealRing(ctx, sel.x, sel.y, sel.def.traits.reveal * TILE);
       if (this.showRange && !sel) for (const t of m.towers) if (!t.def.traits.globalAura) this._rangeRing(ctx, t.x, t.y, m._effectiveRange(t), '#ffffff', 0.12);
       if (this.ghost && this.hover) {
         const def = this.ghost, { c, r } = this.hover, chk = m.canPlace(def, c, r);
         const fp = def.traits.footprint || 1;
+        // Winter: warm "safe from cold" aura when the ghost sits on a house
+        if (chk.ok && m.map.houseOnly) { const cx0 = c * TILE + fp * TILE / 2, cy0 = r * TILE + fp * TILE / 2; ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(cx0, cy0, 2, cx0, cy0, 30); g.addColorStop(0, 'rgba(255,170,80,0.4)'); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx0, cy0, 30, 0, TAU); ctx.fill(); ctx.restore(); }
         ctx.fillStyle = chk.ok ? 'rgba(95,168,85,0.28)' : 'rgba(224,75,43,0.28)'; ctx.fillRect(c * TILE, r * TILE, TILE * fp, TILE * fp);
         const cx = c * TILE + fp * TILE / 2, cy = r * TILE + fp * TILE / 2;
         if (!def.traits.globalAura) this._rangeRing(ctx, cx, cy, def.rangeT * TILE, chk.ok ? '#5fa855' : '#e04b4b', 0.4);
+        if (def.traits.reveal) this._revealRing(ctx, cx, cy, def.traits.reveal * TILE);
         ctx.save(); ctx.globalAlpha = 0.7; S.drawTower(ctx, def, cx, cy, { t: this.clock, aim: -0.3 }); ctx.restore();
         if (!chk.ok) { ctx.fillStyle = '#fff'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(chk.reason, cx, cy - fp * TILE / 2 - 6); ctx.textAlign = 'left'; }
       }
+    }
+    _revealRing(ctx, x, y, r) {
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const g = ctx.createRadialGradient(x, y, r * 0.4, x, y, r); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(120,200,255,0.10)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+      ctx.setLineDash([2, 6]); ctx.lineDashOffset = this.clock * 16; ctx.strokeStyle = 'rgba(150,210,255,0.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(150,210,255,0.7)'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('👁 reveal', x, y - r - 3); ctx.textAlign = 'left';
+      ctx.restore();
     }
     _rangeRing(ctx, x, y, r, color, str) {
       ctx.save();
@@ -4331,15 +4540,52 @@ button:hover::after { transform: translateX(120%); }
       const arr = m.enemies.slice().sort((a, b) => a.y - b.y);
       for (const e of arr) {
         if (!e.alive) continue;
+        // Stealth foes ride a faint ghost path until a Reveal tower exposes them.
+        const stealth = e.def.traits.includes('Stealth');
+        let alpha = 1;
+        if (stealth) {
+          const revealed = this._enemyRevealed(m, e);
+          if (e.vis) { if (revealed && !e.vis.wasRevealed) { e.vis.revealFlash = 0.4; VFX.ring(e.x, e.y, '#9fd0ff', 4, 30, 0.4, 2); } e.vis.wasRevealed = revealed; }
+          alpha = revealed ? 1 : 0.28 + Math.sin(this.clock * 5 + (e.vis ? e.vis.id : 0)) * 0.06;
+          if (!revealed) { // shimmer distortion trail
+            ctx.save(); ctx.globalAlpha = 0.15; ctx.strokeStyle = '#9fd0ff'; ctx.setLineDash([3, 5]); ctx.beginPath(); const p = m.paths[e.lane]; ctx.moveTo(e.x, e.y); ctx.lineTo(p.goal.x, p.goal.y); ctx.stroke(); ctx.setLineDash([]); ctx.restore(); }
+        }
+        ctx.save(); ctx.globalAlpha = alpha;
         if (e.isBoss) this._drawBoss(ctx, e); else S.drawEnemy(ctx, e, this.clock);
-        this._hpBar(ctx, e);
+        if (e.vis && e.vis.revealFlash > 0) { ctx.globalAlpha = e.vis.revealFlash; VFX.enabled && S.circ(ctx, e.x, e.y - 8, 10, A.alpha('#dff0ff', 0.6)); }
+        ctx.restore();
+        this._bars(ctx, e, m);
       }
     }
-    _hpBar(ctx, e) {
-      const w = e.isBoss ? 46 : 16, hp = Math.max(0, e.hp / e.maxHp);
-      const by = e.y - (e.isBoss ? 34 : (RS.Sprites.getSheet(e.def.motif).size * 0.5 + 4));
-      ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(e.x - w / 2, by, w, e.isBoss ? 4 : 3);
-      ctx.fillStyle = hp > 0.5 ? RS.PALETTE.good : hp > 0.25 ? RS.PALETTE.warn : RS.PALETTE.bad; ctx.fillRect(e.x - w / 2, by, w * hp, e.isBoss ? 4 : 3);
+    _enemyRevealed(m, e) {
+      for (const t of m.towers) { const rv = t.def.traits.reveal; if (rv && dist2(t.x, t.y, e.x, e.y) < (rv * TILE) ** 2) return true; }
+      return false;
+    }
+    // Stacked bars above an enemy: Cold (Winter only) → Metal (Shielded) → HP.
+    _bars(ctx, e, m) {
+      const w = e.isBoss ? 46 : 16, h = e.isBoss ? 4 : 3;
+      let by = e.y - (e.isBoss ? 34 : (RS.Sprites.getSheet(e.def.motif).size * 0.5 + 4));
+      const bar = (frac, col, extra) => {
+        ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(e.x - w / 2, by, w, h);
+        ctx.fillStyle = col; ctx.fillRect(e.x - w / 2, by, w * Math.max(0, Math.min(1, frac)), h);
+        if (extra) extra(by);
+        by -= h + 1.5;
+      };
+      // HP (drawn first = bottom)
+      const hp = Math.max(0, e.hp / e.maxHp);
+      bar(hp, hp > 0.5 ? RS.PALETTE.good : hp > 0.25 ? RS.PALETTE.warn : RS.PALETTE.bad);
+      // Metal armour bar (Shielded foes — blocks physical until broken)
+      if (e.shieldHits > 0 && e.def.abilities.shieldHits) {
+        bar(e.shieldHits / e.def.abilities.shieldHits, '#c6ccd4', (y) => {
+          // moving metallic shine
+          const sx = e.x - w / 2 + ((this.clock * 30) % w);
+          ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(sx, y, 2, h);
+        });
+      }
+      // Cold shroud bar (Winter map only — melt with Fire/Holy)
+      if (e.coldMax > 0 && e.coldHp > 0) {
+        bar(e.coldHp / e.coldMax, '#8fd4e8', (y) => { ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.strokeRect(e.x - w / 2 + 0.5, y + 0.5, w - 1, h - 1); });
+      }
     }
     _drawBoss(ctx, e) {
       // bosses drawn live at big scale with ambient embers
@@ -4441,6 +4687,11 @@ button:hover::after { transform: translateX(120%); }
       if (this.lightning > 0) { ctx.fillStyle = A.alpha('#eaf0ff', this.lightning * 3); ctx.fillRect(0, 0, W, H); }
     }
     _post(ctx, W, H, m) {
+      // Winter frost overlay: cold blue cast + icy corners
+      if (m.map.winter) {
+        ctx.fillStyle = 'rgba(120,180,220,0.12)'; ctx.fillRect(0, 0, W, H);
+        const fg = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.8); fg.addColorStop(0, 'rgba(0,0,0,0)'); fg.addColorStop(1, 'rgba(180,215,240,0.18)'); ctx.fillStyle = fg; ctx.fillRect(0, 0, W, H);
+      }
       // vignette
       const g = ctx.createRadialGradient(W / 2, H / 2, H * 0.4, W / 2, H / 2, H * 0.75); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.35)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
       if (m.freeze > 0) { ctx.fillStyle = A.alpha('#ffffff', m.freeze * 0.15); ctx.fillRect(0, 0, W, H); }
@@ -4589,39 +4840,71 @@ button:hover::after { transform: translateX(120%); }
     _wireGo() { $$('[data-go]', this.root).forEach((b) => b.onclick = () => this.show(b.dataset.go)); },
 
     /* ---------------------------- map select -------------------------- */
+    // Difficulty is now picked GLOBALLY here; each map carries its OWN inherent
+    // difficulty rating (harder map = more loot), independent of that choice.
     renderMapSelect() {
-      const hardcoreDone = Meta.allHardcoreCleared();
+      const clearedAt = (did) => RS.MAPS.some((mm) => Meta.p.completions[mm.id] && Meta.p.completions[mm.id][did]);
+      const tiers = RS.DIFFICULTY.filter((d) => !d.purple); // Easy..Hardcore in the selector
+      const diffUnlocked = (d) => d.order === 0 || clearedAt(RS.DIFFICULTY[d.order - 1].id);
+      if (!this.globalDiff || !RS.DIFF_BY_ID[this.globalDiff] || RS.DIFF_BY_ID[this.globalDiff].purple) this.globalDiff = 'Easy';
+      if (!diffUnlocked(RS.DIFF_BY_ID[this.globalDiff])) this.globalDiff = 'Easy';
+      const gd = RS.DIFF_BY_ID[this.globalDiff];
+      const hardcoreDone = clearedAt('Hardcore');
+      const skulls = (n) => '💀'.repeat(n) + '<span class="sk-off">💀</span>'.repeat(6 - n);
+      const maps = RS.MAPS.filter((m) => !m.winter);
       this.root.innerHTML = this._topbar() + `
         <div class="page">
           <div class="page-head"><button class="back" data-go="menu">← Menu</button><h2>Choose Your Battlefield</h2></div>
+          <div class="diffbar">
+            <span class="diffbar-lbl">Game Difficulty:</span>
+            ${tiers.map((d) => { const u = diffUnlocked(d); return `<button class="diffchip d-${d.id.toLowerCase()} ${this.globalDiff === d.id ? 'on' : ''} ${u ? '' : 'locked'}" data-gdiff="${d.id}" ${u ? '' : 'disabled'}>${d.id}${u ? '' : ' 🔒'}</button>`; }).join('')}
+            <span class="diffbar-info">×${gd.hpMult} HP · ${gd.lives} lives · ${gd.tokenMult}× tokens</span>
+          </div>
           <div class="mapgrid">
-          ${RS.MAPS.map((m, i) => {
+          ${maps.map((m) => {
             const comp = Meta.p.completions[m.id] || {};
-            return `<div class="mapcard" data-map="${m.id}">
-              <div class="mapnum">${i + 1}</div>
+            const s = comp[this.globalDiff] ? comp[this.globalDiff].stars : 0;
+            return `<div class="mapcard mapcard-lg" data-play="${m.id}">
+              <div class="map-rate" title="Map difficulty ${m.rating}/6">${skulls(m.rating)}</div>
               <h3>${m.name}</h3>
+              <div class="map-loot">+${Math.round((m.rewardMult - 1) * 100)}% loot${s ? ` · <span class="cleared">${star(s)}</span>` : ''}</div>
               <p>${m.desc}</p>
               ${m.signature && RS.ENEMY_BY_ID[m.signature] ? `<div class="sigfoe">☠ Signature foe: <b>${RS.ENEMY_BY_ID[m.signature].name}</b></div>` : ''}
-              <div class="difrow">
-                ${RS.DIFFICULTY.map((d) => {
-                  const unlocked = Meta.diffUnlocked(m.id, d.id);
-                  const s = comp[d.id] ? comp[d.id].stars : 0;
-                  return `<button class="difbtn ${unlocked ? '' : 'locked'} d-${d.id.toLowerCase()}" data-map="${m.id}" data-diff="${d.id}" ${unlocked ? '' : 'disabled'}>
-                    <b>${d.id}</b><span>${unlocked ? (s ? star(s) : 'Play') : '🔒'}</span></button>`;
-                }).join('')}
-              </div>
+              <button class="playbtn d-${this.globalDiff.toLowerCase()}" data-play="${m.id}">▶ Play · ${this.globalDiff}</button>
             </div>`;
           }).join('')}
-          ${hardcoreDone ? `<div class="mapcard endless" data-map="emberthrone" data-endless="1"><div class="mapnum">✦</div><h3>The Grey Herald</h3><p>Endless superboss. It copies your strongest tower every 60s.</p><button class="difbtn d-hardcore" data-endless="1" data-map="emberthrone">Enter the Endless</button></div>` : ''}
+          </div>
+          <h3 class="special-h">Special Challenges</h3>
+          <div class="mapgrid">
+            <div class="mapcard purple ${hardcoreDone ? '' : 'locked-card'}" data-winter="${hardcoreDone ? 1 : ''}">
+              <div class="frostaura"></div>
+              <div class="map-rate">💜💜💜💜💜💜</div>
+              <h3>💜 Winterhold Ruins</h3>
+              <div class="map-loot purple-loot">PURPLE NIGHTMARE · 12× tokens · Frostcrown cosmetic</div>
+              <p>Build ONLY inside campfire-lit ruined houses. Every foe wears a Cold shroud only Fire or Holy can melt. ${hardcoreDone ? '' : '<b>Unlocks after any Hardcore clear.</b>'}</p>
+              ${hardcoreDone ? `<button class="playbtn d-purple" data-winter="1">💜 Enter the Nightmare</button>` : '<button class="playbtn locked" disabled>🔒 Locked</button>'}
+            </div>
+            ${hardcoreDone ? `<div class="mapcard endless" data-endless="1"><div class="map-rate">✦✦✦✦✦✦</div><h3>The Grey Herald</h3><div class="map-loot">Endless · scaling loot</div><p>Endless superboss on The Ember Throne. It copies your strongest tower every 60s.</p><button class="playbtn d-hardcore" data-endless="1">Enter the Endless</button></div>` : ''}
           </div>
         </div>`;
       this._wireGo();
-      $$('.difbtn:not(.locked)', this.root).forEach((b) => b.onclick = () => {
-        if (b.disabled) return;
-        this.selectedMap = RS.MAP_BY_ID[b.dataset.map];
-        this.selectedDiff = RS.DIFF_BY_ID[b.dataset.diff] || RS.DIFF_BY_ID.Hardcore;
-        this.endless = b.dataset.endless === '1';
+      $$('[data-gdiff]', this.root).forEach((b) => b.onclick = () => { if (!b.disabled) { this.globalDiff = b.dataset.gdiff; this.renderMapSelect(); } });
+      $$('[data-play]', this.root).forEach((b) => b.onclick = (e) => {
+        e.stopPropagation();
+        this.selectedMap = RS.MAP_BY_ID[b.dataset.play];
+        this.selectedDiff = RS.DIFF_BY_ID[this.globalDiff];
+        this.endless = false;
         this.show('loadout');
+      });
+      const win = $('[data-winter="1"].playbtn', this.root) || $('.mapcard.purple[data-winter="1"] .playbtn', this.root);
+      $$('[data-winter="1"]', this.root).forEach((el) => el.onclick = (e) => {
+        e.stopPropagation();
+        if (!hardcoreDone) return;
+        this.selectedMap = RS.MAP_BY_ID.winterhold; this.selectedDiff = RS.DIFF_BY_ID['Purple Nightmare']; this.endless = false; this.show('loadout');
+      });
+      $$('[data-endless="1"]', this.root).forEach((el) => el.onclick = (e) => {
+        e.stopPropagation();
+        this.selectedMap = RS.MAP_BY_ID.emberthrone; this.selectedDiff = RS.DIFF_BY_ID.Hardcore; this.endless = true; this.show('loadout');
       });
     },
 
@@ -4662,6 +4945,7 @@ button:hover::after { transform: translateX(120%); }
       });
       $$('.slot', this.root).forEach((s) => s.onclick = () => { const i = +s.dataset.slot; if (this.workingLoadout[i]) { this.workingLoadout.splice(i, 1); this.renderLoadout(); } });
       $('#startMatch').onclick = () => this.startMatch();
+      this._drawGlyphs(this.root); // FIX: draw the tower silhouettes (were invisible)
     },
 
     _coverageWarnings(ids) {
@@ -4679,8 +4963,11 @@ button:hover::after { transform: translateX(120%); }
     _towerChip(t, big) {
       const c = RS.rarityColor(t.rarity);
       const owned = Meta.ownedCount(t.id);
-      return `<div class="tchip" style="--rc:${c}">
-        <div class="tchip-icon"><canvas class="glyph" data-glyph="${t.id}" width="40" height="40"></canvas></div>
+      const rk = RS.rarityRank(t.rarity);
+      const anim = rk >= 6 ? 'rc-prism' : rk >= 5 ? 'rc-ember' : rk >= 4 ? 'rc-shimmer' : '';
+      return `<div class="tchip ${anim}" style="--rc:${c}">
+        <div class="tchip-icon"><canvas class="glyph" data-glyph="${t.id}" width="44" height="44"></canvas>
+          <span class="dmgicon di-${t.damageType.toLowerCase()}" title="${t.damageType}">${RS.dmgIcon(t.damageType)}</span></div>
         <div class="tchip-info"><b>${t.name}</b><span>${t.rarity} · ${t.cost}g</span>
         ${big ? `<em>DPS ${fmt(RS.towerDps(t))} · ${t.damageType}</em>` : ''}</div>
         ${owned > 1 ? `<span class="dup">×${owned}</span>` : ''}
@@ -5041,9 +5328,17 @@ button:hover::after { transform: translateX(120%); }
       const canUp = sel.level < 5 && m.gold >= upCost;
       const needBranch = sel.level === 3;
       const needDup = sel.level === 4 && Meta.ownedCount(sel.def.id) < 2;
-      box.innerHTML = `<div class="sel-head"><b>${sel.def.name}</b> <span class="lvl">L${sel.level}${sel.ascended ? ' ✦' : ''}</span><button class="cancel" id="deselBtn">✕</button></div>
+      const UP = RS.TOWER_UPGRADES[sel.def.id] || {};
+      const rc = RS.rarityColor(sel.def.rarity);
+      let upName = 'Upgrade', upDesc = '';
+      if (sel.level === 1 && UP.l2) { upName = UP.l2.n; upDesc = UP.l2.d; }
+      else if (sel.level === 2 && UP.l3) { upName = UP.l3.n; upDesc = UP.l3.d; }
+      else if (sel.level === 3) { upName = 'Choose Path'; upDesc = 'Pick a permanent specialisation below.'; }
+      else if (sel.level === 4) { upName = UP.ascend || 'Ascension'; upDesc = sel.def.ascend.desc; }
+      box.innerHTML = `<div class="sel-head" style="--rc:${rc}"><b>${sel.def.name}</b> <span class="dmgicon di-${sel.def.damageType.toLowerCase()}" title="${sel.def.damageType}">${RS.dmgIcon(sel.def.damageType)}</span> <span class="lvl">L${sel.level}${sel.ascended ? ' ✦' : ''}</span><button class="cancel" id="deselBtn">✕</button></div>
         <div class="sel-stats">DPS ${fmt(sel.damage * sel.fireRate * sel.buff.dmg)} · rng ${Math.round(m._effectiveRange(sel))} · ${sel.def.damageType}</div>
         <div class="sel-targets">Target: ${['First', 'Last', 'Strongest', 'Weakest', 'Closest', 'Most-Clustered'].map((mo) => `<button class="tbtn ${sel.targeting === mo ? 'on' : ''}" data-target="${mo}">${mo}</button>`).join('')}</div>
+        ${sel.level < 5 ? `<div class="sel-upname r-${sel.def.rarity.toLowerCase().replace('+', 'plus')}" style="--rc:${rc}"><b>➜ ${upName}</b><span>${upDesc}</span></div>` : ''}
         <div class="sel-actions">
           ${sel.level < 5 ? `<button id="upBtn" class="${canUp && !needDup ? '' : 'disabled'}">${needBranch ? 'Choose Path' : 'Upgrade'} (${upCost}g)</button>` : '<span class="maxed">MAX ✦</span>'}
           ${needDup ? '<span class="hint">Need duplicate to Ascend</span>' : ''}
@@ -5104,16 +5399,19 @@ button:hover::after { transform: translateX(120%); }
       m.encountered.forEach((k) => { if (k.startsWith('enemy:')) Meta.seeEnemy(k.slice(6)); });
       // rewards
       const rewards = { copper: 0, silver: 0, gold: 0, relic: 0, xp: 0 };
-      rewards.copper = Math.round(m.copperEarned);
+      const loot = m.map.rewardMult || 1; // harder maps pay more (§ map ratings)
+      rewards.copper = Math.round(m.copperEarned * loot);
       rewards.xp = m.waveIndex * RS.ACCOUNT.xpPerWave;
       if (won) {
         rewards.xp += RS.ACCOUNT.xpPerMapClear;
-        rewards.silver = Math.round(RS.ECON.silverPerMap * m.diff.tokenMult);
-        if (m.diff.order >= 2) rewards.gold = Math.round(3 * m.diff.tokenMult);
-        if (m.diff.order === 3) rewards.relic = 2;
+        rewards.silver = Math.round(RS.ECON.silverPerMap * m.diff.tokenMult * loot);
+        if (m.diff.order >= 2) rewards.gold = Math.round(3 * m.diff.tokenMult * loot);
+        if (m.diff.order >= 3) rewards.relic = m.diff.purple ? 6 : 2;
         if (m.goldFromBoss) { rewards.gold += m.goldFromBoss * RS.ECON.goldPerBossKill; rewards.xp += RS.ACCOUNT.xpPerBoss; }
         // Hard clear grants a Super roll ticket
         if (m.diff.id === 'Hard') Meta.p.rolls.Super += 1;
+        // Purple Nightmare grants a Divine ticket + the Frostcrown cosmetic
+        if (m.diff.purple) { Meta.p.rolls.Divine = (Meta.p.rolls.Divine || 0) + 1; Meta.p.cosmetics = Meta.p.cosmetics || {}; if (!Meta.p.cosmetics[m.diff.cosmetic]) { Meta.p.cosmetics[m.diff.cosmetic] = true; this._newCosmetic = m.diff.cosmetic; } }
         Meta.recordClear(m.map.id, m.diff.id, m.stars, true);
       }
       Meta.grant('copper', rewards.copper); Meta.grant('silver', rewards.silver);
@@ -5147,13 +5445,14 @@ button:hover::after { transform: translateX(120%); }
             <div class="rw"><b>${fmt(r.xp)}</b><span>XP</span></div>
           </div>
           ${this._lastLeveled ? `<div class="levelup">⬆ Account Level ${Meta.p.account.level}! ${RS.ACCOUNT.unlocks[Meta.p.account.level] || ''}</div>` : ''}
+          ${this._newCosmetic ? `<div class="levelup" style="border-color:#9b59b6;color:#c79bff">👑 Cosmetic unlocked: ${this._newCosmetic}!</div>` : ''}
           <h3>Damage by Tower</h3>
           <div class="dmgchart">
             ${rows.length ? rows.map((row) => `<div class="dmgrow"><span>${row.name}</span><div class="bar"><i style="width:${row.dmg / maxDmg * 100}%"></i></div><em>${fmt(row.dmg)} · ${Math.round(row.dmg / total * 100)}%</em></div>`).join('') : '<em>No damage recorded.</em>'}
           </div>
           <div class="summary-actions">
             <button class="bigbtn" data-go="mapselect">Map Select</button>
-            ${won && Meta.diffUnlocked(m.map.id, this._nextDiffId(m.diff)) ? `<button class="bigbtn hl" id="nextTier">Next Tier ▶</button>` : ''}
+            ${won && !m.diff.purple && !m.map.winter && m.diff.order < 3 ? `<button class="bigbtn hl" id="nextTier">Next Tier ▶</button>` : ''}
             <button class="bigbtn" id="replayBtn">Replay</button>
             <button class="bigbtn" data-go="roll">Go Roll 🎲</button>
           </div>
@@ -5161,6 +5460,7 @@ button:hover::after { transform: translateX(120%); }
       this._wireGo();
       const nb = $('#nextTier'); if (nb) nb.onclick = () => { this.selectedDiff = RS.DIFF_BY_ID[this._nextDiffId(m.diff)]; this.workingLoadout = this.workingLoadout.slice(); this.show('loadout'); };
       $('#replayBtn').onclick = () => { this.show('loadout'); };
+      this._newCosmetic = null;
       this.match = null;
     },
     _nextDiffId(diff) { const order = Math.min(3, diff.order + 1); return RS.DIFFICULTY[order].id; },

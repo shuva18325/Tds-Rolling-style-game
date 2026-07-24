@@ -161,6 +161,75 @@ button:hover::after { transform: translateX(120%); }
 .sigfoe { font-size: 11px; color: #c98a6a; margin: 4px 0 2px; letter-spacing: .3px; }
 .sigfoe b { color: #e0a878; }
 
+/* ===== bigger battlefield ===== */
+#game { max-height: 90vh !important; max-width: 98vw !important; border-radius: 6px;
+  box-shadow: 0 0 0 3px #1a1712, 0 0 0 5px #3a2f1c, 0 0 60px rgba(0,0,0,.7); }
+#matchWrap { background: radial-gradient(circle at 50% 35%, #201d16, #070605 75%) !important; }
+
+/* ===== global difficulty selector ===== */
+.diffbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: linear-gradient(#26241f,#1a1815); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; }
+.diffbar-lbl { font-family: Georgia, serif; color: var(--dim); font-size: 13px; }
+.diffchip { padding: 7px 16px; font-weight: 700; border-radius: 20px; border: 1px solid var(--line); background: #201d18; }
+.diffchip.on { box-shadow: 0 0 0 2px currentColor, 0 0 14px -3px currentColor; }
+.diffchip.d-easy.on { color: #5fa855; } .diffchip.d-medium.on { color: #4a90d9; }
+.diffchip.d-hard.on { color: #9b59b6; } .diffchip.d-hardcore.on { color: #e04b4b; }
+.diffchip.locked { opacity: .45; }
+.diffbar-info { margin-left: auto; font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; }
+
+/* ===== map cards (bigger, own difficulty rating) ===== */
+.mapgrid { grid-template-columns: repeat(3, 1fr); }
+.mapcard-lg { display: flex; flex-direction: column; min-height: 210px; transition: transform .14s, box-shadow .14s; }
+.mapcard-lg:hover { transform: translateY(-4px); box-shadow: 0 10px 26px -10px rgba(217,164,65,.5), inset 0 0 0 1px rgba(217,164,65,.12); }
+.map-rate { letter-spacing: 1px; font-size: 13px; filter: drop-shadow(0 0 3px rgba(0,0,0,.6)); }
+.map-rate .sk-off { opacity: .18; filter: grayscale(1); }
+.map-loot { font-size: 12px; color: var(--gold); margin: 3px 0 6px; font-weight: 600; }
+.map-loot .cleared { color: #d9a441; }
+.mapcard-lg p { min-height: 40px; font-size: 12.5px; }
+.playbtn { margin-top: auto; width: 100%; padding: 10px; font-weight: 700; border-radius: 8px;
+  background: linear-gradient(#3a2f1c,#241d12); border: 1px solid var(--gold); color: var(--gold); }
+.playbtn.d-easy { border-color: #5fa855; color: #7bd070; } .playbtn.d-medium { border-color: #4a90d9; color: #6fb0f5; }
+.playbtn.d-hard { border-color: #9b59b6; color: #c07fe0; } .playbtn.d-hardcore { border-color: #e04b4b; color: #ff6a4a; }
+.playbtn.locked { border-color: var(--line); color: var(--dim); }
+.special-h { color: var(--gold); margin: 22px 0 10px; border-top: 1px solid var(--line); padding-top: 16px; }
+
+/* ===== Winter / Purple Nightmare card ===== */
+.mapcard.purple { position: relative; overflow: hidden; border-color: #9b59b6;
+  background: linear-gradient(160deg, #241633, #141018); }
+.mapcard.purple.locked-card { opacity: .7; filter: grayscale(.3); }
+.mapcard.purple h3 { color: #c79bff; }
+.purple-loot { color: #c79bff !important; font-weight: 700; }
+.playbtn.d-purple { border-color: #9b59b6; color: #d9b6ff; background: linear-gradient(#2a1a3a,#160f22);
+  animation: purplePulse 2s ease-in-out infinite; }
+@keyframes purplePulse { 50% { box-shadow: 0 0 20px -3px #9b59b6; } }
+.frostaura { position: absolute; inset: -40%; pointer-events: none; z-index: 0;
+  background: radial-gradient(circle, rgba(143,212,232,.14), transparent 60%);
+  animation: frostSpin 8s linear infinite; }
+@keyframes frostSpin { to { transform: rotate(360deg); } }
+.mapcard.purple > *:not(.frostaura) { position: relative; z-index: 1; }
+.pill.d-purple, .d-purple { color: #c79bff; border-color: #9b59b6; }
+
+/* ===== damage-type icon badge on tower cards ===== */
+.tchip-icon { position: relative; width: 44px; height: 44px; }
+.dmgicon { position: absolute; bottom: -3px; right: -4px; font-size: 13px; line-height: 1;
+  filter: drop-shadow(0 0 3px rgba(0,0,0,.8)); animation: diPulse 1.8s ease-in-out infinite; }
+@keyframes diPulse { 50% { transform: scale(1.18); } }
+.sel-head .dmgicon { position: static; font-size: 15px; }
+
+/* animated rarity treatment on tower chips */
+.tchip.rc-shimmer { animation: rarShimmer 2.4s ease-in-out infinite; }
+.tchip.rc-ember { animation: rarEmber 1.3s ease-in-out infinite; }
+.tchip.rc-prism { border: 2px solid transparent;
+  border-image: linear-gradient(90deg,#ff5a5a,#f0a92e,#5fa855,#4a90d9,#9b59b6,#ff5a5a) 1;
+  animation: prismSpin 3s linear infinite; }
+
+/* ===== named upgrade block (selected tower panel) ===== */
+.sel-upname { background: #151217; border: 1px solid var(--rc); border-left: 3px solid var(--rc);
+  border-radius: 6px; padding: 5px 8px; margin: 6px 0; }
+.sel-upname b { display: block; color: var(--rc); font-size: 12.5px; }
+.sel-upname span { font-size: 11px; color: var(--dim); line-height: 1.35; }
+.sel-head { border-bottom: 1px solid var(--rc); padding-bottom: 3px; }
+.r-mythicplus { animation: prismSpin 3s linear infinite; }
+
 /* respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001s !important; animation-iteration-count: 1 !important; }

@@ -104,39 +104,71 @@
     _wireGo() { $$('[data-go]', this.root).forEach((b) => b.onclick = () => this.show(b.dataset.go)); },
 
     /* ---------------------------- map select -------------------------- */
+    // Difficulty is now picked GLOBALLY here; each map carries its OWN inherent
+    // difficulty rating (harder map = more loot), independent of that choice.
     renderMapSelect() {
-      const hardcoreDone = Meta.allHardcoreCleared();
+      const clearedAt = (did) => RS.MAPS.some((mm) => Meta.p.completions[mm.id] && Meta.p.completions[mm.id][did]);
+      const tiers = RS.DIFFICULTY.filter((d) => !d.purple); // Easy..Hardcore in the selector
+      const diffUnlocked = (d) => d.order === 0 || clearedAt(RS.DIFFICULTY[d.order - 1].id);
+      if (!this.globalDiff || !RS.DIFF_BY_ID[this.globalDiff] || RS.DIFF_BY_ID[this.globalDiff].purple) this.globalDiff = 'Easy';
+      if (!diffUnlocked(RS.DIFF_BY_ID[this.globalDiff])) this.globalDiff = 'Easy';
+      const gd = RS.DIFF_BY_ID[this.globalDiff];
+      const hardcoreDone = clearedAt('Hardcore');
+      const skulls = (n) => '💀'.repeat(n) + '<span class="sk-off">💀</span>'.repeat(6 - n);
+      const maps = RS.MAPS.filter((m) => !m.winter);
       this.root.innerHTML = this._topbar() + `
         <div class="page">
           <div class="page-head"><button class="back" data-go="menu">← Menu</button><h2>Choose Your Battlefield</h2></div>
+          <div class="diffbar">
+            <span class="diffbar-lbl">Game Difficulty:</span>
+            ${tiers.map((d) => { const u = diffUnlocked(d); return `<button class="diffchip d-${d.id.toLowerCase()} ${this.globalDiff === d.id ? 'on' : ''} ${u ? '' : 'locked'}" data-gdiff="${d.id}" ${u ? '' : 'disabled'}>${d.id}${u ? '' : ' 🔒'}</button>`; }).join('')}
+            <span class="diffbar-info">×${gd.hpMult} HP · ${gd.lives} lives · ${gd.tokenMult}× tokens</span>
+          </div>
           <div class="mapgrid">
-          ${RS.MAPS.map((m, i) => {
+          ${maps.map((m) => {
             const comp = Meta.p.completions[m.id] || {};
-            return `<div class="mapcard" data-map="${m.id}">
-              <div class="mapnum">${i + 1}</div>
+            const s = comp[this.globalDiff] ? comp[this.globalDiff].stars : 0;
+            return `<div class="mapcard mapcard-lg" data-play="${m.id}">
+              <div class="map-rate" title="Map difficulty ${m.rating}/6">${skulls(m.rating)}</div>
               <h3>${m.name}</h3>
+              <div class="map-loot">+${Math.round((m.rewardMult - 1) * 100)}% loot${s ? ` · <span class="cleared">${star(s)}</span>` : ''}</div>
               <p>${m.desc}</p>
               ${m.signature && RS.ENEMY_BY_ID[m.signature] ? `<div class="sigfoe">☠ Signature foe: <b>${RS.ENEMY_BY_ID[m.signature].name}</b></div>` : ''}
-              <div class="difrow">
-                ${RS.DIFFICULTY.map((d) => {
-                  const unlocked = Meta.diffUnlocked(m.id, d.id);
-                  const s = comp[d.id] ? comp[d.id].stars : 0;
-                  return `<button class="difbtn ${unlocked ? '' : 'locked'} d-${d.id.toLowerCase()}" data-map="${m.id}" data-diff="${d.id}" ${unlocked ? '' : 'disabled'}>
-                    <b>${d.id}</b><span>${unlocked ? (s ? star(s) : 'Play') : '🔒'}</span></button>`;
-                }).join('')}
-              </div>
+              <button class="playbtn d-${this.globalDiff.toLowerCase()}" data-play="${m.id}">▶ Play · ${this.globalDiff}</button>
             </div>`;
           }).join('')}
-          ${hardcoreDone ? `<div class="mapcard endless" data-map="emberthrone" data-endless="1"><div class="mapnum">✦</div><h3>The Grey Herald</h3><p>Endless superboss. It copies your strongest tower every 60s.</p><button class="difbtn d-hardcore" data-endless="1" data-map="emberthrone">Enter the Endless</button></div>` : ''}
+          </div>
+          <h3 class="special-h">Special Challenges</h3>
+          <div class="mapgrid">
+            <div class="mapcard purple ${hardcoreDone ? '' : 'locked-card'}" data-winter="${hardcoreDone ? 1 : ''}">
+              <div class="frostaura"></div>
+              <div class="map-rate">💜💜💜💜💜💜</div>
+              <h3>💜 Winterhold Ruins</h3>
+              <div class="map-loot purple-loot">PURPLE NIGHTMARE · 12× tokens · Frostcrown cosmetic</div>
+              <p>Build ONLY inside campfire-lit ruined houses. Every foe wears a Cold shroud only Fire or Holy can melt. ${hardcoreDone ? '' : '<b>Unlocks after any Hardcore clear.</b>'}</p>
+              ${hardcoreDone ? `<button class="playbtn d-purple" data-winter="1">💜 Enter the Nightmare</button>` : '<button class="playbtn locked" disabled>🔒 Locked</button>'}
+            </div>
+            ${hardcoreDone ? `<div class="mapcard endless" data-endless="1"><div class="map-rate">✦✦✦✦✦✦</div><h3>The Grey Herald</h3><div class="map-loot">Endless · scaling loot</div><p>Endless superboss on The Ember Throne. It copies your strongest tower every 60s.</p><button class="playbtn d-hardcore" data-endless="1">Enter the Endless</button></div>` : ''}
           </div>
         </div>`;
       this._wireGo();
-      $$('.difbtn:not(.locked)', this.root).forEach((b) => b.onclick = () => {
-        if (b.disabled) return;
-        this.selectedMap = RS.MAP_BY_ID[b.dataset.map];
-        this.selectedDiff = RS.DIFF_BY_ID[b.dataset.diff] || RS.DIFF_BY_ID.Hardcore;
-        this.endless = b.dataset.endless === '1';
+      $$('[data-gdiff]', this.root).forEach((b) => b.onclick = () => { if (!b.disabled) { this.globalDiff = b.dataset.gdiff; this.renderMapSelect(); } });
+      $$('[data-play]', this.root).forEach((b) => b.onclick = (e) => {
+        e.stopPropagation();
+        this.selectedMap = RS.MAP_BY_ID[b.dataset.play];
+        this.selectedDiff = RS.DIFF_BY_ID[this.globalDiff];
+        this.endless = false;
         this.show('loadout');
+      });
+      const win = $('[data-winter="1"].playbtn', this.root) || $('.mapcard.purple[data-winter="1"] .playbtn', this.root);
+      $$('[data-winter="1"]', this.root).forEach((el) => el.onclick = (e) => {
+        e.stopPropagation();
+        if (!hardcoreDone) return;
+        this.selectedMap = RS.MAP_BY_ID.winterhold; this.selectedDiff = RS.DIFF_BY_ID['Purple Nightmare']; this.endless = false; this.show('loadout');
+      });
+      $$('[data-endless="1"]', this.root).forEach((el) => el.onclick = (e) => {
+        e.stopPropagation();
+        this.selectedMap = RS.MAP_BY_ID.emberthrone; this.selectedDiff = RS.DIFF_BY_ID.Hardcore; this.endless = true; this.show('loadout');
       });
     },
 
@@ -177,6 +209,7 @@
       });
       $$('.slot', this.root).forEach((s) => s.onclick = () => { const i = +s.dataset.slot; if (this.workingLoadout[i]) { this.workingLoadout.splice(i, 1); this.renderLoadout(); } });
       $('#startMatch').onclick = () => this.startMatch();
+      this._drawGlyphs(this.root); // FIX: draw the tower silhouettes (were invisible)
     },
 
     _coverageWarnings(ids) {
@@ -194,8 +227,11 @@
     _towerChip(t, big) {
       const c = RS.rarityColor(t.rarity);
       const owned = Meta.ownedCount(t.id);
-      return `<div class="tchip" style="--rc:${c}">
-        <div class="tchip-icon"><canvas class="glyph" data-glyph="${t.id}" width="40" height="40"></canvas></div>
+      const rk = RS.rarityRank(t.rarity);
+      const anim = rk >= 6 ? 'rc-prism' : rk >= 5 ? 'rc-ember' : rk >= 4 ? 'rc-shimmer' : '';
+      return `<div class="tchip ${anim}" style="--rc:${c}">
+        <div class="tchip-icon"><canvas class="glyph" data-glyph="${t.id}" width="44" height="44"></canvas>
+          <span class="dmgicon di-${t.damageType.toLowerCase()}" title="${t.damageType}">${RS.dmgIcon(t.damageType)}</span></div>
         <div class="tchip-info"><b>${t.name}</b><span>${t.rarity} · ${t.cost}g</span>
         ${big ? `<em>DPS ${fmt(RS.towerDps(t))} · ${t.damageType}</em>` : ''}</div>
         ${owned > 1 ? `<span class="dup">×${owned}</span>` : ''}
@@ -556,9 +592,17 @@
       const canUp = sel.level < 5 && m.gold >= upCost;
       const needBranch = sel.level === 3;
       const needDup = sel.level === 4 && Meta.ownedCount(sel.def.id) < 2;
-      box.innerHTML = `<div class="sel-head"><b>${sel.def.name}</b> <span class="lvl">L${sel.level}${sel.ascended ? ' ✦' : ''}</span><button class="cancel" id="deselBtn">✕</button></div>
+      const UP = RS.TOWER_UPGRADES[sel.def.id] || {};
+      const rc = RS.rarityColor(sel.def.rarity);
+      let upName = 'Upgrade', upDesc = '';
+      if (sel.level === 1 && UP.l2) { upName = UP.l2.n; upDesc = UP.l2.d; }
+      else if (sel.level === 2 && UP.l3) { upName = UP.l3.n; upDesc = UP.l3.d; }
+      else if (sel.level === 3) { upName = 'Choose Path'; upDesc = 'Pick a permanent specialisation below.'; }
+      else if (sel.level === 4) { upName = UP.ascend || 'Ascension'; upDesc = sel.def.ascend.desc; }
+      box.innerHTML = `<div class="sel-head" style="--rc:${rc}"><b>${sel.def.name}</b> <span class="dmgicon di-${sel.def.damageType.toLowerCase()}" title="${sel.def.damageType}">${RS.dmgIcon(sel.def.damageType)}</span> <span class="lvl">L${sel.level}${sel.ascended ? ' ✦' : ''}</span><button class="cancel" id="deselBtn">✕</button></div>
         <div class="sel-stats">DPS ${fmt(sel.damage * sel.fireRate * sel.buff.dmg)} · rng ${Math.round(m._effectiveRange(sel))} · ${sel.def.damageType}</div>
         <div class="sel-targets">Target: ${['First', 'Last', 'Strongest', 'Weakest', 'Closest', 'Most-Clustered'].map((mo) => `<button class="tbtn ${sel.targeting === mo ? 'on' : ''}" data-target="${mo}">${mo}</button>`).join('')}</div>
+        ${sel.level < 5 ? `<div class="sel-upname r-${sel.def.rarity.toLowerCase().replace('+', 'plus')}" style="--rc:${rc}"><b>➜ ${upName}</b><span>${upDesc}</span></div>` : ''}
         <div class="sel-actions">
           ${sel.level < 5 ? `<button id="upBtn" class="${canUp && !needDup ? '' : 'disabled'}">${needBranch ? 'Choose Path' : 'Upgrade'} (${upCost}g)</button>` : '<span class="maxed">MAX ✦</span>'}
           ${needDup ? '<span class="hint">Need duplicate to Ascend</span>' : ''}
@@ -619,16 +663,19 @@
       m.encountered.forEach((k) => { if (k.startsWith('enemy:')) Meta.seeEnemy(k.slice(6)); });
       // rewards
       const rewards = { copper: 0, silver: 0, gold: 0, relic: 0, xp: 0 };
-      rewards.copper = Math.round(m.copperEarned);
+      const loot = m.map.rewardMult || 1; // harder maps pay more (§ map ratings)
+      rewards.copper = Math.round(m.copperEarned * loot);
       rewards.xp = m.waveIndex * RS.ACCOUNT.xpPerWave;
       if (won) {
         rewards.xp += RS.ACCOUNT.xpPerMapClear;
-        rewards.silver = Math.round(RS.ECON.silverPerMap * m.diff.tokenMult);
-        if (m.diff.order >= 2) rewards.gold = Math.round(3 * m.diff.tokenMult);
-        if (m.diff.order === 3) rewards.relic = 2;
+        rewards.silver = Math.round(RS.ECON.silverPerMap * m.diff.tokenMult * loot);
+        if (m.diff.order >= 2) rewards.gold = Math.round(3 * m.diff.tokenMult * loot);
+        if (m.diff.order >= 3) rewards.relic = m.diff.purple ? 6 : 2;
         if (m.goldFromBoss) { rewards.gold += m.goldFromBoss * RS.ECON.goldPerBossKill; rewards.xp += RS.ACCOUNT.xpPerBoss; }
         // Hard clear grants a Super roll ticket
         if (m.diff.id === 'Hard') Meta.p.rolls.Super += 1;
+        // Purple Nightmare grants a Divine ticket + the Frostcrown cosmetic
+        if (m.diff.purple) { Meta.p.rolls.Divine = (Meta.p.rolls.Divine || 0) + 1; Meta.p.cosmetics = Meta.p.cosmetics || {}; if (!Meta.p.cosmetics[m.diff.cosmetic]) { Meta.p.cosmetics[m.diff.cosmetic] = true; this._newCosmetic = m.diff.cosmetic; } }
         Meta.recordClear(m.map.id, m.diff.id, m.stars, true);
       }
       Meta.grant('copper', rewards.copper); Meta.grant('silver', rewards.silver);
@@ -662,13 +709,14 @@
             <div class="rw"><b>${fmt(r.xp)}</b><span>XP</span></div>
           </div>
           ${this._lastLeveled ? `<div class="levelup">⬆ Account Level ${Meta.p.account.level}! ${RS.ACCOUNT.unlocks[Meta.p.account.level] || ''}</div>` : ''}
+          ${this._newCosmetic ? `<div class="levelup" style="border-color:#9b59b6;color:#c79bff">👑 Cosmetic unlocked: ${this._newCosmetic}!</div>` : ''}
           <h3>Damage by Tower</h3>
           <div class="dmgchart">
             ${rows.length ? rows.map((row) => `<div class="dmgrow"><span>${row.name}</span><div class="bar"><i style="width:${row.dmg / maxDmg * 100}%"></i></div><em>${fmt(row.dmg)} · ${Math.round(row.dmg / total * 100)}%</em></div>`).join('') : '<em>No damage recorded.</em>'}
           </div>
           <div class="summary-actions">
             <button class="bigbtn" data-go="mapselect">Map Select</button>
-            ${won && Meta.diffUnlocked(m.map.id, this._nextDiffId(m.diff)) ? `<button class="bigbtn hl" id="nextTier">Next Tier ▶</button>` : ''}
+            ${won && !m.diff.purple && !m.map.winter && m.diff.order < 3 ? `<button class="bigbtn hl" id="nextTier">Next Tier ▶</button>` : ''}
             <button class="bigbtn" id="replayBtn">Replay</button>
             <button class="bigbtn" data-go="roll">Go Roll 🎲</button>
           </div>
@@ -676,6 +724,7 @@
       this._wireGo();
       const nb = $('#nextTier'); if (nb) nb.onclick = () => { this.selectedDiff = RS.DIFF_BY_ID[this._nextDiffId(m.diff)]; this.workingLoadout = this.workingLoadout.slice(); this.show('loadout'); };
       $('#replayBtn').onclick = () => { this.show('loadout'); };
+      this._newCosmetic = null;
       this.match = null;
     },
     _nextDiffId(diff) { const order = Math.min(3, diff.order + 1); return RS.DIFFICULTY[order].id; },

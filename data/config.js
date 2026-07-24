@@ -29,6 +29,12 @@
     { id: 'Hardcore', order: 3, waves: 50, hpMult: 14, speedMult: 1.4, startGold: 400, lives: 1,
       boss: 'boss_azhrakoth', copperMult: 5.0, tokenMult: 6.0, modifiers: ['Unbroken', 'Adaptive', 'Siegebreaker', 'No-Sell'],
       addArmor: 20, magicResist: 0.25, countMult: 1.6, night: false, noSell: true, noLeak: true, siegebreaker: true, adaptive: true },
+    // 💜 Purple Nightmare — a tier ABOVE Hardcore, exclusive to the Winter Map.
+    // Applies the Coldness map modifier and rewards a cosmetic crown.
+    { id: 'Purple Nightmare', order: 4, waves: 45, hpMult: 20, speedMult: 1.5, startGold: 650, lives: 3,
+      boss: 'boss_herald', copperMult: 8.0, tokenMult: 12.0, modifiers: ['Coldness', 'Frostbound', 'No-Sell'],
+      addArmor: 25, magicResist: 0.30, countMult: 1.7, night: true, noSell: true, noLeak: false, siegebreaker: false, adaptive: true,
+      purple: true, cosmetic: 'Frostcrown' },
   ];
   RS.DIFF_BY_ID = {};
   RS.DIFFICULTY.forEach((d) => { RS.DIFF_BY_ID[d.id] = d; });
