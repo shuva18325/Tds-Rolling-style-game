@@ -260,6 +260,11 @@
               ${Meta.p.rolls[r.id] > 0 ? `<span class="tickets">🎟 ${Meta.p.rolls[r.id]}</span>` : ''}</button>`).join('')}
           </div>
           <div class="multirow"><button class="multibtn" data-multi="Basic">Basic ×10</button><button class="multibtn" data-multi="Lucky">Lucky ×10</button><button class="multibtn" data-multi="Super">Super ×10</button></div>
+          <div class="quickroll">
+            ${Meta.p.settings.quickRollUnlocked
+              ? `<label class="toggle"><input type="checkbox" id="quickRollToggle" ${Meta.p.settings.quickRoll ? 'checked' : ''}> ⚡ Quick Roll <small>— skip the suspense animation</small></label>`
+              : `<button class="qrbuy ${Meta.p.tokens.gold >= 15 ? '' : 'disabled'}" id="buyQuickRoll">⚡ Unlock Quick Roll — 15 🟡 Gold <small>skip the roll animation forever</small></button>`}
+          </div>
           <div class="pity">
             <h3>Pity Counters</h3>
             ${bar('Epic guarantee', pity.epic, RS.PITY.epic.hard, '#9b59b6')}
@@ -272,6 +277,8 @@
       this._wireGo();
       $$('[data-roll]', this.root).forEach((b) => b.onclick = () => this.doRoll(b.dataset.roll, 1));
       $$('[data-multi]', this.root).forEach((b) => b.onclick = () => this.doRoll(b.dataset.multi, 10));
+      const qrb = $('#buyQuickRoll'); if (qrb) qrb.onclick = () => { if (Meta.spend('gold', 15)) { Meta.p.settings.quickRollUnlocked = true; Meta.p.settings.quickRoll = true; Meta.save(); this.toast('Quick Roll unlocked!', RS.PALETTE.good); this.renderRoll(); } };
+      const qrt = $('#quickRollToggle'); if (qrt) qrt.onchange = (e) => { Meta.p.settings.quickRoll = e.target.checked; Meta.save(); };
     },
     _rollHistoryHtml() {
       return Meta.p.rollHistory.slice(0, 18).map((e) => {
@@ -298,13 +305,16 @@
     _playRollAnim(results, bestRank) {
       const stage = $('#rollStage');
       const bestColor = RS.RARITY[bestRank].color;
-      stage.innerHTML = `<div class="banner-spin" style="--flare:${bestColor}"></div>`;
-      const spin = stage.firstElementChild;
-      const dur = 700 + bestRank * 300;
-      // escalating flare
-      spin.animate([{ filter: 'brightness(1)' }, { filter: `brightness(${1.5 + bestRank * 0.4})` }, { filter: 'brightness(1)' }], { duration: dur, iterations: 1 });
-      if (bestRank >= 6) { document.body.classList.add('shatter'); setTimeout(() => document.body.classList.remove('shatter'), 900); }
-      if (bestRank >= 5) this.match && (this.match.freeze = 0.4);
+      // Quick Roll: skip the suspense animation entirely (purchased QoL toggle).
+      const quick = Meta.p.settings.quickRoll;
+      const dur = quick ? 0 : 700 + bestRank * 300;
+      if (!quick) {
+        stage.innerHTML = `<div class="banner-spin" style="--flare:${bestColor}"></div>`;
+        const spin = stage.firstElementChild;
+        spin.animate([{ filter: 'brightness(1)' }, { filter: `brightness(${1.5 + bestRank * 0.4})` }, { filter: 'brightness(1)' }], { duration: dur, iterations: 1 });
+        if (bestRank >= 6) { document.body.classList.add('shatter'); setTimeout(() => document.body.classList.remove('shatter'), 900); }
+        if (bestRank >= 5) this.match && (this.match.freeze = 0.4);
+      }
       setTimeout(() => {
         stage.innerHTML = `<div class="results">${results.map((r) => {
           if (r.converted) return `<div class="rescard" style="--rc:${RS.rarityColor('Mythic')}"><div class="resrar">50/50 → Relics</div><b>+${r.converted.relic} 🔮</b></div>`;
@@ -316,9 +326,9 @@
           </div>`;
         }).join('')}</div>`;
         this._drawGlyphs(stage);
-        // full-screen rarity reveal spectacle (glow bloom / column / shatter)
-        const rect = stage.getBoundingClientRect();
-        RS.VFX.overlay.reveal(RS.RARITY[bestRank].id, rect.left + rect.width / 2, rect.top + rect.height / 2);
+        RS.Audio && RS.Audio.reveal(bestRank);
+        // full-screen rarity reveal spectacle — skipped in Quick Roll mode
+        if (!quick) { const rect = stage.getBoundingClientRect(); RS.VFX.overlay.reveal(RS.RARITY[bestRank].id, rect.left + rect.width / 2, rect.top + rect.height / 2); }
         // refresh tokens/pity display without losing stage
         this._refreshTopbar();
         this._refreshPity();
@@ -364,7 +374,7 @@
         </div>`;
       this._wireGo(); this._drawGlyphs(this.root);
       const refresh = () => { this.renderForge(); };
-      const strike = (el, color) => { const r = el.getBoundingClientRect(); RS.VFX.overlay.forgeStrike(r.left + r.width / 2, r.top + r.height / 2, color); };
+      const strike = (el, color) => { const r = el.getBoundingClientRect(); RS.VFX.overlay.forgeStrike(r.left + r.width / 2, r.top + r.height / 2, color); RS.Audio && RS.Audio.forge(); };
       $$('[data-ctok]', this.root).forEach((b) => b.onclick = () => { if (Meta.convertTokens(b.dataset.ctok)) { strike(b, '#ffd98a'); refresh(); } });
       $$('[data-croll]', this.root).forEach((b) => b.onclick = () => { if (Meta.convertRolls(b.dataset.croll)) { strike(b, '#ffd98a'); refresh(); } });
       $$('[data-upcast]', this.root).forEach((b) => b.onclick = () => { if (Meta.upcastShards(b.dataset.upcast)) { strike(b, '#c79bff'); refresh(); } });
@@ -735,6 +745,9 @@
       RS.bus.on('consume-dup', (id) => Meta.consumeDuplicate(id));
       RS.bus.on('level-up', (lvl) => { if (this.screen === 'match') this.toast('Account Level ' + lvl + '!', RS.PALETTE.gold); });
       RS.bus.on('objective-done', (o) => this.toast('Objective complete: ' + o.desc, RS.PALETTE.good));
+      RS.bus.on('wave-clear', () => RS.Audio && RS.Audio.coin());
+      RS.bus.on('match-won', () => RS.Audio && RS.Audio.win());
+      RS.bus.on('match-lost', () => RS.Audio && RS.Audio.lose());
     },
   };
 

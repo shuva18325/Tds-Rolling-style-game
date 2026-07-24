@@ -183,6 +183,32 @@ Every dial a designer needs, with locations. **Data lives in `/data`, logic in
 
 ---
 
+## Latest patch
+
+- **Fixed: flying enemies now follow the road.** Flyers used to cut a straight
+  line from spawn to goal (ignoring the path entirely); they now walk the same
+  spline as ground units — just drawn at altitude with a moving shadow.
+- **`js/audio.js`** — a tiny procedural WebAudio synth (no sound files):
+  arrow/spell shot per damage type, metal **clang** on a Shielded block, a
+  frost **crack** when Cold breaks, cannon boom vs. the Basilisk's deep
+  `greatCannon()`, upgrade/ascend chimes, coin ping, forge strike, and an
+  escalating roll reveal. Gated by the existing sfx setting.
+- **Quick Roll** — a one-time 15 Gold purchase (Roll screen) that skips the
+  roll suspense animation forever after; toggle on/off any time once bought.
+- **Ruined houses redrawn.** They were stamped per-tile and looked incoherent;
+  `_houseClusters()` now flood-fills each map's house tiles into connected
+  groups and `_drawRuinedHouse()` paints ONE structure per group — collapsed
+  snow-capped roof beams, weathered plaster wall, a glowing window, rubble —
+  closer to a real ruin.
+- **The Sultan's Basilisk** — new Legendary tower (`basilisk` in
+  `data/towers.js`): 480 dmg, 0.12 fire rate (a real reload wait), 2×2
+  footprint, `traits.heavyReload`. Its rig (`Sil.basilisk` in `js/sprites.js`)
+  shows a visible reload animation — an ember building in the breech and four
+  loader pips lighting up as the long cooldown fills — then a deep recoil kick,
+  smoke burst, embers, and a screen-shake boom on fire.
+
+---
+
 ## Controls
 
 `1`–`9` quick-select tower · `Space` pause · `F` fast-forward (1×/2×/4×) ·

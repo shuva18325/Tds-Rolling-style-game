@@ -134,6 +134,7 @@
     archmage:   { sil: 'archmage',   anim: 'mage', scale: 1.05 },
     engineer:   { sil: 'engineer',   anim: 'siege' },
     wyvernrider:{ sil: 'wyvernrider',anim: 'flyer', scale: 1.05 },
+    basilisk:   { sil: 'basilisk',   anim: 'siege', scale: 1.55 },
     marshal:    { sil: 'marshal',    anim: 'banner' },
     wyrm:       { sil: 'wyrm',       anim: 'static', scale: 1.25 },
     lich:       { sil: 'lich',       anim: 'mage' },

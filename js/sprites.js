@@ -169,6 +169,36 @@
     facet(ctx, [[16, -2 - flap], [2, 3], [0, -4], [4, -6 - flap]], A.mul(r.mid, 0.9), r.rim);
     facet(ctx, [[-6, 6], [6, 6], [3, -3], [-3, -3]], r.mid, r.rim);
     circ(ctx, 5, -2, 3, r.light); circ(ctx, 6, -3, 1, '#e8722c'); };
+  Sil.basilisk = (ctx, r, a, p) => { // The Sultan's Basilisk — a huge Ottoman-
+    // style siege bombard: heavy wooden cradle, iron-banded barrel, a visible
+    // reload glow that builds toward the long-awaited shot, and a big recoil kick.
+    const kick = p.recoil * 9; // deep recoil along the barrel axis
+    // wide timber carriage + wheels (grounds the huge silhouette)
+    facet(ctx, [[-20, 14], [-20, 6], [20, 6], [20, 14]], woodM(), woodL());
+    circ(ctx, -13, 15, 6, RS.RAMP.timber.shadow, RS.RAMP.timber.light);
+    circ(ctx, 13, 15, 6, RS.RAMP.timber.shadow, RS.RAMP.timber.light);
+    for (let i = 0; i < 6; i++) { const sp = i / 6 * TAU; ctx.strokeStyle = RS.RAMP.iron.mid; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-13, 15); ctx.lineTo(-13 + Math.cos(sp) * 6, 15 + Math.sin(sp) * 6); ctx.moveTo(13, 15); ctx.lineTo(13 + Math.cos(sp) * 6, 15 + Math.sin(sp) * 6); ctx.stroke(); }
+    // trunnion cradle
+    facet(ctx, [[-9, 6], [9, 6], [9, -2], [-9, -2]], RS.RAMP.timber.shadow, RS.RAMP.timber.mid);
+    // the great barrel — thick, tapering, riding the recoil
+    ctx.save(); ctx.translate(-kick * Math.cos(a), -kick * Math.sin(a)); ctx.rotate(a);
+    facet(ctx, [[-6, -8], [26, -6], [30, 0], [26, 6], [-6, 8]], A.mul(r.mid, 0.85), r.rim);
+    // iron reinforcing bands (the iconic Dardanelles-gun rings)
+    ctx.strokeStyle = RS.RAMP.iron.light; ctx.lineWidth = 2;
+    for (const bx of [-2, 6, 14, 22]) { ctx.beginPath(); ctx.moveTo(bx, -7 + (bx > 10 ? -1 : 0)); ctx.lineTo(bx, 7 + (bx > 10 ? 1 : 0)); ctx.stroke(); }
+    circ(ctx, 30, 0, 3.2, '#1a1a1a'); // muzzle bore
+    // reload glow: an ember building in the breech as it charges toward ready
+    if (p.reload > 0.05) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; circ(ctx, -4, 0, 2 + p.reload * 3, A.alpha('#ff6a2a', p.reload)); ctx.restore(); }
+    ctx.restore();
+    // loading crew — small figures that "work" the gun while it reloads
+    const heave = Math.sin(p.t * 3) * (1 - p.reload) * 2;
+    facet(ctx, [[-16, 4 - heave], [-14, -3 - heave], [-12, 4 - heave]], RS.RAMP.leather.mid);
+    facet(ctx, [[14, 4 + heave], [16, -3 + heave], [18, 4 + heave]], RS.RAMP.leather.mid);
+    // loader pips: four glowing dots along the carriage that fill in as reload progresses
+    for (let i = 0; i < 4; i++) { const lit = p.reload >= (i + 1) / 4; ctx.fillStyle = lit ? '#ffcb5a' : 'rgba(255,255,255,0.18)'; circ(ctx, -12 + i * 8, 11, 1.6, ctx.fillStyle); }
+    // banner of rarity on a short standard
+    ctx.strokeStyle = RS.RAMP.timber.shadow; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-19, 6); ctx.lineTo(-19, -6); ctx.stroke();
+    facet(ctx, [[-19, -6], [-13, -4], [-19, -2]], r.light); };
   // --- MYTHIC ---
   Sil.marshal = (ctx, r, a, p) => { // grand banner + crown
     ctx.strokeStyle = RS.RAMP.gold.mid; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, 12); ctx.lineTo(0, -18); ctx.stroke();
@@ -215,7 +245,7 @@
     // animation params
     const bob = Math.sin(t * RS.ANIM.idleBobHz * TAU + def._ph * TAU) * 1.1;
     const p = {
-      t, lunge: 0, recoil: o.atk || 0, draw: 0, charge: 0,
+      t, lunge: 0, recoil: o.atk || 0, draw: 0, charge: 0, reload: o.reload != null ? o.reload : 1,
     };
     // per-anim idle/attack shaping
     const atk = o.atk || 0; // 0..1 attack progress

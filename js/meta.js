@@ -24,7 +24,7 @@
       unlocked: {},    // mapId -> highest unlocked difficulty order (Easy=0 always)
       account: { level: 1, xp: 0 },
       objectives: {},  // id -> progress
-      settings: { sfx: true, showRange: false, particles: true },
+      settings: { sfx: true, showRange: false, particles: true, quickRoll: false, quickRollUnlocked: false },
       loadouts: [],    // saved presets [{name, ids:[...]}]
       activeLoadout: null,
       codex: { towers: [], enemies: [] },

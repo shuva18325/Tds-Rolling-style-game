@@ -460,6 +460,14 @@ button:hover::after { transform: translateX(120%); }
 .sel-head { border-bottom: 1px solid var(--rc); padding-bottom: 3px; }
 .r-mythicplus { animation: prismSpin 3s linear infinite; }
 
+/* ===== Quick Roll (purchasable animation skip) ===== */
+.quickroll { margin: 10px 0; }
+.qrbuy { width: 100%; padding: 10px; font-weight: 700; border-radius: 8px; text-align: left;
+  background: linear-gradient(#241d12,#1a140d); border: 1px solid var(--gold); color: var(--gold); }
+.qrbuy small { display: block; color: var(--dim); font-weight: 400; margin-top: 2px; }
+.quickroll .toggle { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; }
+.quickroll .toggle small { color: var(--dim); }
+
 /* respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001s !important; animation-iteration-count: 1 !important; }
@@ -1014,6 +1022,7 @@ button:hover::after { transform: translateX(120%); }
     archmage:   { sil: 'archmage',   anim: 'mage', scale: 1.05 },
     engineer:   { sil: 'engineer',   anim: 'siege' },
     wyvernrider:{ sil: 'wyvernrider',anim: 'flyer', scale: 1.05 },
+    basilisk:   { sil: 'basilisk',   anim: 'siege', scale: 1.55 },
     marshal:    { sil: 'marshal',    anim: 'banner' },
     wyrm:       { sil: 'wyrm',       anim: 'static', scale: 1.25 },
     lich:       { sil: 'lich',       anim: 'mage' },
@@ -1302,6 +1311,19 @@ button:hover::after { transform: translateX(120%); }
       ascend: { desc: 'Leaves a trail of fire along the whole path.' },
       lore: 'It answers to no terrain and no crown.' }),
 
+    T({ id: 'basilisk', name: 'The Sultan\'s Basilisk', rarity: 'Legendary', cost: 3600,
+      damage: 480, fireRate: 0.12, rangeT: 5.5, targeting: 'Most-Clustered', damageType: 'Physical',
+      splashT: 2.2, status: ['Stagger'], placement: 'Ground',
+      // footprint 2 = a genuine 2x2 giant; heavyReload flags the long charge-up
+      // animation + the deep "great cannon" boom (both purely presentational).
+      traits: { footprint: 2, splash: true, heavyReload: true, stagger: 0.6,
+        bonusVs: { trait: 'Armored', mult: 1.8 } },
+      upgrades: { branch: [
+        { name: 'Chain Shot', desc: 'wider splash, hits packed lines', mods: { splashT: 1.0 } },
+        { name: 'Siege Round', desc: 'devastating single-target strike', mods: { damage: 0.7, bonusVsMult: 0.6 } } ] },
+      ascend: { desc: 'Reload halved; the barrel glows white-hot between shots.' },
+      lore: 'Cast in a single mould over forty days, drawn by sixty oxen. It does not besiege a wall — it ends the argument.' }),
+
     /* ------------------------------ MYTHIC ----------------------------- */
     T({ id: 'marshal', name: 'Grand Marshal of the Realm', rarity: 'Mythic', cost: 8000,
       damage: 20, fireRate: 1.0, rangeT: 2.0, targeting: 'First', damageType: 'Holy',
@@ -1400,6 +1422,7 @@ button:hover::after { transform: translateX(120%); }
     archmage:  { l2: std('Arcane Mastery', 'Mightier spells. +22% dmg, +12% range, +8% attack speed.'), l3: std('Ley-Line Tap', 'Longer reach. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Trinity Cast' },
     engineer:  { l2: std('Reinforced Turrets', 'Sturdier builds. +22% dmg, +12% range, +8% attack speed.'), l3: std('Assembly Line', 'Faster works. +22% dmg, +12% range, +8% attack speed.'), ascend: 'War Foundry' },
     wyvernrider:{ l2: std('Firebreath Tonic', 'Hotter breath. +22% dmg, +12% range, +8% attack speed.'), l3: std('Ace Flight', 'Swifter strafe. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Trail of Cinders' },
+    basilisk:  { l2: std('Reinforced Bands', 'Thicker iron rings. +22% dmg, +12% range, +8% attack speed.'), l3: std('Master Founders', 'A truer bore. +22% dmg, +12% range, +8% attack speed.'), ascend: 'The Conqueror\'s Voice' },
     marshal:   { l2: std('War Council', 'Stronger command. +22% dmg, +12% range, +8% attack speed.'), l3: std('Grand Strategy', 'Wider reach. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Banner of the Realm' },
     wyrm:      { l2: std('Molten Gullet', 'Fiercer breath. +22% dmg, +12% range, +8% attack speed.'), l3: std('Ancient Fury', 'Wider cone. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Elder Cataclysm' },
     lich:      { l2: std('Grave Bind', 'Stronger raise. +22% dmg, +12% range, +8% attack speed.'), l3: std('Death Dominion', 'Wider grasp. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Undying Legion' },
@@ -2403,21 +2426,17 @@ button:hover::after { transform: translateX(120%); }
     }
 
     _placeEnemy(e) {
+      // ALL enemies — including flyers — now follow the path spline. Flyers are
+      // still "Flying" (anti-air targeting + drawn at altitude), they just no
+      // longer cut a straight line across the map. (Fixes "birds ignore the path".)
       const path = this.paths[e.lane];
-      const total = (e.isFlying ? path.straightLen : path.len) * (1 - this.pathShorten);
+      const total = path.len * (1 - this.pathShorten);
       if (e.progress >= total) { e.x = this.goalPx.x; e.y = this.goalPx.y; return; }
-      if (e.isFlying) {
-        const t = e.progress / path.straightLen;
-        e.x = path.spawn.x + (this.goalPx.x - path.spawn.x) * t;
-        e.y = path.spawn.y + (this.goalPx.y - path.spawn.y) * t;
-      } else {
-        // find segment
-        let p = e.progress; let seg = path.segs[0];
-        for (const s of path.segs) { if (p <= s.d) { seg = s; break; } p -= s.d; }
-        const t = seg.d > 0 ? p / seg.d : 0;
-        e.x = seg.a.x + (seg.b.x - seg.a.x) * t;
-        e.y = seg.a.y + (seg.b.y - seg.a.y) * t;
-      }
+      let p = e.progress; let seg = path.segs[0];
+      for (const s of path.segs) { if (p <= s.d) { seg = s; break; } p -= s.d; }
+      const t = seg.d > 0 ? p / seg.d : 0;
+      e.x = seg.a.x + (seg.b.x - seg.a.x) * t;
+      e.y = seg.a.y + (seg.b.y - seg.a.y) * t;
     }
 
     /* ---------------------------- enemies ----------------------------- */
@@ -2452,7 +2471,7 @@ button:hover::after { transform: translateX(120%); }
         if (e.flashT > 0) e.flashT -= dt;
         // leak
         const path = this.paths[e.lane];
-        const total = (e.isFlying ? path.straightLen : path.len) * (1 - this.pathShorten);
+        const total = path.len * (1 - this.pathShorten);
         if (e.progress >= total) { this._leak(e); continue; }
         if (e.alive) live.push(e);
       }
@@ -3201,7 +3220,7 @@ button:hover::after { transform: translateX(120%); }
       unlocked: {},    // mapId -> highest unlocked difficulty order (Easy=0 always)
       account: { level: 1, xp: 0 },
       objectives: {},  // id -> progress
-      settings: { sfx: true, showRange: false, particles: true },
+      settings: { sfx: true, showRange: false, particles: true, quickRoll: false, quickRollUnlocked: false },
       loadouts: [],    // saved presets [{name, ids:[...]}]
       activeLoadout: null,
       codex: { towers: [], enemies: [] },
@@ -3470,6 +3489,108 @@ button:hover::after { transform: translateX(120%); }
   };
 
   RS.Meta = Meta;
+})();
+
+;
+/* ===== js/audio.js ===== */
+/* =========================================================================
+ * REALM SIEGE — js/audio.js
+ * Tiny procedural sound engine (WebAudio, no external assets). Every effect is
+ * synthesised from oscillators + noise bursts. Gated by settings.sfx; the
+ * AudioContext is created lazily on the first user gesture (browser policy).
+ * Callers are rate-limited so 40 towers firing don't turn into noise.
+ * ========================================================================= */
+(function () {
+  'use strict';
+  const RS = (window.RS = window.RS || {});
+
+  const Audio = {
+    ctx: null, master: null, _last: {},
+    init() {
+      if (this.ctx) return;
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+        this.ctx = new AC();
+        this.master = this.ctx.createGain(); this.master.gain.value = 0.32; this.master.connect(this.ctx.destination);
+      } catch (e) { /* audio unavailable — silently ignore */ }
+    },
+    resume() { if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); },
+    _ok() { return this.ctx && (RS.Meta && RS.Meta.p ? RS.Meta.p.settings.sfx !== false : true); },
+    _throttle(k, ms) { const t = performance.now(); if (this._last[k] && t - this._last[k] < ms) return false; this._last[k] = t; return true; },
+
+    // one oscillator blip with an amplitude/pitch envelope
+    tone(o) {
+      if (!this._ok()) return;
+      const c = this.ctx, t = c.currentTime + (o.delay || 0);
+      const osc = c.createOscillator(), g = c.createGain();
+      osc.type = o.type || 'sine';
+      osc.frequency.setValueAtTime(o.freq, t);
+      if (o.freqEnd) osc.frequency.exponentialRampToValueAtTime(Math.max(1, o.freqEnd), t + o.dur);
+      const v = o.vol == null ? 0.3 : o.vol;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.006);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + o.dur);
+      osc.connect(g); g.connect(this.master); osc.start(t); osc.stop(t + o.dur + 0.03);
+    },
+    // filtered white-noise burst (impacts / clang body)
+    noise(o) {
+      if (!this._ok()) return;
+      const c = this.ctx, t = c.currentTime + (o.delay || 0), dur = o.dur || 0.2;
+      const n = Math.floor(dur * c.sampleRate);
+      const buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+      const src = c.createBufferSource(); src.buffer = buf;
+      const filt = c.createBiquadFilter(); filt.type = o.filter || 'bandpass'; filt.frequency.value = o.freq || 1200; filt.Q.value = o.q || 1;
+      const g = c.createGain(); const v = o.vol == null ? 0.3 : o.vol;
+      g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      src.connect(filt); filt.connect(g); g.connect(this.master); src.start(t); src.stop(t + dur + 0.02);
+    },
+
+    /* ------------------------------ effects --------------------------- */
+    shoot(type) {
+      if (!this._throttle('shoot', 55)) return;
+      const map = { Fire: 340, Frost: 520, Magic: 660, Holy: 720, Necrotic: 300, Physical: 260, Piercing: 480, True: 800 };
+      this.tone({ freq: map[type] || 320, freqEnd: (map[type] || 320) * 0.5, type: 'triangle', dur: 0.08, vol: 0.12 });
+    },
+    clang() { // metallic shield block — the requested "clang"
+      if (!this._throttle('clang', 45)) return;
+      this.tone({ freq: 2100, type: 'square', dur: 0.11, vol: 0.10 });
+      this.tone({ freq: 3200, type: 'square', dur: 0.09, vol: 0.07 });
+      this.tone({ freq: 4700, type: 'square', dur: 0.06, vol: 0.05 });
+      this.noise({ freq: 3000, q: 2, dur: 0.09, vol: 0.10, filter: 'highpass' });
+    },
+    boom() { // cannon / splash blast
+      if (!this._throttle('boom', 70)) return;
+      this.tone({ freq: 150, freqEnd: 42, type: 'sine', dur: 0.35, vol: 0.32 });
+      this.noise({ freq: 400, q: 0.6, dur: 0.3, vol: 0.28, filter: 'lowpass' });
+    },
+    greatCannon() { // the Basilic — deep, huge
+      this.tone({ freq: 90, freqEnd: 30, type: 'sine', dur: 0.7, vol: 0.42 });
+      this.tone({ freq: 200, freqEnd: 50, type: 'sawtooth', dur: 0.5, vol: 0.2 });
+      this.noise({ freq: 300, q: 0.5, dur: 0.6, vol: 0.34, filter: 'lowpass' });
+    },
+    place() { this.tone({ freq: 180, freqEnd: 320, type: 'square', dur: 0.12, vol: 0.14 }); this.noise({ freq: 800, dur: 0.14, vol: 0.12, filter: 'lowpass' }); },
+    upgrade() { [523, 659, 784].forEach((f, i) => this.tone({ freq: f, type: 'triangle', dur: 0.14, vol: 0.14, delay: i * 0.05 })); },
+    ascend() { [523, 659, 784, 1046, 1318].forEach((f, i) => this.tone({ freq: f, type: 'triangle', dur: 0.2, vol: 0.15, delay: i * 0.06 })); },
+    crack() { this.tone({ freq: 900, freqEnd: 200, type: 'sawtooth', dur: 0.18, vol: 0.16 }); this.noise({ freq: 2500, q: 1.5, dur: 0.16, vol: 0.16, filter: 'highpass' }); },
+    boss() { this.tone({ freq: 70, freqEnd: 45, type: 'sawtooth', dur: 0.8, vol: 0.34 }); this.tone({ freq: 140, type: 'square', dur: 0.5, vol: 0.14 }); },
+    coin() { this.tone({ freq: 880, type: 'square', dur: 0.06, vol: 0.1 }); this.tone({ freq: 1320, type: 'square', dur: 0.08, vol: 0.08, delay: 0.05 }); },
+    forge() { this.tone({ freq: 260, freqEnd: 120, type: 'square', dur: 0.12, vol: 0.2 }); this.noise({ freq: 3500, q: 2, dur: 0.12, vol: 0.16, filter: 'highpass' }); },
+    reveal(rank) { // roll result — escalates with rarity rank (0..6)
+      const base = [392, 440, 523, 587, 659, 784, 880][Math.min(rank, 6)];
+      const steps = 3 + rank;
+      for (let i = 0; i < steps; i++) this.tone({ freq: base * Math.pow(1.12, i), type: 'triangle', dur: 0.16, vol: 0.14, delay: i * 0.05 });
+      if (rank >= 5) this.tone({ freq: base * 2, type: 'sine', dur: 0.5, vol: 0.2, delay: steps * 0.05 });
+    },
+    win() { [523, 659, 784, 1046].forEach((f, i) => this.tone({ freq: f, type: 'triangle', dur: 0.3, vol: 0.18, delay: i * 0.12 })); },
+    lose() { [440, 349, 262].forEach((f, i) => this.tone({ freq: f, type: 'sawtooth', dur: 0.4, vol: 0.18, delay: i * 0.16 })); },
+  };
+
+  // Lazy-init on the first gesture so autoplay policy is satisfied.
+  const kick = () => { Audio.init(); Audio.resume(); };
+  window.addEventListener('pointerdown', kick, { once: false });
+  window.addEventListener('keydown', kick, { once: false });
+
+  RS.Audio = Audio;
 })();
 
 ;
@@ -3950,6 +4071,36 @@ button:hover::after { transform: translateX(120%); }
     facet(ctx, [[16, -2 - flap], [2, 3], [0, -4], [4, -6 - flap]], A.mul(r.mid, 0.9), r.rim);
     facet(ctx, [[-6, 6], [6, 6], [3, -3], [-3, -3]], r.mid, r.rim);
     circ(ctx, 5, -2, 3, r.light); circ(ctx, 6, -3, 1, '#e8722c'); };
+  Sil.basilisk = (ctx, r, a, p) => { // The Sultan's Basilisk — a huge Ottoman-
+    // style siege bombard: heavy wooden cradle, iron-banded barrel, a visible
+    // reload glow that builds toward the long-awaited shot, and a big recoil kick.
+    const kick = p.recoil * 9; // deep recoil along the barrel axis
+    // wide timber carriage + wheels (grounds the huge silhouette)
+    facet(ctx, [[-20, 14], [-20, 6], [20, 6], [20, 14]], woodM(), woodL());
+    circ(ctx, -13, 15, 6, RS.RAMP.timber.shadow, RS.RAMP.timber.light);
+    circ(ctx, 13, 15, 6, RS.RAMP.timber.shadow, RS.RAMP.timber.light);
+    for (let i = 0; i < 6; i++) { const sp = i / 6 * TAU; ctx.strokeStyle = RS.RAMP.iron.mid; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-13, 15); ctx.lineTo(-13 + Math.cos(sp) * 6, 15 + Math.sin(sp) * 6); ctx.moveTo(13, 15); ctx.lineTo(13 + Math.cos(sp) * 6, 15 + Math.sin(sp) * 6); ctx.stroke(); }
+    // trunnion cradle
+    facet(ctx, [[-9, 6], [9, 6], [9, -2], [-9, -2]], RS.RAMP.timber.shadow, RS.RAMP.timber.mid);
+    // the great barrel — thick, tapering, riding the recoil
+    ctx.save(); ctx.translate(-kick * Math.cos(a), -kick * Math.sin(a)); ctx.rotate(a);
+    facet(ctx, [[-6, -8], [26, -6], [30, 0], [26, 6], [-6, 8]], A.mul(r.mid, 0.85), r.rim);
+    // iron reinforcing bands (the iconic Dardanelles-gun rings)
+    ctx.strokeStyle = RS.RAMP.iron.light; ctx.lineWidth = 2;
+    for (const bx of [-2, 6, 14, 22]) { ctx.beginPath(); ctx.moveTo(bx, -7 + (bx > 10 ? -1 : 0)); ctx.lineTo(bx, 7 + (bx > 10 ? 1 : 0)); ctx.stroke(); }
+    circ(ctx, 30, 0, 3.2, '#1a1a1a'); // muzzle bore
+    // reload glow: an ember building in the breech as it charges toward ready
+    if (p.reload > 0.05) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; circ(ctx, -4, 0, 2 + p.reload * 3, A.alpha('#ff6a2a', p.reload)); ctx.restore(); }
+    ctx.restore();
+    // loading crew — small figures that "work" the gun while it reloads
+    const heave = Math.sin(p.t * 3) * (1 - p.reload) * 2;
+    facet(ctx, [[-16, 4 - heave], [-14, -3 - heave], [-12, 4 - heave]], RS.RAMP.leather.mid);
+    facet(ctx, [[14, 4 + heave], [16, -3 + heave], [18, 4 + heave]], RS.RAMP.leather.mid);
+    // loader pips: four glowing dots along the carriage that fill in as reload progresses
+    for (let i = 0; i < 4; i++) { const lit = p.reload >= (i + 1) / 4; ctx.fillStyle = lit ? '#ffcb5a' : 'rgba(255,255,255,0.18)'; circ(ctx, -12 + i * 8, 11, 1.6, ctx.fillStyle); }
+    // banner of rarity on a short standard
+    ctx.strokeStyle = RS.RAMP.timber.shadow; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-19, 6); ctx.lineTo(-19, -6); ctx.stroke();
+    facet(ctx, [[-19, -6], [-13, -4], [-19, -2]], r.light); };
   // --- MYTHIC ---
   Sil.marshal = (ctx, r, a, p) => { // grand banner + crown
     ctx.strokeStyle = RS.RAMP.gold.mid; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, 12); ctx.lineTo(0, -18); ctx.stroke();
@@ -3996,7 +4147,7 @@ button:hover::after { transform: translateX(120%); }
     // animation params
     const bob = Math.sin(t * RS.ANIM.idleBobHz * TAU + def._ph * TAU) * 1.1;
     const p = {
-      t, lunge: 0, recoil: o.atk || 0, draw: 0, charge: 0,
+      t, lunge: 0, recoil: o.atk || 0, draw: 0, charge: 0, reload: o.reload != null ? o.reload : 1,
     };
     // per-anim idle/attack shaping
     const atk = o.atk || 0; // 0..1 attack progress
@@ -4220,7 +4371,7 @@ button:hover::after { transform: translateX(120%); }
 
       // ---- towers: init vis, placement, upgrade flash, attack, aim ----
       for (const t of m.towers) {
-        if (!t.vis) { t.vis = { phase: Math.random() * TAU, atkT: 0, atkDur: 0.34, aim: -0.3, placeT: 0, lastLevel: t.level, lastMuzzle: 0, ascFx: t.ascended }; VFX.dust(t.x, t.y + 10, 10); VFX.ring(t.x, t.y + 8, RS.rarityPal(t.def.rarity).glow, 4, 26, 0.4, 2); }
+        if (!t.vis) { t.vis = { phase: Math.random() * TAU, atkT: 0, atkDur: 0.34, aim: -0.3, placeT: 0, lastLevel: t.level, lastMuzzle: 0, ascFx: t.ascended }; VFX.dust(t.x, t.y + 10, 10); VFX.ring(t.x, t.y + 8, RS.rarityPal(t.def.rarity).glow, 4, 26, 0.4, 2); RS.Audio && RS.Audio.place(); }
         const v = t.vis;
         if (v.placeT < 1) v.placeT = Math.min(1, v.placeT + dt / RS.ANIM.placeDrop);
         // upgrade detection
@@ -4229,12 +4380,16 @@ button:hover::after { transform: translateX(120%); }
           const pal = RS.rarityPal(t.def.rarity);
           VFX.rarityBurst(t.def.rarity, t.x, t.y - 4, t.level >= 5);
           VFX.ring(t.x, t.y, pal.glow, 4, 40, 0.5, 3);
-          if (t.level >= 5) VFX.column(t.x, t.y + 6, pal.glow);
+          if (t.level >= 5) { VFX.column(t.x, t.y + 6, pal.glow); RS.Audio && RS.Audio.ascend(); } else RS.Audio && RS.Audio.upgrade();
           v.atkT = 0.1;
         }
         if (t.ascended && !v.ascFx) { v.ascFx = true; VFX.column(t.x, t.y + 6, RS.rarityPal(t.def.rarity).glow); }
-        // attack trigger via muzzle rising edge
-        if (t.muzzle > v.lastMuzzle + 0.001) v.atkT = v.atkDur;
+        // attack trigger via muzzle rising edge (+ sound: heavy cannons boom)
+        if (t.muzzle > v.lastMuzzle + 0.001) {
+          v.atkT = v.atkDur;
+          if (RS.Audio) { if (t.def.traits.heavyReload) RS.Audio.greatCannon(); else if (t.splash > TILE) RS.Audio.boom(); else RS.Audio.shoot(t.def.damageType); }
+          if (t.def.traits.heavyReload) { m.shake = Math.max(m.shake, 10); VFX.smoke(t.x, t.y - 4, 12, '#8a8578'); VFX.embers(t.x + Math.cos(v.aim) * 20, t.y - 6 + Math.sin(v.aim) * 20, 8, '#ffb457'); }
+        }
         v.lastMuzzle = t.muzzle;
         if (v.atkT > 0) v.atkT = Math.max(0, v.atkT - dt);
         // aim toward nearest enemy in range (visual only)
@@ -4257,9 +4412,13 @@ button:hover::after { transform: translateX(120%); }
         if (Math.abs(e.x - v.px) > 0.2) v.faceLeft = e.x < v.px;
         v.px = e.x; v.py = e.y;
         if (v.revealFlash > 0) v.revealFlash = Math.max(0, v.revealFlash - dt);
+        // metal shield block → clang + sparks
+        if (v.lastShield == null) v.lastShield = e.shieldHits || 0;
+        if ((e.shieldHits || 0) < v.lastShield) { RS.Audio && RS.Audio.clang(); VFX.sparks(e.x, e.y - 6, 5, '#dfe6ee'); }
+        v.lastShield = e.shieldHits || 0;
         // cold shroud: ambient frost + one-shot shatter when it breaks
         if (e.coldHp > 0 && Math.random() < 0.04) VFX.frost(e.x + (Math.random() - 0.5) * 12, e.y - 6, 1);
-        if (e._coldBroke > 0 && !v.crackDone) { v.crackDone = true; VFX.frost(e.x, e.y - 6, 10); VFX.ring(e.x, e.y - 6, '#bfeaf5', 4, 26, 0.4, 2); }
+        if (e._coldBroke > 0 && !v.crackDone) { v.crackDone = true; VFX.frost(e.x, e.y - 6, 10); VFX.ring(e.x, e.y - 6, '#bfeaf5', 4, 26, 0.4, 2); RS.Audio && RS.Audio.crack(); }
         // boss entrance detection
         if (e.isBoss && !v.entered) { v.entered = true; this._bossEntrance(m, e); }
         this._enemyPrev.set(v.id, { x: e.x, y: e.y, motif: e.def.motif, family: e.def.family, isBoss: e.isBoss });
@@ -4297,7 +4456,7 @@ button:hover::after { transform: translateX(120%); }
       if (this._fpsT >= 0.5) { this._fps = Math.round(this._fpsN / this._fpsT); this._fpsT = 0; this._fpsN = 0; }
     }
 
-    _bossEntrance(m, e) { this.bossBanner = { name: e.def.name, t: 0 }; VFX.ring(e.x, e.y, '#ff5a2a', 8, 90, 0.6, 5); VFX.embers(e.x, e.y, 20, '#ff8a3a'); }
+    _bossEntrance(m, e) { this.bossBanner = { name: e.def.name, t: 0 }; VFX.ring(e.x, e.y, '#ff5a2a', 8, 90, 0.6, 5); VFX.embers(e.x, e.y, 20, '#ff8a3a'); RS.Audio && RS.Audio.boss(); }
 
     _enemyDeath(info) {
       const x = info.x, y = info.y;
@@ -4381,25 +4540,79 @@ button:hover::after { transform: translateX(120%); }
       patch('cursed', RS.RAMP.void); patch('hazard', RS.RAMP.lava);
       // 3) flowing path splines
       for (const p of m.paths) this._smoothPath(c, p.pts);
-      // 4) ruined houses (Winter map) — the only buildable tiles; static shell
-      for (let r = 0; r < m.rows; r++) for (let col = 0; col < m.cols; col++) if (m.tileKind(col, r) === 'house') this._drawHouseShell(c, col * TILE, r * TILE, col, r);
+      // 4) ruined houses (Winter map) — grouped into connected clusters so each
+      // house reads as ONE coherent ruin (collapsed roof, plaster walls, glowing
+      // window) instead of a repeated per-tile stamp. Campfires drawn live.
+      if (m.map.houses) this._houseClusters(m).forEach((cluster) => this._drawRuinedHouse(c, cluster));
       this._terrain = cv;
     }
-    // Static ruined-house shell baked into the terrain cache (fire drawn live).
-    _drawHouseShell(c, x, y, col, r) {
-      const s = ((col * 73856093) ^ (r * 19349663)) >>> 0;
-      // snow-cleared warm dirt floor
-      c.fillStyle = '#3a2c22'; this._roundRect(c, x + 3, y + 6, TILE - 6, TILE - 9, 6); c.fill();
-      c.fillStyle = '#2a1f18'; this._roundRect(c, x + 7, y + 10, TILE - 14, TILE - 15, 4); c.fill();
-      // broken timber walls (a few planks, snow-capped)
-      c.strokeStyle = RS.RAMP.timber.shadow; c.lineWidth = 3;
-      c.beginPath(); c.moveTo(x + 5, y + TILE - 5); c.lineTo(x + 5, y + 8); c.lineTo(x + 16, y + 3); c.stroke();
-      c.beginPath(); c.moveTo(x + TILE - 5, y + TILE - 5); c.lineTo(x + TILE - 5, y + 10); c.stroke();
-      c.strokeStyle = RS.RAMP.timber.mid; c.lineWidth = 2;
-      c.beginPath(); c.moveTo(x + 5, y + 12 + (s & 3)); c.lineTo(x + TILE - 8, y + 9); c.stroke();
-      // snow caps on the beams
-      c.strokeStyle = 'rgba(255,255,255,0.85)'; c.lineWidth = 2;
-      c.beginPath(); c.moveTo(x + 5, y + 7); c.lineTo(x + 16, y + 2); c.stroke();
+    // Flood-fill 'house' tiles into 4-connected clusters -> [{col,row,x,y},...]
+    _houseClusters(m) {
+      if (this._houseCache && this._houseCacheSig === m.map.id) return this._houseCache;
+      const seen = new Set(), out = [];
+      for (let r = 0; r < m.rows; r++) for (let col = 0; col < m.cols; col++) {
+        if (m.tileKind(col, r) !== 'house' || seen.has(col + ',' + r)) continue;
+        const stack = [[col, r]], cluster = [];
+        while (stack.length) {
+          const [cc, rr] = stack.pop(); const key = cc + ',' + rr;
+          if (seen.has(key) || m.tileKind(cc, rr) !== 'house') continue;
+          seen.add(key); cluster.push({ col: cc, row: rr, x: cc * TILE, y: rr * TILE });
+          stack.push([cc + 1, rr], [cc - 1, rr], [cc, rr + 1], [cc, rr - 1]);
+        }
+        out.push(cluster);
+      }
+      this._houseCache = out; this._houseCacheSig = m.map.id;
+      return out;
+    }
+    // Paints one ruined house across its whole tile cluster: snow-capped broken
+    // roof caving inward, weathered plaster walls, a glowing window, rubble.
+    _drawRuinedHouse(c, cluster) {
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const t of cluster) { minX = Math.min(minX, t.x); minY = Math.min(minY, t.y); maxX = Math.max(maxX, t.x + TILE); maxY = Math.max(maxY, t.y + TILE); }
+      const w = maxX - minX, h = maxY - minY, cx = minX + w / 2, cy = minY + h / 2;
+      const seed = ((cluster[0].col * 73856093) ^ (cluster[0].row * 19349663)) >>> 0;
+      const rnd = (i) => (((seed >> (i * 3)) & 15) / 15);
+      const pad = 5;
+      // ground: snow trampled to bare, frozen mud inside the footprint
+      c.fillStyle = '#463428'; this._roundRect(c, minX + pad, minY + pad, w - pad * 2, h - pad * 2, 8); c.fill();
+      c.fillStyle = '#2f251c'; this._roundRect(c, minX + pad + 3, minY + pad + 3, w - pad * 2 - 6, h - pad * 2 - 6, 6); c.fill();
+      // scattered rubble/snow patches on the dirt floor
+      for (let i = 0; i < 5; i++) { const rx = minX + pad + 6 + rnd(i) * (w - pad * 2 - 12), ry = minY + pad + 6 + rnd(i + 4) * (h - pad * 2 - 12); c.fillStyle = i % 2 ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.35)'; c.beginPath(); c.arc(rx, ry, 2.5 + rnd(i + 1) * 2, 0, TAU); c.fill(); }
+      // weathered plaster back wall (the standing wall from the reference photo)
+      c.fillStyle = '#8a7c68'; this._roundRect(c, minX + pad, minY + pad, w - pad * 2, h * 0.4, 4); c.fill();
+      c.fillStyle = 'rgba(0,0,0,0.18)'; for (let i = 0; i < 3; i++) c.fillRect(minX + pad + 4 + i * (w / 4), minY + pad + 3, 1.5, h * 0.35); // crack lines
+      c.strokeStyle = 'rgba(60,45,30,0.5)'; c.lineWidth = 1; c.strokeRect(minX + pad + 0.5, minY + pad + 0.5, w - pad * 2 - 1, h * 0.4);
+      // a glowing window in the wall
+      const wx = cx - 4, wy = minY + pad + h * 0.14;
+      c.fillStyle = '#2a1f18'; c.fillRect(wx, wy, 9, 9);
+      c.fillStyle = '#ffb457'; c.fillRect(wx + 1.5, wy + 1.5, 6, 6);
+      c.strokeStyle = '#3a2c22'; c.lineWidth = 1; c.beginPath(); c.moveTo(wx + 4.5, wy); c.lineTo(wx + 4.5, wy + 9); c.moveTo(wx, wy + 4.5); c.lineTo(wx + 9, wy + 4.5); c.stroke();
+      // side wall stubs (broken, angled tops)
+      c.fillStyle = '#7a6d5a';
+      this._roundRect(c, minX + pad, minY + pad, 6, h * 0.7, 2); c.fill();
+      this._roundRect(c, maxX - pad - 6, minY + pad, 6, h * 0.55, 2); c.fill();
+      // collapsed roof: caved-in timber beams criss-crossing toward the low point,
+      // heavy snow load on the upper faces (matches the reference photo)
+      const lowX = cx + (rnd(2) - 0.5) * w * 0.3, lowY = cy + h * 0.18;
+      const beams = [
+        [minX + pad + 2, minY + pad - 2], [maxX - pad - 4, minY + pad + h * 0.3],
+        [minX + pad + w * 0.3, minY + pad - 4], [maxX - pad - 2, minY + pad + h * 0.1],
+        [minX + pad - 2, minY + pad + h * 0.45], [maxX - pad - w * 0.25, minY + pad - 3],
+      ];
+      c.lineCap = 'round';
+      for (let i = 0; i < beams.length; i += 2) {
+        c.strokeStyle = RS.RAMP.timber.shadow; c.lineWidth = 4; c.beginPath(); c.moveTo(beams[i][0], beams[i][1]); c.lineTo(lowX + (i - 3) * 3, lowY); c.stroke();
+        c.strokeStyle = RS.RAMP.timber.mid; c.lineWidth = 2.5; c.beginPath(); c.moveTo(beams[i][0], beams[i][1]); c.lineTo(lowX + (i - 3) * 3, lowY); c.stroke();
+        // snow riding the top edge of each beam
+        c.strokeStyle = 'rgba(255,255,255,0.92)'; c.lineWidth = 2; c.beginPath(); c.moveTo(beams[i][0], beams[i][1] - 1.5); c.lineTo(lowX + (i - 3) * 3, lowY - 1.5); c.stroke();
+      }
+      // a couple of loose splintered planks jutting from the collapse
+      c.strokeStyle = RS.RAMP.timber.light; c.lineWidth = 2;
+      c.beginPath(); c.moveTo(lowX - 6, lowY + 2); c.lineTo(lowX + 10, lowY - 9); c.stroke();
+      // drifted snow piled against the ruin's base
+      c.fillStyle = 'rgba(255,255,255,0.85)';
+      c.beginPath(); c.ellipse(minX + pad - 1, maxY - pad - 2, 7, 3.5, 0, 0, TAU); c.fill();
+      c.beginPath(); c.ellipse(maxX - pad + 1, maxY - pad - 3, 6, 3, 0, 0, TAU); c.fill();
     }
     _roundRect(c, x, y, w, h, r) {
       if (c.roundRect) { c.beginPath(); c.roundRect(x, y, w, h, r); return; }
@@ -4514,8 +4727,11 @@ button:hover::after { transform: translateX(120%); }
         const v = t.vis || { phase: 0, atkT: 0, atkDur: 0.34, aim: -0.3, placeT: 1 };
         const atk = v.atkDur > 0 ? (v.atkT > 0 ? 1 - v.atkT / v.atkDur : 0) : 0;
         const dim = (t.charmT > 0 || t.disabledT > 0 || t.overheatT > 0);
+        // Reload charge fraction (0=just fired, 1=ready) — drives the heavy
+        // siege guns' visible reload animation (crew loading, breech glowing).
+        const cycle = t.fireRate * t.buff.fireRate; const reload = cycle > 0 ? A.clamp(1 - t.cooldown / (1 / cycle), 0, 1) : 1;
         ctx.save(); if (dim) ctx.globalAlpha = 0.6;
-        S.drawTower(ctx, t.def, t.x, t.y, { t: this.clock + v.phase, atk, aim: v.aim, ascended: t.ascended, place: v.placeT });
+        S.drawTower(ctx, t.def, t.x, t.y, { t: this.clock + v.phase, atk, aim: v.aim, ascended: t.ascended, place: v.placeT, reload });
         ctx.restore();
         // status rings
         if (t.charmT > 0) { ctx.strokeStyle = '#e04bcf'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(t.x, t.y, 16, 0, TAU); ctx.stroke(); }
@@ -4996,6 +5212,11 @@ button:hover::after { transform: translateX(120%); }
               ${Meta.p.rolls[r.id] > 0 ? `<span class="tickets">🎟 ${Meta.p.rolls[r.id]}</span>` : ''}</button>`).join('')}
           </div>
           <div class="multirow"><button class="multibtn" data-multi="Basic">Basic ×10</button><button class="multibtn" data-multi="Lucky">Lucky ×10</button><button class="multibtn" data-multi="Super">Super ×10</button></div>
+          <div class="quickroll">
+            ${Meta.p.settings.quickRollUnlocked
+              ? `<label class="toggle"><input type="checkbox" id="quickRollToggle" ${Meta.p.settings.quickRoll ? 'checked' : ''}> ⚡ Quick Roll <small>— skip the suspense animation</small></label>`
+              : `<button class="qrbuy ${Meta.p.tokens.gold >= 15 ? '' : 'disabled'}" id="buyQuickRoll">⚡ Unlock Quick Roll — 15 🟡 Gold <small>skip the roll animation forever</small></button>`}
+          </div>
           <div class="pity">
             <h3>Pity Counters</h3>
             ${bar('Epic guarantee', pity.epic, RS.PITY.epic.hard, '#9b59b6')}
@@ -5008,6 +5229,8 @@ button:hover::after { transform: translateX(120%); }
       this._wireGo();
       $$('[data-roll]', this.root).forEach((b) => b.onclick = () => this.doRoll(b.dataset.roll, 1));
       $$('[data-multi]', this.root).forEach((b) => b.onclick = () => this.doRoll(b.dataset.multi, 10));
+      const qrb = $('#buyQuickRoll'); if (qrb) qrb.onclick = () => { if (Meta.spend('gold', 15)) { Meta.p.settings.quickRollUnlocked = true; Meta.p.settings.quickRoll = true; Meta.save(); this.toast('Quick Roll unlocked!', RS.PALETTE.good); this.renderRoll(); } };
+      const qrt = $('#quickRollToggle'); if (qrt) qrt.onchange = (e) => { Meta.p.settings.quickRoll = e.target.checked; Meta.save(); };
     },
     _rollHistoryHtml() {
       return Meta.p.rollHistory.slice(0, 18).map((e) => {
@@ -5034,13 +5257,16 @@ button:hover::after { transform: translateX(120%); }
     _playRollAnim(results, bestRank) {
       const stage = $('#rollStage');
       const bestColor = RS.RARITY[bestRank].color;
-      stage.innerHTML = `<div class="banner-spin" style="--flare:${bestColor}"></div>`;
-      const spin = stage.firstElementChild;
-      const dur = 700 + bestRank * 300;
-      // escalating flare
-      spin.animate([{ filter: 'brightness(1)' }, { filter: `brightness(${1.5 + bestRank * 0.4})` }, { filter: 'brightness(1)' }], { duration: dur, iterations: 1 });
-      if (bestRank >= 6) { document.body.classList.add('shatter'); setTimeout(() => document.body.classList.remove('shatter'), 900); }
-      if (bestRank >= 5) this.match && (this.match.freeze = 0.4);
+      // Quick Roll: skip the suspense animation entirely (purchased QoL toggle).
+      const quick = Meta.p.settings.quickRoll;
+      const dur = quick ? 0 : 700 + bestRank * 300;
+      if (!quick) {
+        stage.innerHTML = `<div class="banner-spin" style="--flare:${bestColor}"></div>`;
+        const spin = stage.firstElementChild;
+        spin.animate([{ filter: 'brightness(1)' }, { filter: `brightness(${1.5 + bestRank * 0.4})` }, { filter: 'brightness(1)' }], { duration: dur, iterations: 1 });
+        if (bestRank >= 6) { document.body.classList.add('shatter'); setTimeout(() => document.body.classList.remove('shatter'), 900); }
+        if (bestRank >= 5) this.match && (this.match.freeze = 0.4);
+      }
       setTimeout(() => {
         stage.innerHTML = `<div class="results">${results.map((r) => {
           if (r.converted) return `<div class="rescard" style="--rc:${RS.rarityColor('Mythic')}"><div class="resrar">50/50 → Relics</div><b>+${r.converted.relic} 🔮</b></div>`;
@@ -5052,9 +5278,9 @@ button:hover::after { transform: translateX(120%); }
           </div>`;
         }).join('')}</div>`;
         this._drawGlyphs(stage);
-        // full-screen rarity reveal spectacle (glow bloom / column / shatter)
-        const rect = stage.getBoundingClientRect();
-        RS.VFX.overlay.reveal(RS.RARITY[bestRank].id, rect.left + rect.width / 2, rect.top + rect.height / 2);
+        RS.Audio && RS.Audio.reveal(bestRank);
+        // full-screen rarity reveal spectacle — skipped in Quick Roll mode
+        if (!quick) { const rect = stage.getBoundingClientRect(); RS.VFX.overlay.reveal(RS.RARITY[bestRank].id, rect.left + rect.width / 2, rect.top + rect.height / 2); }
         // refresh tokens/pity display without losing stage
         this._refreshTopbar();
         this._refreshPity();
@@ -5100,7 +5326,7 @@ button:hover::after { transform: translateX(120%); }
         </div>`;
       this._wireGo(); this._drawGlyphs(this.root);
       const refresh = () => { this.renderForge(); };
-      const strike = (el, color) => { const r = el.getBoundingClientRect(); RS.VFX.overlay.forgeStrike(r.left + r.width / 2, r.top + r.height / 2, color); };
+      const strike = (el, color) => { const r = el.getBoundingClientRect(); RS.VFX.overlay.forgeStrike(r.left + r.width / 2, r.top + r.height / 2, color); RS.Audio && RS.Audio.forge(); };
       $$('[data-ctok]', this.root).forEach((b) => b.onclick = () => { if (Meta.convertTokens(b.dataset.ctok)) { strike(b, '#ffd98a'); refresh(); } });
       $$('[data-croll]', this.root).forEach((b) => b.onclick = () => { if (Meta.convertRolls(b.dataset.croll)) { strike(b, '#ffd98a'); refresh(); } });
       $$('[data-upcast]', this.root).forEach((b) => b.onclick = () => { if (Meta.upcastShards(b.dataset.upcast)) { strike(b, '#c79bff'); refresh(); } });
@@ -5471,6 +5697,9 @@ button:hover::after { transform: translateX(120%); }
       RS.bus.on('consume-dup', (id) => Meta.consumeDuplicate(id));
       RS.bus.on('level-up', (lvl) => { if (this.screen === 'match') this.toast('Account Level ' + lvl + '!', RS.PALETTE.gold); });
       RS.bus.on('objective-done', (o) => this.toast('Objective complete: ' + o.desc, RS.PALETTE.good));
+      RS.bus.on('wave-clear', () => RS.Audio && RS.Audio.coin());
+      RS.bus.on('match-won', () => RS.Audio && RS.Audio.win());
+      RS.bus.on('match-lost', () => RS.Audio && RS.Audio.lose());
     },
   };
 

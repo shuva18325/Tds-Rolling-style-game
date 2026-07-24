@@ -230,6 +230,14 @@ button:hover::after { transform: translateX(120%); }
 .sel-head { border-bottom: 1px solid var(--rc); padding-bottom: 3px; }
 .r-mythicplus { animation: prismSpin 3s linear infinite; }
 
+/* ===== Quick Roll (purchasable animation skip) ===== */
+.quickroll { margin: 10px 0; }
+.qrbuy { width: 100%; padding: 10px; font-weight: 700; border-radius: 8px; text-align: left;
+  background: linear-gradient(#241d12,#1a140d); border: 1px solid var(--gold); color: var(--gold); }
+.qrbuy small { display: block; color: var(--dim); font-weight: 400; margin-top: 2px; }
+.quickroll .toggle { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; }
+.quickroll .toggle small { color: var(--dim); }
+
 /* respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001s !important; animation-iteration-count: 1 !important; }

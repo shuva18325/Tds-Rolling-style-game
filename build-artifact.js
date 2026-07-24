@@ -12,7 +12,7 @@ const jsFiles = [
   'js/core.js', 'data/palette.js', 'data/config.js', 'data/artstyle.js',
   'data/towers.js', 'data/enemies.js', 'data/maps.js',
   'js/combat.js', 'js/match.js', 'js/meta.js',
-  'js/vfx.js', 'js/sprites.js', 'js/render.js', 'js/ui.js', 'js/main.js',
+  'js/audio.js', 'js/vfx.js', 'js/sprites.js', 'js/render.js', 'js/ui.js', 'js/main.js',
 ];
 
 const css = cssFiles.map((f) => `/* ===== ${f} ===== */\n` + read(f)).join('\n\n');

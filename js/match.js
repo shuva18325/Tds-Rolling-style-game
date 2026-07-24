@@ -558,21 +558,17 @@
     }
 
     _placeEnemy(e) {
+      // ALL enemies — including flyers — now follow the path spline. Flyers are
+      // still "Flying" (anti-air targeting + drawn at altitude), they just no
+      // longer cut a straight line across the map. (Fixes "birds ignore the path".)
       const path = this.paths[e.lane];
-      const total = (e.isFlying ? path.straightLen : path.len) * (1 - this.pathShorten);
+      const total = path.len * (1 - this.pathShorten);
       if (e.progress >= total) { e.x = this.goalPx.x; e.y = this.goalPx.y; return; }
-      if (e.isFlying) {
-        const t = e.progress / path.straightLen;
-        e.x = path.spawn.x + (this.goalPx.x - path.spawn.x) * t;
-        e.y = path.spawn.y + (this.goalPx.y - path.spawn.y) * t;
-      } else {
-        // find segment
-        let p = e.progress; let seg = path.segs[0];
-        for (const s of path.segs) { if (p <= s.d) { seg = s; break; } p -= s.d; }
-        const t = seg.d > 0 ? p / seg.d : 0;
-        e.x = seg.a.x + (seg.b.x - seg.a.x) * t;
-        e.y = seg.a.y + (seg.b.y - seg.a.y) * t;
-      }
+      let p = e.progress; let seg = path.segs[0];
+      for (const s of path.segs) { if (p <= s.d) { seg = s; break; } p -= s.d; }
+      const t = seg.d > 0 ? p / seg.d : 0;
+      e.x = seg.a.x + (seg.b.x - seg.a.x) * t;
+      e.y = seg.a.y + (seg.b.y - seg.a.y) * t;
     }
 
     /* ---------------------------- enemies ----------------------------- */
@@ -607,7 +603,7 @@
         if (e.flashT > 0) e.flashT -= dt;
         // leak
         const path = this.paths[e.lane];
-        const total = (e.isFlying ? path.straightLen : path.len) * (1 - this.pathShorten);
+        const total = path.len * (1 - this.pathShorten);
         if (e.progress >= total) { this._leak(e); continue; }
         if (e.alive) live.push(e);
       }

@@ -239,6 +239,19 @@
       ascend: { desc: 'Leaves a trail of fire along the whole path.' },
       lore: 'It answers to no terrain and no crown.' }),
 
+    T({ id: 'basilisk', name: 'The Sultan\'s Basilisk', rarity: 'Legendary', cost: 3600,
+      damage: 480, fireRate: 0.12, rangeT: 5.5, targeting: 'Most-Clustered', damageType: 'Physical',
+      splashT: 2.2, status: ['Stagger'], placement: 'Ground',
+      // footprint 2 = a genuine 2x2 giant; heavyReload flags the long charge-up
+      // animation + the deep "great cannon" boom (both purely presentational).
+      traits: { footprint: 2, splash: true, heavyReload: true, stagger: 0.6,
+        bonusVs: { trait: 'Armored', mult: 1.8 } },
+      upgrades: { branch: [
+        { name: 'Chain Shot', desc: 'wider splash, hits packed lines', mods: { splashT: 1.0 } },
+        { name: 'Siege Round', desc: 'devastating single-target strike', mods: { damage: 0.7, bonusVsMult: 0.6 } } ] },
+      ascend: { desc: 'Reload halved; the barrel glows white-hot between shots.' },
+      lore: 'Cast in a single mould over forty days, drawn by sixty oxen. It does not besiege a wall — it ends the argument.' }),
+
     /* ------------------------------ MYTHIC ----------------------------- */
     T({ id: 'marshal', name: 'Grand Marshal of the Realm', rarity: 'Mythic', cost: 8000,
       damage: 20, fireRate: 1.0, rangeT: 2.0, targeting: 'First', damageType: 'Holy',
@@ -337,6 +350,7 @@
     archmage:  { l2: std('Arcane Mastery', 'Mightier spells. +22% dmg, +12% range, +8% attack speed.'), l3: std('Ley-Line Tap', 'Longer reach. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Trinity Cast' },
     engineer:  { l2: std('Reinforced Turrets', 'Sturdier builds. +22% dmg, +12% range, +8% attack speed.'), l3: std('Assembly Line', 'Faster works. +22% dmg, +12% range, +8% attack speed.'), ascend: 'War Foundry' },
     wyvernrider:{ l2: std('Firebreath Tonic', 'Hotter breath. +22% dmg, +12% range, +8% attack speed.'), l3: std('Ace Flight', 'Swifter strafe. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Trail of Cinders' },
+    basilisk:  { l2: std('Reinforced Bands', 'Thicker iron rings. +22% dmg, +12% range, +8% attack speed.'), l3: std('Master Founders', 'A truer bore. +22% dmg, +12% range, +8% attack speed.'), ascend: 'The Conqueror\'s Voice' },
     marshal:   { l2: std('War Council', 'Stronger command. +22% dmg, +12% range, +8% attack speed.'), l3: std('Grand Strategy', 'Wider reach. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Banner of the Realm' },
     wyrm:      { l2: std('Molten Gullet', 'Fiercer breath. +22% dmg, +12% range, +8% attack speed.'), l3: std('Ancient Fury', 'Wider cone. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Elder Cataclysm' },
     lich:      { l2: std('Grave Bind', 'Stronger raise. +22% dmg, +12% range, +8% attack speed.'), l3: std('Death Dominion', 'Wider grasp. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Undying Legion' },

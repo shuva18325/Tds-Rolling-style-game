@@ -46,7 +46,7 @@
 
       // ---- towers: init vis, placement, upgrade flash, attack, aim ----
       for (const t of m.towers) {
-        if (!t.vis) { t.vis = { phase: Math.random() * TAU, atkT: 0, atkDur: 0.34, aim: -0.3, placeT: 0, lastLevel: t.level, lastMuzzle: 0, ascFx: t.ascended }; VFX.dust(t.x, t.y + 10, 10); VFX.ring(t.x, t.y + 8, RS.rarityPal(t.def.rarity).glow, 4, 26, 0.4, 2); }
+        if (!t.vis) { t.vis = { phase: Math.random() * TAU, atkT: 0, atkDur: 0.34, aim: -0.3, placeT: 0, lastLevel: t.level, lastMuzzle: 0, ascFx: t.ascended }; VFX.dust(t.x, t.y + 10, 10); VFX.ring(t.x, t.y + 8, RS.rarityPal(t.def.rarity).glow, 4, 26, 0.4, 2); RS.Audio && RS.Audio.place(); }
         const v = t.vis;
         if (v.placeT < 1) v.placeT = Math.min(1, v.placeT + dt / RS.ANIM.placeDrop);
         // upgrade detection
@@ -55,12 +55,16 @@
           const pal = RS.rarityPal(t.def.rarity);
           VFX.rarityBurst(t.def.rarity, t.x, t.y - 4, t.level >= 5);
           VFX.ring(t.x, t.y, pal.glow, 4, 40, 0.5, 3);
-          if (t.level >= 5) VFX.column(t.x, t.y + 6, pal.glow);
+          if (t.level >= 5) { VFX.column(t.x, t.y + 6, pal.glow); RS.Audio && RS.Audio.ascend(); } else RS.Audio && RS.Audio.upgrade();
           v.atkT = 0.1;
         }
         if (t.ascended && !v.ascFx) { v.ascFx = true; VFX.column(t.x, t.y + 6, RS.rarityPal(t.def.rarity).glow); }
-        // attack trigger via muzzle rising edge
-        if (t.muzzle > v.lastMuzzle + 0.001) v.atkT = v.atkDur;
+        // attack trigger via muzzle rising edge (+ sound: heavy cannons boom)
+        if (t.muzzle > v.lastMuzzle + 0.001) {
+          v.atkT = v.atkDur;
+          if (RS.Audio) { if (t.def.traits.heavyReload) RS.Audio.greatCannon(); else if (t.splash > TILE) RS.Audio.boom(); else RS.Audio.shoot(t.def.damageType); }
+          if (t.def.traits.heavyReload) { m.shake = Math.max(m.shake, 10); VFX.smoke(t.x, t.y - 4, 12, '#8a8578'); VFX.embers(t.x + Math.cos(v.aim) * 20, t.y - 6 + Math.sin(v.aim) * 20, 8, '#ffb457'); }
+        }
         v.lastMuzzle = t.muzzle;
         if (v.atkT > 0) v.atkT = Math.max(0, v.atkT - dt);
         // aim toward nearest enemy in range (visual only)
@@ -83,9 +87,13 @@
         if (Math.abs(e.x - v.px) > 0.2) v.faceLeft = e.x < v.px;
         v.px = e.x; v.py = e.y;
         if (v.revealFlash > 0) v.revealFlash = Math.max(0, v.revealFlash - dt);
+        // metal shield block → clang + sparks
+        if (v.lastShield == null) v.lastShield = e.shieldHits || 0;
+        if ((e.shieldHits || 0) < v.lastShield) { RS.Audio && RS.Audio.clang(); VFX.sparks(e.x, e.y - 6, 5, '#dfe6ee'); }
+        v.lastShield = e.shieldHits || 0;
         // cold shroud: ambient frost + one-shot shatter when it breaks
         if (e.coldHp > 0 && Math.random() < 0.04) VFX.frost(e.x + (Math.random() - 0.5) * 12, e.y - 6, 1);
-        if (e._coldBroke > 0 && !v.crackDone) { v.crackDone = true; VFX.frost(e.x, e.y - 6, 10); VFX.ring(e.x, e.y - 6, '#bfeaf5', 4, 26, 0.4, 2); }
+        if (e._coldBroke > 0 && !v.crackDone) { v.crackDone = true; VFX.frost(e.x, e.y - 6, 10); VFX.ring(e.x, e.y - 6, '#bfeaf5', 4, 26, 0.4, 2); RS.Audio && RS.Audio.crack(); }
         // boss entrance detection
         if (e.isBoss && !v.entered) { v.entered = true; this._bossEntrance(m, e); }
         this._enemyPrev.set(v.id, { x: e.x, y: e.y, motif: e.def.motif, family: e.def.family, isBoss: e.isBoss });
@@ -123,7 +131,7 @@
       if (this._fpsT >= 0.5) { this._fps = Math.round(this._fpsN / this._fpsT); this._fpsT = 0; this._fpsN = 0; }
     }
 
-    _bossEntrance(m, e) { this.bossBanner = { name: e.def.name, t: 0 }; VFX.ring(e.x, e.y, '#ff5a2a', 8, 90, 0.6, 5); VFX.embers(e.x, e.y, 20, '#ff8a3a'); }
+    _bossEntrance(m, e) { this.bossBanner = { name: e.def.name, t: 0 }; VFX.ring(e.x, e.y, '#ff5a2a', 8, 90, 0.6, 5); VFX.embers(e.x, e.y, 20, '#ff8a3a'); RS.Audio && RS.Audio.boss(); }
 
     _enemyDeath(info) {
       const x = info.x, y = info.y;
@@ -207,25 +215,79 @@
       patch('cursed', RS.RAMP.void); patch('hazard', RS.RAMP.lava);
       // 3) flowing path splines
       for (const p of m.paths) this._smoothPath(c, p.pts);
-      // 4) ruined houses (Winter map) — the only buildable tiles; static shell
-      for (let r = 0; r < m.rows; r++) for (let col = 0; col < m.cols; col++) if (m.tileKind(col, r) === 'house') this._drawHouseShell(c, col * TILE, r * TILE, col, r);
+      // 4) ruined houses (Winter map) — grouped into connected clusters so each
+      // house reads as ONE coherent ruin (collapsed roof, plaster walls, glowing
+      // window) instead of a repeated per-tile stamp. Campfires drawn live.
+      if (m.map.houses) this._houseClusters(m).forEach((cluster) => this._drawRuinedHouse(c, cluster));
       this._terrain = cv;
     }
-    // Static ruined-house shell baked into the terrain cache (fire drawn live).
-    _drawHouseShell(c, x, y, col, r) {
-      const s = ((col * 73856093) ^ (r * 19349663)) >>> 0;
-      // snow-cleared warm dirt floor
-      c.fillStyle = '#3a2c22'; this._roundRect(c, x + 3, y + 6, TILE - 6, TILE - 9, 6); c.fill();
-      c.fillStyle = '#2a1f18'; this._roundRect(c, x + 7, y + 10, TILE - 14, TILE - 15, 4); c.fill();
-      // broken timber walls (a few planks, snow-capped)
-      c.strokeStyle = RS.RAMP.timber.shadow; c.lineWidth = 3;
-      c.beginPath(); c.moveTo(x + 5, y + TILE - 5); c.lineTo(x + 5, y + 8); c.lineTo(x + 16, y + 3); c.stroke();
-      c.beginPath(); c.moveTo(x + TILE - 5, y + TILE - 5); c.lineTo(x + TILE - 5, y + 10); c.stroke();
-      c.strokeStyle = RS.RAMP.timber.mid; c.lineWidth = 2;
-      c.beginPath(); c.moveTo(x + 5, y + 12 + (s & 3)); c.lineTo(x + TILE - 8, y + 9); c.stroke();
-      // snow caps on the beams
-      c.strokeStyle = 'rgba(255,255,255,0.85)'; c.lineWidth = 2;
-      c.beginPath(); c.moveTo(x + 5, y + 7); c.lineTo(x + 16, y + 2); c.stroke();
+    // Flood-fill 'house' tiles into 4-connected clusters -> [{col,row,x,y},...]
+    _houseClusters(m) {
+      if (this._houseCache && this._houseCacheSig === m.map.id) return this._houseCache;
+      const seen = new Set(), out = [];
+      for (let r = 0; r < m.rows; r++) for (let col = 0; col < m.cols; col++) {
+        if (m.tileKind(col, r) !== 'house' || seen.has(col + ',' + r)) continue;
+        const stack = [[col, r]], cluster = [];
+        while (stack.length) {
+          const [cc, rr] = stack.pop(); const key = cc + ',' + rr;
+          if (seen.has(key) || m.tileKind(cc, rr) !== 'house') continue;
+          seen.add(key); cluster.push({ col: cc, row: rr, x: cc * TILE, y: rr * TILE });
+          stack.push([cc + 1, rr], [cc - 1, rr], [cc, rr + 1], [cc, rr - 1]);
+        }
+        out.push(cluster);
+      }
+      this._houseCache = out; this._houseCacheSig = m.map.id;
+      return out;
+    }
+    // Paints one ruined house across its whole tile cluster: snow-capped broken
+    // roof caving inward, weathered plaster walls, a glowing window, rubble.
+    _drawRuinedHouse(c, cluster) {
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const t of cluster) { minX = Math.min(minX, t.x); minY = Math.min(minY, t.y); maxX = Math.max(maxX, t.x + TILE); maxY = Math.max(maxY, t.y + TILE); }
+      const w = maxX - minX, h = maxY - minY, cx = minX + w / 2, cy = minY + h / 2;
+      const seed = ((cluster[0].col * 73856093) ^ (cluster[0].row * 19349663)) >>> 0;
+      const rnd = (i) => (((seed >> (i * 3)) & 15) / 15);
+      const pad = 5;
+      // ground: snow trampled to bare, frozen mud inside the footprint
+      c.fillStyle = '#463428'; this._roundRect(c, minX + pad, minY + pad, w - pad * 2, h - pad * 2, 8); c.fill();
+      c.fillStyle = '#2f251c'; this._roundRect(c, minX + pad + 3, minY + pad + 3, w - pad * 2 - 6, h - pad * 2 - 6, 6); c.fill();
+      // scattered rubble/snow patches on the dirt floor
+      for (let i = 0; i < 5; i++) { const rx = minX + pad + 6 + rnd(i) * (w - pad * 2 - 12), ry = minY + pad + 6 + rnd(i + 4) * (h - pad * 2 - 12); c.fillStyle = i % 2 ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.35)'; c.beginPath(); c.arc(rx, ry, 2.5 + rnd(i + 1) * 2, 0, TAU); c.fill(); }
+      // weathered plaster back wall (the standing wall from the reference photo)
+      c.fillStyle = '#8a7c68'; this._roundRect(c, minX + pad, minY + pad, w - pad * 2, h * 0.4, 4); c.fill();
+      c.fillStyle = 'rgba(0,0,0,0.18)'; for (let i = 0; i < 3; i++) c.fillRect(minX + pad + 4 + i * (w / 4), minY + pad + 3, 1.5, h * 0.35); // crack lines
+      c.strokeStyle = 'rgba(60,45,30,0.5)'; c.lineWidth = 1; c.strokeRect(minX + pad + 0.5, minY + pad + 0.5, w - pad * 2 - 1, h * 0.4);
+      // a glowing window in the wall
+      const wx = cx - 4, wy = minY + pad + h * 0.14;
+      c.fillStyle = '#2a1f18'; c.fillRect(wx, wy, 9, 9);
+      c.fillStyle = '#ffb457'; c.fillRect(wx + 1.5, wy + 1.5, 6, 6);
+      c.strokeStyle = '#3a2c22'; c.lineWidth = 1; c.beginPath(); c.moveTo(wx + 4.5, wy); c.lineTo(wx + 4.5, wy + 9); c.moveTo(wx, wy + 4.5); c.lineTo(wx + 9, wy + 4.5); c.stroke();
+      // side wall stubs (broken, angled tops)
+      c.fillStyle = '#7a6d5a';
+      this._roundRect(c, minX + pad, minY + pad, 6, h * 0.7, 2); c.fill();
+      this._roundRect(c, maxX - pad - 6, minY + pad, 6, h * 0.55, 2); c.fill();
+      // collapsed roof: caved-in timber beams criss-crossing toward the low point,
+      // heavy snow load on the upper faces (matches the reference photo)
+      const lowX = cx + (rnd(2) - 0.5) * w * 0.3, lowY = cy + h * 0.18;
+      const beams = [
+        [minX + pad + 2, minY + pad - 2], [maxX - pad - 4, minY + pad + h * 0.3],
+        [minX + pad + w * 0.3, minY + pad - 4], [maxX - pad - 2, minY + pad + h * 0.1],
+        [minX + pad - 2, minY + pad + h * 0.45], [maxX - pad - w * 0.25, minY + pad - 3],
+      ];
+      c.lineCap = 'round';
+      for (let i = 0; i < beams.length; i += 2) {
+        c.strokeStyle = RS.RAMP.timber.shadow; c.lineWidth = 4; c.beginPath(); c.moveTo(beams[i][0], beams[i][1]); c.lineTo(lowX + (i - 3) * 3, lowY); c.stroke();
+        c.strokeStyle = RS.RAMP.timber.mid; c.lineWidth = 2.5; c.beginPath(); c.moveTo(beams[i][0], beams[i][1]); c.lineTo(lowX + (i - 3) * 3, lowY); c.stroke();
+        // snow riding the top edge of each beam
+        c.strokeStyle = 'rgba(255,255,255,0.92)'; c.lineWidth = 2; c.beginPath(); c.moveTo(beams[i][0], beams[i][1] - 1.5); c.lineTo(lowX + (i - 3) * 3, lowY - 1.5); c.stroke();
+      }
+      // a couple of loose splintered planks jutting from the collapse
+      c.strokeStyle = RS.RAMP.timber.light; c.lineWidth = 2;
+      c.beginPath(); c.moveTo(lowX - 6, lowY + 2); c.lineTo(lowX + 10, lowY - 9); c.stroke();
+      // drifted snow piled against the ruin's base
+      c.fillStyle = 'rgba(255,255,255,0.85)';
+      c.beginPath(); c.ellipse(minX + pad - 1, maxY - pad - 2, 7, 3.5, 0, 0, TAU); c.fill();
+      c.beginPath(); c.ellipse(maxX - pad + 1, maxY - pad - 3, 6, 3, 0, 0, TAU); c.fill();
     }
     _roundRect(c, x, y, w, h, r) {
       if (c.roundRect) { c.beginPath(); c.roundRect(x, y, w, h, r); return; }
@@ -340,8 +402,11 @@
         const v = t.vis || { phase: 0, atkT: 0, atkDur: 0.34, aim: -0.3, placeT: 1 };
         const atk = v.atkDur > 0 ? (v.atkT > 0 ? 1 - v.atkT / v.atkDur : 0) : 0;
         const dim = (t.charmT > 0 || t.disabledT > 0 || t.overheatT > 0);
+        // Reload charge fraction (0=just fired, 1=ready) — drives the heavy
+        // siege guns' visible reload animation (crew loading, breech glowing).
+        const cycle = t.fireRate * t.buff.fireRate; const reload = cycle > 0 ? A.clamp(1 - t.cooldown / (1 / cycle), 0, 1) : 1;
         ctx.save(); if (dim) ctx.globalAlpha = 0.6;
-        S.drawTower(ctx, t.def, t.x, t.y, { t: this.clock + v.phase, atk, aim: v.aim, ascended: t.ascended, place: v.placeT });
+        S.drawTower(ctx, t.def, t.x, t.y, { t: this.clock + v.phase, atk, aim: v.aim, ascended: t.ascended, place: v.placeT, reload });
         ctx.restore();
         // status rings
         if (t.charmT > 0) { ctx.strokeStyle = '#e04bcf'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(t.x, t.y, 16, 0, TAU); ctx.stroke(); }
