@@ -184,17 +184,56 @@ multiples.
 ## Architecture
 
 ```
-index.html            load order: data tables first, then engine, then UI
-css/style.css         parchment-on-slate theme
+index.html            load order: data tables → sim → presentation → UI
+css/style.css         parchment-on-slate layout
+css/art.css           VISUAL ASCENSION ornament layer (frames, rarity borders)
 data/  palette·config·towers·enemies·maps      (all balance, declarative)
+       artstyle        ART BIBLE — ramps, rarity palettes, light model, rigs
 js/    core            namespace, RNG, object Pool, SpatialGrid, Save, Emitter
-       combat          damage formula, armour/resist, status, targeting
-       match           grid+path build, fixed-timestep loop, waves, economy
-       meta            persistent profile + gacha + pity + forge + progression
-       render          layered Canvas 2D, procedural silhouettes, juice
+       combat          damage formula, armour/resist, status, targeting  (sim)
+       match           grid+path build, fixed-timestep loop, waves, economy (sim)
+       meta            persistent profile + gacha + pity + forge + progression (sim)
+       vfx             pooled particle engine + roll/forge/shatter overlay
+       sprites         procedural shading + 26 tower rigs + enemy sprite cache
+       render          layered pipeline + updateVisuals observer (presentation)
        ui              screens + in-match HUD + input
        main            bootstrap + the single RAF loop
 ```
 
 Performance: fixed-timestep logic decoupled from render, object pooling for
 projectiles & particles, a uniform spatial grid for targeting queries.
+
+---
+
+## Visual Ascension (art overhaul)
+
+The `sim` modules (`combat`, `match`, `meta`) and every data table are the
+authoritative game — the art layer never touches them. All animation is driven
+by `render.updateVisuals()` **observing** sim state (new towers → placement
+drop + dust; level jumps → upgrade burst; vanished enemies → family death VFX;
+boss spawns → banner) so the simulation stays byte-identical and deterministic.
+
+**Art Bible** (`data/artstyle.js`): one fixed top-left sun; 3–4 stop material
+ramps (`shade(ramp, facing)`); per-rarity palettes escalating to an animated
+**prismatic** Mythic+; time-based easing + animation constants.
+
+**Rendering** (`js/render.js`): strict layer order (cached low-poly terrain →
+animated tiles → range/ghost → towers → enemies → sim particles → projectiles →
+`RS.VFX` impacts → arcs/beams → auras → weather → night/grade → vignette → boss
+banner). Static terrain is baked to an offscreen canvas and only rebuilt when
+tile kinds change; enemy bodies render from **cached per-motif walk-cycle sprite
+sheets** (blit + flip + white-flash overlay) — the key to the 200-enemy budget.
+
+**VFX** (`js/vfx.js`): a single hard-capped, pooled particle engine with
+damage-type impact language (fire/frost/holy/necrotic/arcane/prism), plus a
+self-driven full-screen overlay for the roll reveal (glow bloom → light column →
+shockwave → **Mythic+ prismatic shatter + slow-mo**) and forge anvil sparks.
+
+**Silhouettes** (`js/sprites.js`): 26 distinct animated tower rigs (idle bob,
+archer draw, mage charge, siege recoil, blocker lunge, flyer flap) and animated
+enemy motifs (walk cycles that slow with `Slow`/freeze mid-stride, wing-flaps,
+hit flashes, status crystals/flames).
+
+Verified: **zero console errors**, sim unchanged (identical Easy clear), **~6.4
+ms/frame under a 180-enemy load** (≈2.5× the 60 FPS budget in headroom). Dial
+quality via `RS.VFX.MAX` (particle cap) and the `settings.particles` toggle.

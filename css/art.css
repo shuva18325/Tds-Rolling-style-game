@@ -1,0 +1,163 @@
+/* =========================================================================
+ * REALM SIEGE — css/art.css  (VISUAL ASCENSION)
+ * Additive ornamentation layered ON TOP of style.css. Appearance only — it
+ * changes no layout structure or behaviour, only frames, textures, rarity
+ * borders, glows and micro-animations. Loaded after style.css.
+ * ========================================================================= */
+
+/* ---- parchment + iron shell -------------------------------------------- */
+body {
+  background:
+    radial-gradient(circle at 30% -10%, rgba(217,164,65,0.06), transparent 40%),
+    radial-gradient(circle at 50% 0%, #26241f, #100e0b 72%);
+}
+.topbar {
+  background: linear-gradient(#2c2a24, #1a1815) padding-box;
+  border-bottom: 2px solid transparent;
+  border-image: linear-gradient(90deg, #6a4a1a, #d9a441, #6a4a1a) 1;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+}
+.brand { text-shadow: 0 0 12px rgba(217,164,65,0.5), 0 2px 0 #000; }
+.tk { background: linear-gradient(#26241f, #1a1815); box-shadow: inset 0 1px 0 rgba(255,255,255,0.06); }
+
+/* parchment panel texture on the big surfaces */
+.objectives, .forge-col, .pity, .history, .dmgchart, .savebox, .settings,
+.mapcard, .codexcard, .collcard, .craftcard, .rescard, .modal, .hud-preview,
+.hud-selected, .hud-tray, .shard {
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.012) 0 2px, transparent 2px 4px),
+    repeating-linear-gradient(90deg, rgba(0,0,0,0.03) 0 3px, transparent 3px 6px);
+}
+
+/* ---- tactile bevelled buttons ------------------------------------------ */
+button {
+  background: linear-gradient(#34322c, #26241f);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 4px rgba(0,0,0,0.35);
+  position: relative; overflow: hidden;
+}
+button:hover { background: linear-gradient(#3d3a30, #2c2a24); }
+button:active { transform: translateY(1px); box-shadow: inset 0 2px 4px rgba(0,0,0,0.4); }
+/* hover sheen sweep */
+button::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(115deg, transparent 40%, rgba(255,255,255,0.14) 50%, transparent 60%);
+  transform: translateX(-120%); transition: transform .5s ease;
+}
+button:hover::after { transform: translateX(120%); }
+.bigbtn {
+  background: linear-gradient(#4a3a1c, #2a2112);
+  border-image: linear-gradient(#f0d090, #8a6a2a) 1;
+  text-shadow: 0 0 8px rgba(217,164,65,0.4);
+}
+
+/* ---- ornate carved-frame corners on major cards ------------------------ */
+.mapcard, .modal, .objectives, .forge-col, .pity {
+  position: relative;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(217,164,65,0.08);
+}
+.mapcard::before, .modal::before {
+  content: ''; position: absolute; inset: 4px; pointer-events: none; border-radius: 6px;
+  border: 1px solid rgba(217,164,65,0.18);
+  -webkit-mask: linear-gradient(#000 0 0) top/100% 14px no-repeat, linear-gradient(#000 0 0) bottom/100% 14px no-repeat,
+                linear-gradient(#000 0 0) left/14px 100% no-repeat, linear-gradient(#000 0 0) right/14px 100% no-repeat;
+          mask: linear-gradient(#000 0 0) top/100% 14px no-repeat, linear-gradient(#000 0 0) bottom/100% 14px no-repeat,
+                linear-gradient(#000 0 0) left/14px 100% no-repeat, linear-gradient(#000 0 0) right/14px 100% no-repeat;
+}
+
+/* ---- rarity borders (escalating treatments) ---------------------------- */
+.tchip, .rescard, .collcard, .craftcard, .cchip.in {
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 0 10px -4px var(--rc);
+}
+.collcard { transition: transform .15s, box-shadow .15s; }
+.collcard:not(.locked):hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 6px 18px -6px var(--rc), 0 0 0 1px var(--rc); }
+.collcard .tchip-icon, .collcard canvas.glyph { filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5)); }
+
+/* Legendary shimmer */
+.rescard[style*="f0a92e"], .collcard[style*="f0a92e"] { animation: rarShimmer 2.4s ease-in-out infinite; }
+@keyframes rarShimmer { 50% { box-shadow: 0 0 18px -3px #f0a92e, 0 0 0 1px #f0a92e; } }
+/* Mythic ember flicker */
+.rescard[style*="e04b4b"], .collcard[style*="e04b4b"] { animation: rarEmber 1.3s ease-in-out infinite; }
+@keyframes rarEmber { 0%,100% { box-shadow: 0 0 10px -3px #e04b4b, 0 0 0 1px #e04b4b; } 50% { box-shadow: 0 0 22px 0 #ff6a4a, 0 0 0 1px #ff8a4a; } }
+/* Mythic+ animated prismatic border */
+.rescard[style*="ffffff"], .collcard[style*="ffffff"] {
+  border-width: 2px; border-style: solid;
+  border-image: linear-gradient(90deg,#ff5a5a,#f0a92e,#5fa855,#4a90d9,#9b59b6,#ff5a5a) 1;
+  animation: prismSpin 3s linear infinite;
+}
+@keyframes prismSpin { to { filter: hue-rotate(360deg); } }
+
+/* rarity gem dot on tower chips */
+.tchip::before {
+  content: ''; position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--rc); box-shadow: 0 0 8px var(--rc);
+}
+
+/* ---- roll stage: scroll unfurl + banner beacon ------------------------- */
+.rollstage {
+  background:
+    radial-gradient(circle at 50% 30%, rgba(217,164,65,0.08), transparent 60%),
+    radial-gradient(circle, #201d17, #0c0b09 70%);
+  border-image: linear-gradient(#6a4a1a, #d9a441, #6a4a1a) 1;
+  box-shadow: inset 0 0 40px rgba(0,0,0,0.6);
+}
+.banner-spin { box-shadow: 0 0 60px var(--flare), inset 0 0 20px rgba(0,0,0,0.5); }
+.results { animation: unfurl .4s ease-out; }
+@keyframes unfurl { from { transform: scaleY(.2); opacity: 0; } to { transform: scaleY(1); opacity: 1; } }
+.rescard { animation: cardIn .45s cubic-bezier(.2,1.4,.4,1) backwards; }
+.rescard:nth-child(2){animation-delay:.05s} .rescard:nth-child(3){animation-delay:.1s} .rescard:nth-child(4){animation-delay:.15s}
+.rescard:nth-child(5){animation-delay:.2s} .rescard:nth-child(6){animation-delay:.25s} .rescard:nth-child(7){animation-delay:.3s}
+.rescard:nth-child(8){animation-delay:.35s} .rescard:nth-child(9){animation-delay:.4s} .rescard:nth-child(10){animation-delay:.45s}
+@keyframes cardIn { from { transform: translateY(-30px) scale(.6) rotateX(60deg); opacity: 0; } }
+.resrar { text-shadow: 0 0 8px var(--rc); }
+.rescard.shine .resrar { animation: rarPulse .8s ease-in-out infinite; }
+@keyframes rarPulse { 50% { text-shadow: 0 0 16px var(--rc); } }
+.pitybar .pb i { box-shadow: 0 0 8px -2px currentColor; transition: width .4s ease; }
+
+/* ---- forge: anvil glow on hover ---------------------------------------- */
+.craftcard:hover { box-shadow: 0 0 14px -4px var(--rc); }
+.shard button:hover, .conv button:hover { box-shadow: 0 0 10px -3px #ffd98a; }
+
+/* ---- HUD plaques -------------------------------------------------------- */
+.hstat {
+  background: linear-gradient(#26241f, #16150f);
+  border-image: linear-gradient(#5a4a2a, #2a241a) 1;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 2px 6px rgba(0,0,0,0.4);
+}
+.hud-preview, .hud-selected { box-shadow: 0 4px 14px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(217,164,65,0.06); }
+.hud-preview { border-image: linear-gradient(#6a4a1a, #a8703f) 1; }
+.hud-selected { animation: selIn .2s ease-out; }
+@keyframes selIn { from { transform: translateX(12px); opacity: 0; } }
+.trayitem { transition: transform .1s; border-radius: 6px; }
+.trayitem:hover { transform: translateY(-3px); }
+.trayitem:not(.poor) canvas { filter: drop-shadow(0 0 4px var(--rc)); }
+.trayitem.poor { filter: grayscale(0.7) brightness(0.7); }
+.trayitem.active { box-shadow: 0 0 0 2px #d9a441, 0 0 12px -2px #d9a441; }
+.callwave { animation: wavePulse 1.6s ease-in-out infinite; }
+@keyframes wavePulse { 50% { box-shadow: 0 0 16px -2px #d9a441; } }
+
+/* ---- toasts: wax-seal ---------------------------------------------------*/
+.toast { box-shadow: 0 4px 14px rgba(0,0,0,0.6); }
+.toast::before { content: '✦'; margin-right: 6px; color: #d9a441; }
+
+/* ---- menu hero glow ---------------------------------------------------- */
+.menu-hero h1 { animation: heroGlow 4s ease-in-out infinite; }
+@keyframes heroGlow { 50% { text-shadow: 0 3px 0 #000, 0 0 44px rgba(217,164,65,0.7); } }
+.mbtn { transition: transform .12s, box-shadow .12s; }
+.mbtn:hover { transform: translateY(-3px); box-shadow: 0 8px 20px -8px rgba(217,164,65,0.5); }
+.mbtn.play { animation: playPulse 3s ease-in-out infinite; }
+@keyframes playPulse { 50% { box-shadow: 0 0 26px -6px rgba(217,164,65,0.6); } }
+
+/* ---- summary banner ----------------------------------------------------- */
+.summary-banner.win { animation: winGlow 2s ease-in-out infinite; }
+@keyframes winGlow { 50% { text-shadow: 0 0 44px rgba(217,164,65,0.8); } }
+.stars-big { text-shadow: 0 0 20px rgba(217,164,65,0.6); }
+.dmgrow .bar i { box-shadow: 0 0 8px -2px #d9a441; transition: width .6s ease; }
+
+/* subtle page-turn on screen swap */
+#app > .page, #app > .menu { animation: pageIn .28s ease-out; }
+@keyframes pageIn { from { opacity: 0; transform: translateY(8px); } }
+
+/* respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001s !important; animation-iteration-count: 1 !important; }
+}

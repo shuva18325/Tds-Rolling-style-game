@@ -204,8 +204,8 @@
     _drawGlyphs(root) {
       $$('canvas.glyph', root || document).forEach((cv) => {
         const id = cv.dataset.glyph; const t = RS.TOWER_BY_ID[id]; if (!t) return;
-        const ctx = cv.getContext('2d'); ctx.clearRect(0, 0, 40, 40);
-        this.renderer._towerGlyph(ctx, { def: t, muzzle: 0, level: 1, ascended: false }, 20, 18, RS.rarityColor(t.rarity), false);
+        const ctx = cv.getContext('2d'); ctx.clearRect(0, 0, cv.width, cv.height);
+        RS.Sprites.drawTowerIcon(ctx, t, cv.width / 2, cv.height / 2 + 3, Math.min(cv.width, cv.height) * 0.86);
       });
     },
 
@@ -279,6 +279,9 @@
           </div>`;
         }).join('')}</div>`;
         this._drawGlyphs(stage);
+        // full-screen rarity reveal spectacle (glow bloom / column / shatter)
+        const rect = stage.getBoundingClientRect();
+        RS.VFX.overlay.reveal(RS.RARITY[bestRank].id, rect.left + rect.width / 2, rect.top + rect.height / 2);
         // refresh tokens/pity display without losing stage
         this._refreshTopbar();
         this._refreshPity();
@@ -324,11 +327,12 @@
         </div>`;
       this._wireGo(); this._drawGlyphs(this.root);
       const refresh = () => { this.renderForge(); };
-      $$('[data-ctok]', this.root).forEach((b) => b.onclick = () => { if (Meta.convertTokens(b.dataset.ctok)) refresh(); });
-      $$('[data-croll]', this.root).forEach((b) => b.onclick = () => { if (Meta.convertRolls(b.dataset.croll)) refresh(); });
-      $$('[data-upcast]', this.root).forEach((b) => b.onclick = () => { if (Meta.upcastShards(b.dataset.upcast)) refresh(); });
-      $$('[data-craft]', this.root).forEach((b) => b.onclick = () => { if (Meta.craftTower(b.dataset.craft)) { this.toast('Crafted ' + RS.TOWER_BY_ID[b.dataset.craft].name, RS.PALETTE.good); refresh(); } });
-      $$('[data-dismantle]', this.root).forEach((b) => b.onclick = () => { if (Meta.dismantle(b.dataset.dismantle)) refresh(); });
+      const strike = (el, color) => { const r = el.getBoundingClientRect(); RS.VFX.overlay.forgeStrike(r.left + r.width / 2, r.top + r.height / 2, color); };
+      $$('[data-ctok]', this.root).forEach((b) => b.onclick = () => { if (Meta.convertTokens(b.dataset.ctok)) { strike(b, '#ffd98a'); refresh(); } });
+      $$('[data-croll]', this.root).forEach((b) => b.onclick = () => { if (Meta.convertRolls(b.dataset.croll)) { strike(b, '#ffd98a'); refresh(); } });
+      $$('[data-upcast]', this.root).forEach((b) => b.onclick = () => { if (Meta.upcastShards(b.dataset.upcast)) { strike(b, '#c79bff'); refresh(); } });
+      $$('[data-craft]', this.root).forEach((b) => b.onclick = () => { const def = RS.TOWER_BY_ID[b.dataset.craft]; if (Meta.craftTower(b.dataset.craft)) { strike(b, RS.rarityColor(def.rarity)); this.toast('Crafted ' + def.name, RS.PALETTE.good); setTimeout(refresh, 120); } });
+      $$('[data-dismantle]', this.root).forEach((b) => b.onclick = () => { if (Meta.dismantle(b.dataset.dismantle)) { const r = b.getBoundingClientRect(); RS.VFX.overlay.stream(r.left + r.width / 2, r.top, r.left, 120, RS.rarityColor(RS.TOWER_BY_ID[b.dataset.dismantle].rarity)); refresh(); } });
     },
 
     /* --------------------------- collection --------------------------- */
@@ -500,6 +504,7 @@
       m.frame(eff);
       m.updateParticles(eff * m.speed);
       this.renderer.showRange = Meta.p.settings.showRange || this._tabRange;
+      this.renderer.updateVisuals(m, eff * m.speed); // presentational animation/VFX only
       this.renderer.draw(m);
       this.refreshHud(true);
       if (m.state === 'won' || m.state === 'lost') this.endMatch();
