@@ -138,6 +138,7 @@
     basilisk:   { sil: 'basilisk',   anim: 'siege', scale: 1.55 },
     spartan:    { sil: 'spartan',    anim: 'blocker', scale: 1.08 },
     greekfire:  { sil: 'greekfire',  anim: 'siege' },
+    pharaoh:    { sil: 'pharaoh',    anim: 'mage', scale: 1.05 },
     marshal:    { sil: 'marshal',    anim: 'banner' },
     wyrm:       { sil: 'wyrm',       anim: 'static', scale: 1.25 },
     lich:       { sil: 'lich',       anim: 'mage' },

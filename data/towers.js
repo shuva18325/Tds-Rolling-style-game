@@ -1,6 +1,6 @@
 /* =========================================================================
  * REALM SIEGE — data/towers.js
- * The 26-tower roster. Pure declarative data: the engine's generic systems
+ * The tower roster (see RS.TOWERS.length). Pure declarative data: the engine's generic systems
  * (blocker / splash / chain / pierce / dot / slow / aura / summon / cycle)
  * read the `traits` block and behave accordingly — no per-tower logic.
  *
@@ -279,6 +279,16 @@
       ascend: { desc: 'The stream clings: burning enemies ignite everything they touch.' },
       lore: 'The formula died with the empire. The fire did not.' }),
 
+    T({ id: 'pharaoh', name: "Pharaoh's Finest", rarity: 'Ancient', cost: 5500,
+      damage: 210, fireRate: 0.85, rangeT: 3.6, targeting: 'Strongest', damageType: 'Magic',
+      splashT: 0, status: ['Mark'], placement: 'Ground',
+      traits: { mark: 0.18, bonusVs: { trait: 'Boss', mult: 1.75 } },
+      upgrades: { branch: [
+        { name: 'Royal Guard', desc: 'harder-hitting curse', mods: { damage: 0.5 } },
+        { name: "Vizier's Rite", desc: 'deeper mark, faster casts', mods: { mark: 0.12, fireRate: 0.3 } } ] },
+      ascend: { desc: 'The curse never lifts: marked targets stay marked until they die.' },
+      lore: 'The god-kings are dust. Their honor guard never stood down.' }),
+
     /* ------------------------------ MYTHIC ----------------------------- */
     T({ id: 'marshal', name: 'Grand Marshal of the Realm', rarity: 'Mythic', cost: 8000,
       damage: 20, fireRate: 1.0, rangeT: 2.0, targeting: 'First', damageType: 'Holy',
@@ -380,6 +390,7 @@
     basilisk:  { l2: std('Reinforced Bands', 'Thicker iron rings. +22% dmg, +12% range, +8% attack speed.'), l3: std('Master Founders', 'A truer bore. +22% dmg, +12% range, +8% attack speed.'), ascend: 'The Conqueror\'s Voice' },
     spartan:   { l2: std('Agoge Training', 'Lifelong discipline. +22% dmg, +12% range, +8% attack speed.'), l3: std('Bronze Aspis', 'A wall of shields. +22% dmg, +12% range, +8% attack speed.'), ascend: 'The Unbroken Line' },
     greekfire: { l2: std('Pressurised Siphon', 'A fiercer jet. +22% dmg, +12% range, +8% attack speed.'), l3: std('Sea-Fire Doctrine', 'Imperial secrets. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Fire of Byzantium' },
+    pharaoh:   { l2: std('Golden Scepter', 'A heavier staff. +22% dmg, +12% range, +8% attack speed.'), l3: std('Rite of Anubis', 'Deeper rites. +22% dmg, +12% range, +8% attack speed.'), ascend: "Pharaoh's Decree" },
     marshal:   { l2: std('War Council', 'Stronger command. +22% dmg, +12% range, +8% attack speed.'), l3: std('Grand Strategy', 'Wider reach. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Banner of the Realm' },
     wyrm:      { l2: std('Molten Gullet', 'Fiercer breath. +22% dmg, +12% range, +8% attack speed.'), l3: std('Ancient Fury', 'Wider cone. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Elder Cataclysm' },
     lich:      { l2: std('Grave Bind', 'Stronger raise. +22% dmg, +12% range, +8% attack speed.'), l3: std('Death Dominion', 'Wider grasp. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Undying Legion' },

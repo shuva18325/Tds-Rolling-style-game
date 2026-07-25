@@ -538,13 +538,22 @@
       }
     }
 
+    // Waves 1..earlyRampWaves scale enemy HP up from earlyRampFloor to 1.0,
+    // so a brand-new player's first few waves are noticeably softer than the
+    // rest of the run instead of hitting full strength immediately.
+    _earlyHpRamp(n) {
+      const R = RS.WAVE;
+      if (!n || n >= R.earlyRampWaves) return 1;
+      return R.earlyRampFloor + (1 - R.earlyRampFloor) * ((n - 1) / (R.earlyRampWaves - 1));
+    }
+
     _spawnEnemy(enemyId, lane, atProgress) {
       const def = RS.ENEMY_BY_ID[enemyId];
       if (!def) return null;
       lane = lane % this.paths.length;
       const path = this.paths[lane];
       const isFlying = def.traits.includes('Flying');
-      const hpMult = this.diff.hpMult;
+      const hpMult = this.diff.hpMult * this._earlyHpRamp(this.waveIndex);
       const e = {
         active: true, alive: true, def, lane,
         progress: atProgress || 0,

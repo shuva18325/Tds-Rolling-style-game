@@ -221,6 +221,19 @@
     }
     ctx.restore(); };
 
+  Sil.pharaoh = (ctx, r, a, p) => { // elite honor guard: gold armor, nemes headdress, glowing was-scepter
+    facet(ctx, [[0, -11], [7, 12], [-7, 12]], '#e8dcc0', '#fff8e0'); // white linen robe
+    facet(ctx, [[-6, -7], [6, -7], [5, -2], [-5, -2]], RS.RAMP.gold.mid, RS.RAMP.gold.rim); // gold usekh collar
+    ctx.strokeStyle = A.mul(r.mid, 1.2); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-5, -5); ctx.lineTo(5, -5); ctx.stroke(); // faience inlay band
+    facet(ctx, [[-6, -14], [-6, -3], [-3, -4], [-3.5, -13]], r.mid, r.rim); // nemes lappet, left
+    facet(ctx, [[6, -14], [6, -3], [3, -4], [3.5, -13]], r.mid, r.rim); // nemes lappet, right
+    facet(ctx, [[-3.2, -16], [3.2, -16], [3.2, -13], [-3.2, -13]], RS.RAMP.gold.mid, RS.RAMP.gold.rim); // gold circlet
+    circ(ctx, 0, -10, 2.8, RS.RAMP.flesh.mid); // face
+    facet(ctx, [[0, -19], [-1.3, -16], [1.3, -16]], '#3fa06a'); // uraeus cobra
+    ctx.strokeStyle = RS.RAMP.gold.mid; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(8, 13); ctx.lineTo(10, -14); ctx.stroke(); // was-scepter shaft
+    facet(ctx, [[8, -15], [13, -14], [12.5, -10], [8, -10]], RS.RAMP.gold.light, RS.RAMP.gold.rim); // forked was-head
+    circ(ctx, 10.5, -17, 2.6 + p.charge * 2.4, A.alpha('#3fe0cc', 0.85), '#eafff9'); }; // glowing eye of Horus
+
   Sil.wyvernrider = (ctx, r, a, p) => { // small wyvern mount hovering
     const flap = Math.sin(p.t * 6) * 5;
     facet(ctx, [[-16, -2 - flap], [-2, 3], [0, -4], [-4, -6 - flap]], A.mul(r.mid, 0.9), r.rim);

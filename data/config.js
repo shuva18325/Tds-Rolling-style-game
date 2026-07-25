@@ -17,7 +17,7 @@
 
   // ---- Difficulty tiers (§6) ----
   RS.DIFFICULTY = [
-    { id: 'Easy', order: 0, waves: 20, hpMult: 1.0, speedMult: 1.0, startGold: 800, lives: 25,
+    { id: 'Easy', order: 0, waves: 20, hpMult: 0.85, speedMult: 1.0, startGold: 800, lives: 30,
       boss: 'boss_corvin', copperMult: 1.0, tokenMult: 1.0, modifiers: [],
       addArmor: 0, magicResist: 0, countMult: 1.0, night: false, noSell: false, noLeak: false, siegebreaker: false, adaptive: false },
     { id: 'Medium', order: 1, waves: 30, hpMult: 2.2, speedMult: 1.1, startGold: 650, lives: 20,
@@ -55,6 +55,11 @@
       Boss:      { familyBias: null,        sizeBias: 1.0,  spacing: 1.0, boss: true },
     },
     noAirBeforeWave: 3,     // waves 1-3 stay ground-only (see _archetypeFor)
+    // New players were getting chewed up before they'd learned the ropes —
+    // waves 1-6 ramp enemy HP up from 60% to 100% instead of hitting full
+    // strength immediately (see _earlyHpRamp). Every difficulty gets this;
+    // it's an onboarding curve, not a difficulty-tier setting.
+    earlyRampWaves: 6, earlyRampFloor: 0.6,
     miniBossEvery: 10,       // every 10th wave = mini-boss (elite-heavy)
     callEarlyBonusPerSec: 2, // in-match gold per remaining second when calling early
   };
