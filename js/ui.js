@@ -558,12 +558,45 @@
           <div class="codexgrid">
           ${RS.ENEMIES.filter((e) => !e.hidden && !e.traits.includes('Boss')).map((e) => { const seen = Meta.p.codex.enemies.includes(e.id); return `<div class="codexcard ${seen ? '' : 'locked'}"><b>${seen ? e.name : '???'}</b><span>${e.family}</span>${seen ? `<em>HP ${e.hp} · SPD ${e.speed} · AR ${e.armor}</em><div class="traits">${e.traits.map((t) => `<i>${t}</i>`).join('')}</div>` : '<em>Not yet encountered</em>'}</div>`; }).join('')}
           </div>
-          <h3>Bosses</h3>
-          <div class="codexgrid">
-          ${RS.ENEMIES.filter((e) => e.traits.includes('Boss')).map((e) => { const seen = Meta.p.codex.enemies.includes(e.id); return `<div class="codexcard boss ${seen ? '' : 'locked'}"><b>${seen ? e.name : '??? Boss'}</b><span>${e.family}</span>${seen ? `<em>HP ${fmt(e.hp)}</em>` : '<em>Undiscovered</em>'}</div>`; }).join('')}
+          <h3>Bosses <small>one per map</small></h3>
+          <div class="codexgrid bossgrid">
+          ${RS.ENEMIES.filter((e) => e.traits.includes('Boss')).map((e) => {
+            const seen = Meta.p.codex.enemies.includes(e.id);
+            const home = RS.MAPS.find((mp) => mp.boss === e.id);
+            return `<div class="codexcard boss ${seen ? '' : 'locked'}">
+              <canvas class="bossport" data-boss="${e.boss || ''}" width="104" height="88"></canvas>
+              <b>${seen ? e.name : '??? Boss'}</b>
+              <span>${seen ? (e.title || e.family) : 'Undiscovered'}</span>
+              ${seen ? `<em>${home ? home.name : 'Endless'} · HP ${fmt(e.hp)}</em>
+                <div class="traits">${e.traits.filter((t) => t !== 'Boss').map((t) => `<i>${t}</i>`).join('')}</div>
+                ${e.lore ? `<p class="bosslore">${e.lore}</p>` : ''}` : '<em>Defeat it to record its entry</em>'}
+            </div>`;
+          }).join('')}
           </div>
         </div>`;
       this._wireGo();
+      this._drawBossPortraits();
+    },
+
+    // Boss portraits in the codex, drawn with the same silhouettes the match
+    // uses (locked entries stay as a black cut-out so the shape is a teaser).
+    _drawBossPortraits() {
+      $$('canvas.bossport', document).forEach((cv) => {
+        const key = cv.dataset.boss; if (!key) return;
+        const locked = cv.parentElement.classList.contains('locked');
+        const c = cv.getContext('2d');
+        c.clearRect(0, 0, cv.width, cv.height);
+        const aura = (RS.Renderer.BOSS_AURA || {})[key];
+        if (!locked && aura) {
+          const g = c.createRadialGradient(52, 52, 2, 52, 52, 46);
+          g.addColorStop(0, RS.art.alpha(aura.glow, 0.20)); g.addColorStop(1, 'rgba(0,0,0,0)');
+          c.fillStyle = g; c.fillRect(0, 0, cv.width, cv.height);
+        }
+        c.save(); c.translate(52, 78); c.scale(1.35, 1.35);
+        if (locked) { c.globalAlpha = 0.55; c.filter = 'brightness(0)'; }
+        RS.Sprites.drawBossBody(c, key, performance.now() / 1000, false);
+        c.restore();
+      });
     },
 
     /* ---------------------------- settings ---------------------------- */
@@ -633,9 +666,10 @@
       $('#btnWave').onclick = () => this.onWaveButton();
       $('#btnPause').onclick = () => this.togglePause();
       $('#btnSpeed').onclick = () => this.cycleSpeed();
-      $('#btnMenu').onclick = () => { if (confirm('Abandon this battle?')) { this.match = null; this.show('mapselect'); } };
+      $('#btnMenu').onclick = () => { if (confirm('Abandon this battle?')) { RS.Tutorial && RS.Tutorial.skip(); this.match = null; this.show('mapselect'); } };
       $('#hMax').textContent = this.match.maxWaves > 900 ? '∞' : this.match.maxWaves;
       this.refreshHud();
+      RS.Tutorial && RS.Tutorial.maybeStart();
     },
 
     _buildTray() {
@@ -666,12 +700,13 @@
       this.placing = t; this.renderer.ghost = t; this.selectedTower = null; this.renderer.selected = null;
       $$('.trayitem', document).forEach((b) => b.classList.toggle('active', b.dataset.place === id));
       this.refreshSelected();
+      RS.Tutorial && RS.Tutorial.event('select');
     },
 
     onWaveButton() {
       const m = this.match; if (!m) return;
       if (m.waveActive) m.callEarly();
-      else m.startWave();
+      else { m.startWave(); RS.Tutorial && RS.Tutorial.event('waveStart'); }
       this.refreshHud();
     },
     togglePause() { if (!this.match) return; this.match.paused = !this.match.paused; $('#btnPause').textContent = this.match.paused ? '▶' : '⏸'; },
@@ -687,6 +722,7 @@
       this.renderer.updateVisuals(m, eff * m.speed); // presentational animation/VFX only
       this.renderer.draw(m);
       this.refreshHud(true);
+      if (RS.Tutorial) { RS.Tutorial.reposition(); RS.Tutorial.scan(m); }
       if (m.state === 'won' || m.state === 'lost') this.endMatch();
     },
 
@@ -812,7 +848,7 @@
         const m = this.match; if (!m) return; const t = toTile(ev);
         if (this.placing) {
           const res = m.place(this.placing, t.c, t.r);
-          if (res.ok) { if (!(ev.shiftKey)) { this.placing = null; this.renderer.ghost = null; $$('.trayitem').forEach((b) => b.classList.remove('active')); } this.refreshSelected(); }
+          if (res.ok) { if (!(ev.shiftKey)) { this.placing = null; this.renderer.ghost = null; $$('.trayitem').forEach((b) => b.classList.remove('active')); } this.refreshSelected(); RS.Tutorial && RS.Tutorial.event('place'); }
           else this.toast(res.reason, RS.PALETTE.bad);
           return;
         }
@@ -820,6 +856,7 @@
         let hit = null, bd = 1e9;
         for (const tw of m.towers) { const d = (tw.x - t.x) ** 2 + (tw.y - t.y) ** 2; if (d < 22 * 22 && d < bd) { bd = d; hit = tw; } }
         this.selectedTower = hit; this.renderer.selected = hit; this.refreshSelected();
+        if (hit) RS.Tutorial && RS.Tutorial.event('towerSelect');
       };
     },
 
@@ -842,6 +879,7 @@
     /* -------------------------- match resolve ------------------------- */
     endMatch() {
       const m = this.match; if (this._ended) return; this._ended = true;
+      RS.Tutorial && RS.Tutorial.skip();   // first battle finished: never show it again
       const won = m.state === 'won';
       // record codex from encountered
       m.encountered.forEach((k) => { if (k.startsWith('enemy:')) Meta.seeEnemy(k.slice(6)); });

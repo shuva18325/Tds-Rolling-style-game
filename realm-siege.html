@@ -600,6 +600,73 @@ button:hover::after { transform: translateX(120%); }
   *, *::before, *::after { animation-duration: .001s !important; animation-iteration-count: 1 !important; }
 }
 
+/* ===== boss codex cards (one boss per map) ===== */
+.bossgrid { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.codexcard.boss { display: flex; flex-direction: column; align-items: center; text-align: center;
+  background: linear-gradient(170deg, #241a18, #16110f); border-color: #5a3028; padding: 12px 12px 14px; }
+.codexcard.boss:not(.locked) { box-shadow: 0 4px 16px rgba(0,0,0,.5), inset 0 0 0 1px rgba(217,164,65,.10); }
+.codexcard.boss b { font-size: 14px; margin-top: 2px; color: #f2e6c8; }
+.codexcard.boss span { font-style: italic; color: #c8a06a; }
+.codexcard.boss em { color: var(--dim); font-style: normal; margin-top: 3px; }
+.codexcard.boss .traits { justify-content: center; margin-top: 6px; }
+.bossport { width: 104px; height: 88px; display: block; }
+.codexcard.boss.locked .bossport { opacity: .45; }
+.bosslore { margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(217,164,65,.14);
+  font-size: 11.5px; font-style: italic; color: #9a8f7a; line-height: 1.45; }
+
+/* ===== first-battle tutorial + field tips ===== */
+/* NOTE: style.css has `#hud > * { pointer-events: auto }`, which outranks a bare
+   `.tut` class rule — the overlay swallowed every click it was pointing at.
+   The #hud-qualified selector wins the specificity fight. */
+.tut, #hud > .tut { position: absolute; inset: 0; z-index: 60; pointer-events: none; transition: background .25s; }
+/* the spotlight: a transparent box with a colossal outer shadow = a cut-out */
+.tut-hole { position: absolute; pointer-events: none; border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgba(8,6,5,.55);
+  outline: 2px solid rgba(217,164,65,.85); outline-offset: 0;
+  transition: left .28s cubic-bezier(.3,1,.4,1), top .28s cubic-bezier(.3,1,.4,1),
+              width .28s cubic-bezier(.3,1,.4,1), height .28s cubic-bezier(.3,1,.4,1);
+  animation: tutHole 1.9s ease-in-out infinite; }
+@keyframes tutHole { 50% { outline-color: rgba(255,214,130,.45); } }
+
+.tut-card { position: absolute; width: 330px; pointer-events: auto;
+  background: linear-gradient(165deg, #2b2822, #191712);
+  border: 1px solid var(--gold); border-radius: 10px; padding: 14px 16px 12px;
+  box-shadow: 0 14px 40px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.06);
+  animation: tutIn .28s cubic-bezier(.2,1.3,.4,1) backwards; }
+.tut-card.at-center { left: 50%; top: 50%; transform: translate(-50%,-50%); }
+@keyframes tutIn { from { opacity: 0; transform: translateY(10px) scale(.97); } }
+.tut-card.at-center { animation-name: tutInC; }
+@keyframes tutInC { from { opacity: 0; transform: translate(-50%,-46%) scale(.97); } }
+.tut-step { font-size: 10px; letter-spacing: 1.4px; text-transform: uppercase; color: #8a7f68; margin-bottom: 5px; }
+.tut-card h4 { font-family: Georgia, serif; font-size: 17px; color: var(--gold); margin-bottom: 6px; }
+.tut-card p { font-size: 13px; line-height: 1.5; color: #ddd2b8; }
+.tut-card p b { color: #f5e3b4; }
+.tut-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; }
+.tut-skip { font-size: 11px; padding: 5px 9px; background: transparent; border-color: transparent; color: #8a7f68; box-shadow: none; }
+.tut-skip:hover { color: var(--text); border-color: var(--line); }
+.tut-next { font-size: 13px; font-weight: 700; padding: 7px 18px;
+  background: linear-gradient(#4a3a1c,#2a2112); border: 1px solid var(--gold); color: var(--gold); }
+.tut-wait { margin-top: 10px; font-size: 11.5px; font-style: italic; color: #c8a860;
+  border-top: 1px solid rgba(217,164,65,.18); padding-top: 8px;
+  animation: tutPulse 1.6s ease-in-out infinite; }
+@keyframes tutPulse { 50% { opacity: .5; } }
+
+/* contextual one-shot field tips */
+.tut-tip { position: absolute; top: 58px; left: 50%; transform: translate(-50%,-14px);
+  display: flex; gap: 11px; align-items: flex-start; width: min(430px, 84vw); z-index: 55;
+  background: linear-gradient(165deg, #2b2822, #191712);
+  border: 1px solid var(--gold); border-left: 4px solid var(--gold); border-radius: 10px;
+  padding: 11px 13px; box-shadow: 0 10px 30px rgba(0,0,0,.6);
+  opacity: 0; transition: opacity .26s, transform .26s cubic-bezier(.2,1.2,.4,1); pointer-events: auto; }
+.tut-tip.in { opacity: 1; transform: translate(-50%,0); }
+.tut-tip-icon { font-size: 21px; line-height: 1.1; filter: drop-shadow(0 0 6px rgba(217,164,65,.4)); }
+.tut-tip-txt b { display: block; font-family: Georgia, serif; font-size: 14px; color: var(--gold); margin-bottom: 3px; }
+.tut-tip-txt p { font-size: 12.5px; line-height: 1.45; color: #ddd2b8; }
+.tut-tip-txt p b { display: inline; font-family: inherit; font-size: inherit; color: #f5e3b4; }
+.tut-tip-x { margin-left: auto; align-self: flex-start; font-size: 11px; padding: 2px 7px;
+  background: transparent; border-color: transparent; color: #8a7f68; box-shadow: none; }
+.tut-tip-x:hover { color: var(--text); border-color: var(--line); }
+
 </style>
 
 <!-- REALM SIEGE — single-file build. Play: rolls, 12 maps, 4 difficulties. -->
@@ -1714,17 +1781,59 @@ button:hover::after { transform: translateX(120%); }
     E({ id: 'sig_thronesentinel', name: 'Throne Sentinel', family: 'Arcane', hp: 460, speed: 36, armor: 16, magicResist: 0.50, bounty: 36, traits: [], abilities: { suppressAbilities: { radius: 150 } }, motif: 'golem', cost: 52 }),
     E({ id: 'sig_wendigo', name: 'Wendigo', family: 'Undead', hp: 440, speed: 46, armor: 8, magicResist: 0.10, bounty: 34, traits: ['Fast', 'Regenerating'], abilities: { regen: 32 }, motif: 'wraith', cost: 44 }),
 
-    /* ------------------------------- BOSSES ---------------------------- */
-    E({ id: 'boss_corvin', name: 'Bandit King Corvin', family: 'Bandit', hp: 4200, speed: 40, armor: 14, magicResist: 0.10, bounty: 300, traits: ['Boss'],
-      abilities: { boss: true, summon: { id: 'highwayman', count: 20, atHpPct: 0.5 } }, motif: 'boss', cost: 400 }),
-    E({ id: 'boss_gruumak', name: 'Warlord Gruumak the Iron Tusk', family: 'Orc', hp: 14000, speed: 34, armor: 40, magicResist: 0.15, bounty: 600, traits: ['Boss', 'Armored'],
-      abilities: { boss: true, phases: 3, shatterBlocker: 10, immuneSlowBelow: 0.5 }, motif: 'boss', cost: 700 }),
-    E({ id: 'boss_malgrath', name: 'Malgrath the Bone Sovereign', family: 'Undead', hp: 30000, speed: 32, armor: 24, magicResist: 0.25, bounty: 1200, traits: ['Boss'],
-      abilities: { boss: true, resurrectAll: true, phases: 2, reflectPhase2: 0.25 }, motif: 'boss', cost: 1100 }),
-    E({ id: 'boss_azhrakoth', name: 'Azhrakoth, the Ember Throne', family: 'Demon', hp: 90000, speed: 34, armor: 30, magicResist: 0.30, bounty: 3000, traits: ['Boss', 'Immune-Fire'],
-      abilities: { boss: true, phases: 4, flightPhase: 1, burnZones: 2, summonBalor: 3, enragePhase: 4 }, motif: 'boss', cost: 2200 }),
-    E({ id: 'boss_herald', name: 'The Grey Herald', family: 'Arcane', hp: 60000, speed: 36, armor: 20, magicResist: 0.30, bounty: 5000, traits: ['Boss'],
-      abilities: { boss: true, endless: true, copyStrongest: { every: 60 } }, motif: 'boss', cost: 3000 }),
+    /* ------------------------------- BOSSES ----------------------------
+     * ONE BOSS PER MAP (see maps.js `boss`). Base HP follows the MAP's rating
+     * curve — r1 ~3k up to r6 ~26k — and the chosen difficulty scales it with
+     * a softened multiplier (see Match._bossHpMult). Previously bosses were
+     * picked by difficulty tier, so all 13 maps shared 4 fights and the base
+     * HP had to encode the tier itself (Azhrakoth at 90k), which double-scaled
+     * once hpMult was applied on top.
+     * Each has a distinct silhouette in sprites.js (BossSil).              */
+    // -- rating 1 --
+    E({ id: 'boss_corvin', name: 'Bandit King Corvin', family: 'Bandit', hp: 3000, speed: 40, armor: 14, magicResist: 0.10, bounty: 300, traits: ['Boss'],
+      abilities: { boss: true, summon: { id: 'highwayman', count: 16, atHpPct: 0.5 } }, motif: 'boss', boss: 'corvin', cost: 400,
+      title: 'The Roadwarden', lore: 'He taxed this road for thirty years. The crown never once collected.' }),
+    // -- rating 2 --
+    E({ id: 'boss_thane', name: 'The Drowned Thane', family: 'Undead', hp: 5000, speed: 34, armor: 22, magicResist: 0.15, bounty: 400, traits: ['Boss', 'Armored', 'Regenerating'],
+      abilities: { boss: true, regen: 120, summon: { id: 'sig_drowned', count: 6, atHpPct: 0.6 } }, motif: 'boss', boss: 'thane', cost: 500,
+      title: 'Lord of the Ford', lore: 'He rode into the river in full plate. He never rode out, and he never stopped walking.' }),
+    E({ id: 'boss_hollow', name: 'The Hollow Mother', family: 'Demon', hp: 5400, speed: 30, armor: 10, magicResist: 0.35, bounty: 420, traits: ['Boss', 'Stealth'],
+      abilities: { boss: true, summon: { id: 'sig_lurker', count: 7, atHpPct: 0.65 }, phases: 2 }, motif: 'boss', boss: 'hollow', cost: 520,
+      title: 'Antlered Warden', lore: 'The forest did not grow around her. She grew around it.' }),
+    // -- rating 3 --
+    E({ id: 'boss_gruumak', name: 'Warlord Gruumak the Iron Tusk', family: 'Orc', hp: 8000, speed: 34, armor: 40, magicResist: 0.15, bounty: 600, traits: ['Boss', 'Armored'],
+      abilities: { boss: true, phases: 3, shatterBlocker: 10, immuneSlowBelow: 0.5 }, motif: 'boss', boss: 'gruumak', cost: 700,
+      title: 'Breaker of Gates', lore: 'Nine keeps have fallen to that cleaver. He counts them on the haft.' }),
+    E({ id: 'boss_frostjarl', name: 'The Frost Jarl', family: 'Orc', hp: 8600, speed: 30, armor: 34, magicResist: 0.30, bounty: 640, traits: ['Boss', 'Armored', 'Immune-Slow'],
+      abilities: { boss: true, phases: 2, shatterBlocker: 12 }, motif: 'boss', boss: 'frostjarl', cost: 720,
+      title: 'He Who Waited Out Winter', lore: 'The pass has been closed for a century. This is why.' }),
+    E({ id: 'boss_bogfather', name: 'The Bogfather', family: 'Undead', hp: 8200, speed: 26, armor: 12, magicResist: 0.25, bounty: 620, traits: ['Boss', 'Regenerating'],
+      abilities: { boss: true, regen: 200, summon: { id: 'sig_boghorror', count: 6, atHpPct: 0.5 } }, motif: 'boss', boss: 'bogfather', cost: 700,
+      title: 'The Lantern in the Reeds', lore: 'Follow the light, the drowned ones say. They are not lying. They are inviting.' }),
+    // -- rating 4 --
+    E({ id: 'boss_cinderlord', name: 'The Cinderlord', family: 'Demon', hp: 12000, speed: 36, armor: 26, magicResist: 0.25, bounty: 900, traits: ['Boss', 'Immune-Fire'],
+      abilities: { boss: true, phases: 3, burnZones: 2, enragePhase: 3 }, motif: 'boss', boss: 'cinderlord', cost: 1000,
+      title: 'Ash of the Old War', lore: 'He burned for so long that the burning became the man.' }),
+    E({ id: 'boss_warden', name: 'The Last Warden', family: 'Arcane', hp: 12600, speed: 28, armor: 44, magicResist: 0.40, bounty: 940, traits: ['Boss', 'Armored', 'Shielded'],
+      abilities: { boss: true, shieldHits: 12, phases: 2, suppressAbilities: { radius: 150 } }, motif: 'boss', boss: 'warden', cost: 1050,
+      title: 'Keeper of the Broken Keep', lore: 'The keep fell. Nobody told the Warden, so the Warden holds it still.' }),
+    E({ id: 'boss_stormwyrm', name: 'The Storm Wyrm', family: 'Aerial', hp: 11500, speed: 44, armor: 18, magicResist: 0.30, bounty: 960, traits: ['Boss', 'Flying', 'Fast'],
+      abilities: { boss: true, phases: 2, summon: { id: 'sig_cliffharrier', count: 8, atHpPct: 0.5 } }, motif: 'boss', boss: 'stormwyrm', cost: 1020,
+      title: 'The Ridge-Breaker', lore: 'It does not fly over the Spine. The Spine is what is left where it flew.' }),
+    // -- rating 5 --
+    E({ id: 'boss_malgrath', name: 'Malgrath the Bone Sovereign', family: 'Undead', hp: 18000, speed: 32, armor: 24, magicResist: 0.25, bounty: 1400, traits: ['Boss'],
+      abilities: { boss: true, resurrectAll: true, phases: 2, reflectPhase2: 0.25 }, motif: 'boss', boss: 'malgrath', cost: 1100,
+      title: 'Crowned in the Nave', lore: 'He was buried beneath the altar. He has decided to attend the service.' }),
+    E({ id: 'boss_forgemaster', name: 'The Obsidian Forgemaster', family: 'Demon', hp: 19000, speed: 30, armor: 50, magicResist: 0.30, bounty: 1500, traits: ['Boss', 'Armored', 'Immune-Fire'],
+      abilities: { boss: true, phases: 3, shatterBlocker: 8, burnZones: 1 }, motif: 'boss', boss: 'forgemaster', cost: 1600,
+      title: 'Smith of the Black Gate', lore: 'Every blade that ever cut you was drawn from his fire, once.' }),
+    // -- rating 6 --
+    E({ id: 'boss_azhrakoth', name: 'Azhrakoth, the Ember Throne', family: 'Demon', hp: 26000, speed: 34, armor: 30, magicResist: 0.30, bounty: 3000, traits: ['Boss', 'Immune-Fire'],
+      abilities: { boss: true, phases: 4, flightPhase: 1, burnZones: 2, summonBalor: 3, enragePhase: 4 }, motif: 'boss', boss: 'azhrakoth', cost: 2200,
+      title: 'He Who Sits', lore: 'The throne was not built for him. It cooled around him.' }),
+    E({ id: 'boss_herald', name: 'The Grey Herald', family: 'Arcane', hp: 24000, speed: 36, armor: 20, magicResist: 0.30, bounty: 5000, traits: ['Boss'],
+      abilities: { boss: true, endless: true, copyStrongest: { every: 60 } }, motif: 'boss', boss: 'herald', cost: 3000,
+      title: 'The Long Winter\'s Envoy', lore: 'It learns. That is the whole of the problem.' }),
   ];
 
   RS.ENEMY_BY_ID = {};
@@ -1745,6 +1854,8 @@ button:hover::after { transform: translateX(120%); }
  *
  * env: { weather:[...cycle], dayNight:bool, gimmick:'id' }
  * families: relative spawn weights per enemy family for wave generation.
+ * boss: the map's OWN final boss (enemies.js). Difficulty no longer picks the
+ *   boss — it only scales it — so all 13 maps end on a different fight.
  * ========================================================================= */
 (function () {
   'use strict';
@@ -1759,21 +1870,21 @@ button:hover::after { transform: translateX(120%); }
   };
 
   RS.MAPS = [
-    M({ id: 'farmstead', name: 'Farmstead Road', order: 1, signature: 'sig_scarecrow',
+    M({ id: 'farmstead', boss: 'boss_corvin', name: 'Farmstead Road', order: 1, signature: 'sig_scarecrow',
       paths: [[[0, 7], [6, 7], [6, 3], [12, 3], [12, 9], [19, 9]]],
       water: [], highground: [], hazard: [], holy: [], cursed: [], unbuildable: [],
       env: { weather: ['Clear'], dayNight: false, gimmick: 'none' },
       families: { Bandit: 5, Orc: 2, Undead: 1, Demon: 0, Arcane: 0, Aerial: 1 },
       desc: 'A gentle road through wheat. The realm’s training ground.' }),
 
-    M({ id: 'riverford', name: 'Riverford Crossing', order: 2, signature: 'sig_drowned',
+    M({ id: 'riverford', boss: 'boss_thane', name: 'Riverford Crossing', order: 2, signature: 'sig_drowned',
       paths: [[[0, 3], [8, 3], [8, 7], [19, 7]], [[0, 11], [8, 11], [8, 7], [19, 7]]],
       water: [...rect(2, 5, 4, 9), ...rect(11, 8, 13, 11)], highground: [], hazard: [], holy: [], cursed: [], unbuildable: [],
       env: { weather: ['Clear', 'Rain'], dayNight: false, gimmick: 'rain' },
       families: { Bandit: 3, Orc: 3, Undead: 2, Demon: 1, Arcane: 1, Aerial: 2 },
       desc: 'Two roads meet at the bridge. Only water-capable towers hold the fords.' }),
 
-    M({ id: 'blackforest', name: 'The Black Forest', order: 3, signature: 'sig_lurker',
+    M({ id: 'blackforest', boss: 'boss_hollow', name: 'The Black Forest', order: 3, signature: 'sig_lurker',
       paths: [[[0, 1], [4, 1], [4, 6], [9, 6], [9, 2], [14, 2], [14, 11], [19, 11]]],
       water: [], highground: [], hazard: [], holy: [], cursed: [],
       unbuildable: [...rect(0, 8, 6, 13), ...rect(15, 0, 19, 5)],
@@ -1781,7 +1892,7 @@ button:hover::after { transform: translateX(120%); }
       families: { Bandit: 2, Orc: 3, Undead: 2, Demon: 2, Arcane: 1, Aerial: 1 },
       desc: 'The canopy hides the horde. A Watchtower Scout is worth its weight in gold.' }),
 
-    M({ id: 'highkeep', name: 'Highkeep Battlements', order: 4, signature: 'sig_wallbreaker',
+    M({ id: 'highkeep', boss: 'boss_gruumak', name: 'Highkeep Battlements', order: 4, signature: 'sig_wallbreaker',
       paths: [[[3, 0], [3, 5], [9, 5], [9, 10], [16, 10], [16, 4], [19, 4]]],
       water: [], highground: [...rect(0, 6, 2, 8), ...rect(11, 1, 14, 3), ...rect(6, 11, 9, 13)],
       hazard: [], holy: [], cursed: [], unbuildable: [],
@@ -1789,14 +1900,14 @@ button:hover::after { transform: translateX(120%); }
       families: { Bandit: 1, Orc: 3, Undead: 2, Demon: 2, Arcane: 2, Aerial: 3 },
       desc: 'Fight from the walls. High ground grants +25% range.' }),
 
-    M({ id: 'frostvale', name: 'Frostvale Pass', order: 5, signature: 'sig_frostrevenant',
+    M({ id: 'frostvale', boss: 'boss_frostjarl', name: 'Frostvale Pass', order: 5, signature: 'sig_frostrevenant',
       paths: [[[0, 6], [5, 6], [5, 2], [11, 2], [11, 10], [16, 10], [16, 6], [19, 6]]],
       water: [], highground: [...rect(7, 7, 9, 9)], hazard: [], holy: [], cursed: [], unbuildable: [],
       env: { weather: ['Clear', 'Blizzard'], dayNight: false, gimmick: 'ice' },
       families: { Bandit: 1, Orc: 3, Undead: 3, Demon: 2, Arcane: 2, Aerial: 2 },
       desc: 'Enemies slide faster on ice, but Frost damage is doubled here.' }),
 
-    M({ id: 'sunkenbog', name: 'The Sunken Bog', order: 6, signature: 'sig_boghorror',
+    M({ id: 'sunkenbog', boss: 'boss_bogfather', name: 'The Sunken Bog', order: 6, signature: 'sig_boghorror',
       paths: [[[0, 4], [6, 4], [6, 9], [12, 9], [12, 3], [19, 3]]],
       water: [...rect(2, 6, 5, 8), ...rect(13, 5, 16, 8)], highground: [], hazard: [], holy: [], cursed: [],
       unbuildable: [...rect(0, 10, 8, 13), ...rect(14, 9, 19, 13), ...rect(0, 0, 4, 2)],
@@ -1804,7 +1915,7 @@ button:hover::after { transform: translateX(120%); }
       families: { Bandit: 2, Orc: 2, Undead: 4, Demon: 2, Arcane: 1, Aerial: 1 },
       desc: 'The mire slows the enemy — but half the ground won’t bear a tower.' }),
 
-    M({ id: 'ashen', name: 'Ashen Battlefield', order: 7, signature: 'sig_cinderfiend',
+    M({ id: 'ashen', boss: 'boss_cinderlord', name: 'Ashen Battlefield', order: 7, signature: 'sig_cinderfiend',
       paths: [[[0, 7], [4, 7], [4, 2], [10, 2], [10, 11], [15, 11], [15, 7], [19, 7]]],
       water: [], highground: [], holy: [], cursed: [],
       hazard: [[6, 6], [12, 5], [8, 9], [3, 10], [16, 3], [13, 9]],
@@ -1813,7 +1924,7 @@ button:hover::after { transform: translateX(120%); }
       families: { Bandit: 2, Orc: 3, Undead: 2, Demon: 3, Arcane: 1, Aerial: 2 },
       desc: 'Burning craters scar the field. Night falls; brazier-lit towers keep their range.' }),
 
-    M({ id: 'aldermere', name: 'Ruins of Old Aldermere', order: 8, signature: 'sig_rubblewight',
+    M({ id: 'aldermere', boss: 'boss_warden', name: 'Ruins of Old Aldermere', order: 8, signature: 'sig_rubblewight',
       paths: [ [[10, 0], [10, 7]], [[10, 13], [10, 7]], [[0, 7], [10, 7]], [[19, 7], [10, 7]] ],
       goalOverride: [10, 7],
       water: [], highground: [...rect(8, 5, 9, 6), ...rect(11, 8, 12, 9)], hazard: [], holy: [], cursed: [],
@@ -1822,7 +1933,7 @@ button:hover::after { transform: translateX(120%); }
       families: { Bandit: 2, Orc: 2, Undead: 3, Demon: 2, Arcane: 2, Aerial: 2 },
       desc: 'Four roads, one keep. Collapsing rubble forces the horde to re-path.' }),
 
-    M({ id: 'dragonspine', name: "The Dragon's Spine", order: 9, signature: 'sig_cliffharrier',
+    M({ id: 'dragonspine', boss: 'boss_stormwyrm', name: "The Dragon's Spine", order: 9, signature: 'sig_cliffharrier',
       paths: [[[0, 2], [6, 2], [6, 11], [13, 11], [13, 4], [19, 4]]],
       water: [], highground: [...rect(0, 4, 3, 6), ...rect(15, 6, 18, 8)], hazard: [], holy: [], cursed: [],
       unbuildable: [...rect(8, 0, 11, 1), ...rect(8, 12, 11, 13)],
@@ -1830,7 +1941,7 @@ button:hover::after { transform: translateX(120%); }
       families: { Bandit: 1, Orc: 2, Undead: 2, Demon: 3, Arcane: 2, Aerial: 4 },
       desc: 'The wind on the ridge pushes arrows off-course. Aim for clusters.' }),
 
-    M({ id: 'cathedral', name: 'Cathedral of Chains', order: 10, signature: 'sig_penitent',
+    M({ id: 'cathedral', boss: 'boss_malgrath', name: 'Cathedral of Chains', order: 10, signature: 'sig_penitent',
       paths: [[[0, 3], [5, 3], [5, 10], [14, 10], [14, 4], [19, 4]]],
       water: [], highground: [], cursed: [],
       holy: [...rect(2, 5, 3, 8), ...rect(8, 2, 11, 3), ...rect(16, 6, 18, 9)],
@@ -1839,7 +1950,7 @@ button:hover::after { transform: translateX(120%); }
       families: { Bandit: 0, Orc: 0, Undead: 5, Demon: 4, Arcane: 1, Aerial: 1 },
       desc: 'Consecrated tiles boost Holy +50% and burn the undead. The dead come regardless.' }),
 
-    M({ id: 'obsidian', name: 'The Obsidian Gate', order: 11, signature: 'sig_magmabrute',
+    M({ id: 'obsidian', boss: 'boss_forgemaster', name: 'The Obsidian Gate', order: 11, signature: 'sig_magmabrute',
       paths: [[[0, 10], [5, 10], [5, 4], [11, 4], [11, 11], [16, 11], [16, 5], [19, 5]]],
       water: [], highground: [], holy: [],
       hazard: [[8, 7], [13, 8]], cursed: [...rect(0, 0, 3, 2)],
@@ -1848,7 +1959,7 @@ button:hover::after { transform: translateX(120%); }
       families: { Bandit: 1, Orc: 2, Undead: 2, Demon: 4, Arcane: 2, Aerial: 2 },
       desc: 'Lava shifts the path every ten waves. Towers overheat after ten rapid shots.' }),
 
-    M({ id: 'emberthrone', name: 'The Ember Throne', order: 12, signature: 'sig_thronesentinel',
+    M({ id: 'emberthrone', boss: 'boss_azhrakoth', name: 'The Ember Throne', order: 12, signature: 'sig_thronesentinel',
       paths: [[[0, 7], [4, 7], [4, 2], [9, 2], [9, 12], [14, 12], [14, 4], [19, 4]]],
       water: [], highground: [...rect(6, 6, 7, 7), ...rect(16, 9, 17, 10)],
       hazard: [[11, 6], [7, 10]], holy: [], cursed: [...rect(0, 11, 2, 13)],
@@ -1859,7 +1970,7 @@ button:hover::after { transform: translateX(120%); }
 
     // 💜 WINTER MAP — plays ONLY on the Purple Nightmare tier. Build inside the
     // campfire-lit ruined houses; the Coldness map modifier shrouds every foe.
-    M({ id: 'winterhold', name: 'Winterhold Ruins', order: 13, signature: 'sig_wendigo',
+    M({ id: 'winterhold', boss: 'boss_herald', name: 'Winterhold Ruins', order: 13, signature: 'sig_wendigo',
       paths: [[[0, 7], [5, 7], [5, 3], [11, 3], [11, 11], [16, 11], [16, 6], [19, 6]]],
       water: [], highground: [], hazard: [], holy: [], cursed: [], unbuildable: [],
       houses: [[3, 8], [4, 8], [3, 9], [8, 5], [9, 5], [8, 6], [13, 9], [14, 9], [13, 8], [7, 10], [8, 10], [17, 8], [17, 9], [2, 5], [13, 2], [14, 2]],
@@ -2347,6 +2458,17 @@ button:hover::after { transform: translateX(120%); }
       return this._pool;
     }
 
+    // The MAP owns its boss; difficulty only scales it. `diff.boss` remains the
+    // fallback for Endless, which overrides it with the Grey Herald.
+    bossId() {
+      if (this.diff.endless) return this.diff.boss;
+      return this.map.boss || this.diff.boss;
+    }
+    // Bosses get a SOFTENED difficulty curve. Boss base HP now encodes the
+    // map's rating, so applying the full hpMult on top (up to 20x) double-
+    // scaled it — a rating-6 boss on Hardcore came out over a million HP.
+    _bossHpMult() { return 1 + (this.diff.hpMult - 1) * 0.45; }
+
     _archetypeFor(n) {
       if (n >= this.maxWaves) return 'Boss';
       if (n % RS.WAVE.miniBossEvery === 0) return 'Elite';
@@ -2380,7 +2502,7 @@ button:hover::after { transform: translateX(120%); }
       const lanes = this.paths.length;
 
       if (arch === 'Boss') {
-        return { arch, groups: [{ enemyId: this.diff.boss, count: 1, spacing: 1, lane: 0, delay: 1 }],
+        return { arch, groups: [{ enemyId: this.bossId(), count: 1, spacing: 1, lane: 0, delay: 1 }],
           budget: 0, name: 'Boss' };
       }
 
@@ -2735,7 +2857,8 @@ button:hover::after { transform: translateX(120%); }
       lane = lane % this.paths.length;
       const path = this.paths[lane];
       const isFlying = def.traits.includes('Flying');
-      const hpMult = this.diff.hpMult * this._earlyHpRamp(this.waveIndex);
+      const isBossDef = def.traits.includes('Boss');
+      const hpMult = isBossDef ? this._bossHpMult() : this.diff.hpMult * this._earlyHpRamp(this.waveIndex);
       const e = {
         active: true, alive: true, def, lane,
         progress: atProgress || 0,
@@ -3629,6 +3752,8 @@ button:hover::after { transform: translateX(120%); }
       profile: { name: '', avatar: '⚔️', createdAt: 0 },
       // Champions' Ladder personal-best records (all derived at match end).
       records: { highestWave: 0, kills: 0, fastestVictory: 0, goldBanked: 0, topTowerDamage: 0, totalRolls: 0 },
+      // First-battle walkthrough + one-shot field tips (js/tutorial.js).
+      tutorial: { done: false, tips: {} },
       badges: {},        // badge id -> true
       defeated: {},      // rival id -> true
       bestRank: 10,      // lower is better; 10 = unranked
@@ -3664,6 +3789,8 @@ button:hover::after { transform: translateX(120%); }
       out.tokens = Object.assign({}, base.tokens, s.tokens);
       out.rolls = Object.assign({}, base.rolls, s.rolls);
       out.pity = Object.assign({}, base.pity, s.pity);
+      out.tutorial = Object.assign({}, base.tutorial, s.tutorial);
+      out.tutorial.tips = Object.assign({}, s.tutorial && s.tutorial.tips);
       out.shards = Object.assign({}, base.shards, s.shards);
       out.account = Object.assign({}, base.account, s.account);
       out.settings = Object.assign({}, base.settings, s.settings);
@@ -4987,7 +5114,368 @@ button:hover::after { transform: translateX(120%); }
     if (e.shieldHits > 0) { ctx.strokeStyle = A.alpha('#8fd4e8', 0.5 + Math.sin(time * 4) * 0.2); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(e.x, e.y - 8, S * 0.28, 0, TAU); ctx.stroke(); }
   }
 
-  RS.Sprites = { facet, poly, circ, drawTower, drawTowerIcon, drawEnemy, drawBody, getSheet, Sil, R0 };
+  /* ============================== BOSSES =============================
+   * One silhouette per boss. Every boss used to render as the same horned
+   * demon body, so Bandit King Corvin and Azhrakoth were visually identical.
+   * Each routine draws feet-at-origin facing right at roughly 1x scale (the
+   * renderer scales up), and takes `p` = { t, breathe, hurt } for idle motion.
+   *
+   * House style, kept deliberately tight so 13 bosses read as one set:
+   *   - one silhouette-defining mass + one signature weapon/feature
+   *   - a shoulder/head accent to break the outline
+   *   - one emissive colour per boss, used sparingly (eyes + weapon only)
+   * ================================================================== */
+  const BossSil = {};
+
+  /* Shared boss anatomy. The first pass drew weapons and pauldrons as loose
+   * quads with nothing joining them to the body, so every boss read as a box
+   * with floating paper shapes around it. Everything is now hung off real
+   * limbs: legs plant the figure, arms reach to whatever it is holding. */
+  function limb(ctx, x1, y1, x2, y2, w1, w2, col, rim) {
+    const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1;
+    const nx = -dy / L, ny = dx / L;
+    facet(ctx, [[x1 + nx * w1, y1 + ny * w1], [x2 + nx * w2, y2 + ny * w2],
+                [x2 - nx * w2, y2 - ny * w2], [x1 - nx * w1, y1 - ny * w1]], col, rim);
+  }
+  // Two planted legs + a shadowed gap, so a boss stands instead of hovering.
+  function stance(ctx, hipY, footY, spread, w, col) {
+    limb(ctx, -spread * 0.45, hipY, -spread, footY, w, w * 0.8, col);
+    limb(ctx, spread * 0.45, hipY, spread, footY, w, w * 0.8, col);
+  }
+  // A binding band where a weapon head meets its haft. Without it the big
+  // cleavers/axes/hammers read as loose slabs parked next to the figure.
+  function socket(ctx, x, y, ang, len, w, col, rim) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+    facet(ctx, [[-len, -w], [len, -w], [len, w], [-len, w]], col, rim);
+    ctx.restore();
+  }
+  const eyes = (ctx, x, y, col, r) => { circ(ctx, x - 2.4, y, r || 1.6, col); circ(ctx, x + 2.4, y, r || 1.6, col); };
+  // Pauldron that sits ON the shoulder line rather than beside it. Five-sided
+  // and swept downward-outward so it reads as a bevelled plate catching the
+  // key light, not an axis-aligned rectangle stuck to the arm.
+  function pauldron(ctx, sx, sy, dir, size, col, rim) {
+    const d = dir, z = size;
+    facet(ctx, [[sx - d * z * 0.25, sy - z * 0.62], [sx + d * z * 0.55, sy - z * 0.78],
+                [sx + d * z * 1.05, sy - z * 0.12], [sx + d * z * 0.82, sy + z * 0.58],
+                [sx - d * z * 0.18, sy + z * 0.42]], col, rim);
+    // lit top bevel
+    facet(ctx, [[sx - d * z * 0.22, sy - z * 0.58], [sx + d * z * 0.52, sy - z * 0.74],
+                [sx + d * z * 0.72, sy - z * 0.34], [sx - d * z * 0.1, sy - z * 0.22]], A.mul(col, 1.28));
+  }
+  // Torso tapered from a wide shoulder line down to a narrower waist. Drawing
+  // it as a plain quad (and often WIDER at the hip) is what made the first
+  // pass read as a stack of boxes rather than a figure.
+  function torso(ctx, shY, hipY, shW, hipW, col, rim) {
+    facet(ctx, [[-shW, shY], [shW, shY], [hipW, hipY], [-hipW, hipY]], col, rim);
+    facet(ctx, [[-shW * 0.55, shY + 1], [shW * 0.2, shY + 1.5], [hipW * 0.2, hipY], [-hipW * 0.6, hipY]], A.mul(col, 1.18));
+  }
+
+  BossSil.corvin = (ctx, p) => { // Bandit King — plumed sallet, sabre, torn cloak
+    const L = RS.RAMP.leather, I = RS.RAMP.iron, b = p.breathe;
+    facet(ctx, [[-14, -34 - b], [14, -34 - b], [11, 12], [-11, 12]], '#4a1f1f', '#7a3535'); // cloak behind
+    stance(ctx, -8, 12, 7, 3.4, L.shadow);
+    torso(ctx, -31 - b, -10, 10, 7.5, L.mid, L.rim);                                        // cuirass
+    facet(ctx, [[-8, -22], [8, -23], [7, -12], [-7, -12]], A.mul(L.mid, 0.72));             // belt/skirt
+    limb(ctx, -9, -27 - b, -14, -12, 3, 2.2, L.shadow);                                     // left arm
+    limb(ctx, 9, -27 - b, 15, -16, 3, 2.2, L.shadow);                                       // sword arm
+    pauldron(ctx, -9, -28 - b, -1, 7, I.mid, I.rim);
+    pauldron(ctx, 9, -29 - b, 1, 7, I.mid, I.rim);
+    facet(ctx, [[-6, -31 - b], [6, -32 - b], [5, -41 - b], [-5, -40 - b]], I.light, I.rim); // sallet
+    ctx.fillStyle = '#120e0c'; ctx.fillRect(-4.5, -38 - b, 9, 2.4);                          // visor slit
+    eyes(ctx, 0, -37 - b, '#ffcf5a', 1.2);
+    facet(ctx, [[-5, -41 - b], [-1, -50 - b], [7, -53 - b], [10, -48 - b], [2, -44 - b]], '#8f2420', '#c9483c'); // swept crest
+    facet(ctx, [[-4, -42 - b], [-1, -48 - b], [5, -50 - b], [1, -45 - b]], '#d9564a');
+    ctx.strokeStyle = RS.RAMP.steel.light; ctx.lineWidth = 2.8; ctx.lineCap = 'round';        // sabre
+    ctx.beginPath(); ctx.moveTo(15, -16); ctx.quadraticCurveTo(27, -26, 29, -42); ctx.stroke();
+    facet(ctx, [[13, -14], [19, -19], [18, -12]], RS.RAMP.gold.mid, RS.RAMP.gold.rim); };     // guard
+
+  BossSil.thane = (ctx, p) => { // Drowned Thane — waterlogged plate, kelp, trident
+    const P = A.mul('#41586a', 1), b = p.breathe, w = Math.sin(p.t * 1.4) * 2;
+    stance(ctx, -8, 12, 8, 4, '#28323c');
+    torso(ctx, -31 - b, -10, 12, 8.5, P, '#7fa8bd');                                          // barnacled plate
+    facet(ctx, [[-9, -21], [9, -22], [8, -11], [-8, -11]], A.mul('#41586a', 0.72));           // fauld
+    limb(ctx, -11, -27 - b, -16, -11, 3.2, 2.4, '#33424f');
+    limb(ctx, 11, -27 - b, 15, -14, 3.2, 2.4, '#33424f');
+    pauldron(ctx, -11, -29 - b, -1, 8, '#33424f', '#6d94a8');
+    pauldron(ctx, 11, -30 - b, 1, 8, '#33424f', '#6d94a8');
+    facet(ctx, [[-6, -31 - b], [6, -32 - b], [5, -42 - b], [-5, -41 - b]], A.mul('#41586a', 1.3)); // great helm
+    ctx.fillStyle = '#0a1418'; ctx.fillRect(-4.5, -39 - b, 9, 2.6);
+    eyes(ctx, 0, -38 - b, '#6ff0d0', 1.3);
+    ctx.strokeStyle = 'rgba(64,112,74,0.9)'; ctx.lineWidth = 2.2; ctx.lineCap = 'round';        // kelp streamers
+    for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(i * 4.4, -12); ctx.quadraticCurveTo(i * 5 - 3 + w, 1, i * 6 - 5 + w, 13); ctx.stroke(); }
+    limb(ctx, 15, -14, 19, -44, 2.2, 1.8, '#5d7f92', '#9fc4d4');                                // trident haft
+    for (const dx of [-5, 0, 5]) { ctx.strokeStyle = '#a8cfe0'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(19 + dx * 0.55, -44); ctx.lineTo(19 + dx, -54); ctx.stroke(); } };
+
+  BossSil.hollow = (ctx, p) => { // Hollow Mother — antlered bark-witch on root legs
+    const b = p.breathe, sway = Math.sin(p.t * 0.9) * 1.8;
+    ctx.strokeStyle = '#3b2d1e'; ctx.lineWidth = 3; ctx.lineCap = 'round';                      // root legs
+    for (const dx of [-8, -3, 3, 8]) { ctx.beginPath(); ctx.moveTo(dx * 0.55, -10); ctx.quadraticCurveTo(dx * 1.2, 2, dx * 1.7, 13); ctx.stroke(); }
+    torso(ctx, -33 - b, -10, 11.5, 8, '#4a3a26', '#7a6240');                                    // bark torso
+    facet(ctx, [[-4, -25], [4, -25], [3, -11], [-3, -11]], '#0f0b06');                          // the hollow
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    circ(ctx, 0, -18, 6, A.alpha('#9fe0a0', 0.30)); ctx.restore();
+    circ(ctx, 0, -18, 2.4, '#cdf5b8');                                                          // wisp inside
+    limb(ctx, -11, -29 - b, -19, -14, 2.6, 1.8, '#4a3a26', '#6d5636');                          // branch arms
+    limb(ctx, 11, -29 - b, 19, -14, 2.6, 1.8, '#4a3a26', '#6d5636');
+    ctx.strokeStyle = '#3b2d1e'; ctx.lineWidth = 1.6;
+    for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * 19, -14); ctx.lineTo(s * 23, -6); ctx.moveTo(s * 19, -14); ctx.lineTo(s * 24, -17); ctx.stroke(); }
+    facet(ctx, [[-5, -33 - b], [5, -34 - b], [4, -43 - b], [-4, -42 - b]], '#5c4a30', '#8a7048'); // skull face
+    eyes(ctx, 0, -39 - b, '#c9f57a', 1.5);
+    ctx.strokeStyle = '#6d5636'; ctx.lineWidth = 2.4; ctx.lineCap = 'round';                     // antler crown
+    for (const s of [-1, 1]) {
+      ctx.beginPath(); ctx.moveTo(s * 3, -43 - b); ctx.quadraticCurveTo(s * 9 + sway, -50 - b, s * 8 + sway, -58 - b); ctx.stroke();
+      ctx.lineWidth = 1.7;
+      ctx.beginPath(); ctx.moveTo(s * 6 + sway * 0.4, -48 - b); ctx.lineTo(s * 15 + sway, -51 - b); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s * 7.5 + sway * 0.7, -53 - b); ctx.lineTo(s * 13 + sway, -60 - b); ctx.stroke();
+    } };
+
+  BossSil.gruumak = (ctx, p) => { // Iron Tusk — armoured orc warlord with a cleaver
+    const I = RS.RAMP.iron, b = p.breathe;
+    stance(ctx, -8, 12, 9, 4.4, '#3d4a26');
+    torso(ctx, -30 - b, -10, 14, 10, '#5c7a3a', '#8ab04a');                                      // green bulk
+    facet(ctx, [[-11, -20], [11, -21], [9, -11], [-9, -11]], I.shadow);                          // iron belt
+    limb(ctx, -13, -26 - b, -19, -10, 3.6, 2.6, '#4a6330');
+    limb(ctx, 13, -26 - b, 19, -14, 3.6, 2.6, '#4a6330');
+    pauldron(ctx, -13, -28 - b, -1, 9, I.shadow, I.mid);
+    pauldron(ctx, 13, -29 - b, 1, 9, I.shadow, I.mid);
+    facet(ctx, [[-7, -30 - b], [7, -31 - b], [6, -40 - b], [-6, -39 - b]], '#6b8f45', '#9ec46a'); // head
+    eyes(ctx, 0, -36 - b, '#ff6a2a', 1.4);
+    facet(ctx, [[-6, -33 - b], [-1.5, -32 - b], [-5, -27 - b]], '#efe6c6');                       // tusks
+    facet(ctx, [[6, -33 - b], [1.5, -32 - b], [5, -27 - b]], '#efe6c6');
+    facet(ctx, [[-8, -40 - b], [8, -41 - b], [6, -46 - b], [-6, -45 - b]], I.shadow, I.mid);      // browplate
+    limb(ctx, 19, -14, 27, -38, 3, 2.4, RS.RAMP.timber.mid, RS.RAMP.timber.light);                // haft
+    // broad orc cleaver: swept edge, concave back, chipped tip, bound socket
+    facet(ctx, [[25, -34], [33, -50], [45, -44], [46, -28], [34, -22], [27, -26]],
+      RS.RAMP.steel.mid, RS.RAMP.steel.rim);
+    facet(ctx, [[27, -33], [33, -46], [40, -42], [36, -27], [28, -26]], RS.RAMP.steel.light);      // bevel
+    facet(ctx, [[45, -44], [46, -28], [41, -33]], A.mul(RS.RAMP.steel.shadow, 1.1));               // thick spine
+    socket(ctx, 26, -30, -1.25, 5.5, 2.6, RS.RAMP.iron.shadow, RS.RAMP.iron.mid); };
+
+  BossSil.frostjarl = (ctx, p) => { // Frost Jarl — ice giant, frozen beard, greataxe
+    const I = RS.RAMP.ice, b = p.breathe;
+    stance(ctx, -9, 13, 10, 4.8, '#3f5666');
+    torso(ctx, -32 - b, -11, 15, 11, '#6d8ba0', '#a8cfe0');
+    facet(ctx, [[-12, -21], [12, -22], [10, -12], [-10, -12]], '#4f6b7d');                        // hide belt
+    limb(ctx, -14, -28 - b, -21, -11, 4, 2.8, '#5b7688');
+    limb(ctx, 14, -28 - b, 21, -15, 4, 2.8, '#5b7688');
+    pauldron(ctx, -14, -30 - b, -1, 10, '#5e7d90', '#a8cfe0');                                    // rime pauldrons
+    pauldron(ctx, 14, -31 - b, 1, 10, '#5e7d90', '#a8cfe0');
+    facet(ctx, [[-14, -34 - b], [-11, -44 - b], [-8, -32 - b]], I.light, I.rim);                  // shoulder shards
+    facet(ctx, [[14, -35 - b], [11, -45 - b], [8, -33 - b]], I.light, I.rim);
+    facet(ctx, [[-7, -32 - b], [7, -33 - b], [6, -43 - b], [-6, -42 - b]], '#7d9bb0', '#b4d6e6');
+    eyes(ctx, 0, -39 - b, '#dff8ff', 1.7);
+    facet(ctx, [[-6, -35 - b], [6, -35 - b], [3.5, -21 - b], [-3.5, -21 - b]], '#d6ecf5', '#ffffff'); // frozen beard
+    facet(ctx, [[-6, -43 - b], [0, -54 - b], [6, -43 - b]], I.mid, I.rim);                        // crown spike
+    limb(ctx, 21, -15, 29, -40, 3.2, 2.6, RS.RAMP.timber.shadow, RS.RAMP.timber.mid);            // haft
+    // crescent ice bit: bearded edge sweeping away from the socket
+    facet(ctx, [[27, -37], [36, -52], [47, -42], [48, -26], [37, -20], [29, -27]], I.mid, I.rim);
+    facet(ctx, [[29, -36], [36, -48], [43, -41], [38, -26], [30, -28]], I.light);
+    facet(ctx, [[36, -52], [47, -42], [41, -44]], A.mul(I.light, 1.2));                            // lit crest
+    socket(ctx, 28, -32, -1.28, 6, 2.8, '#4f6b7d', '#a8cfe0'); };
+
+  BossSil.bogfather = (ctx, p) => { // Bogfather — bloated mire horror with a lantern lure
+    const b = p.breathe, bob = Math.sin(p.t * 1.6) * 2.2;
+    facet(ctx, [[-9, 4], [-13, 13], [-4, 13]], '#2f3a22'); facet(ctx, [[9, 4], [13, 13], [4, 13]], '#2f3a22'); // splayed feet
+    facet(ctx, [[-13, -25 - b], [13, -26 - b], [18, -6], [11, 5], [-11, 5], [-18, -6]], '#4a5236', '#75824e'); // bloated mass
+    facet(ctx, [[-14, -6], [14, -6], [11, 8], [-11, 8]], '#3a4028', '#525c34');                    // sagging gut
+    for (let i = 0; i < 5; i++) circ(ctx, -10 + i * 5, -1 + (i % 2) * 4, 2.4, 'rgba(126,158,92,0.45)');
+    limb(ctx, -16, -20 - b, -23, -4, 3.6, 2.6, '#414a2e');
+    limb(ctx, 16, -20 - b, 23, -6, 3.6, 2.6, '#414a2e');
+    facet(ctx, [[-7, -25 - b], [7, -26 - b], [6, -34 - b], [-6, -33 - b]], '#5c6640', '#87945a');  // squat head
+    eyes(ctx, 0, -31 - b, '#b8f05a', 1.7);
+    facet(ctx, [[-5, -28 - b], [5, -28 - b], [3, -25 - b], [-3, -25 - b]], '#1c2114');             // maw
+    ctx.strokeStyle = '#3a4028'; ctx.lineWidth = 2.6; ctx.lineCap = 'round';                        // lure stalk
+    ctx.beginPath(); ctx.moveTo(3, -34 - b); ctx.quadraticCurveTo(17, -48, 24 + bob, -53); ctx.stroke();
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    circ(ctx, 24 + bob, -54, 8, A.alpha('#c8ff8a', 0.28)); ctx.restore();
+    circ(ctx, 24 + bob, -54, 2.8, '#eaffb8', '#ffffff');
+    ctx.strokeStyle = 'rgba(96,116,72,0.85)'; ctx.lineWidth = 1.8;                                  // reeds at the base
+    for (const dx of [-15, -8, 9, 16]) { ctx.beginPath(); ctx.moveTo(dx, 8); ctx.lineTo(dx + (dx > 0 ? 4 : -4), -8); ctx.stroke(); } };
+
+  BossSil.cinderlord = (ctx, p) => { // Cinderlord — burnt knight lit from within
+    const b = p.breathe, f = 0.55 + Math.abs(Math.sin(p.t * 3)) * 0.45;
+    facet(ctx, [[-13, -32 - b], [13, -32 - b], [10, 13], [-10, 13]], '#311914', '#5e3020');        // scorched cloak
+    stance(ctx, -8, 12, 7, 3.6, '#1d1614');
+    torso(ctx, -30 - b, -10, 11, 8, '#3a2c28', '#6a5048');                                         // charred plate
+    facet(ctx, [[-9, -20], [9, -21], [8, -11], [-8, -11]], '#221a17');
+    limb(ctx, -10, -26 - b, -16, -11, 3.2, 2.4, '#241b18');
+    limb(ctx, 10, -26 - b, 16, -15, 3.2, 2.4, '#241b18');
+    pauldron(ctx, -10, -28 - b, -1, 8, '#2e231e', '#6a4c40');
+    pauldron(ctx, 10, -29 - b, 1, 8, '#2e231e', '#6a4c40');
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';                                           // molten cracks
+    ctx.strokeStyle = A.alpha('#ff6a1e', f); ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-5, -27 - b); ctx.lineTo(-1, -19); ctx.lineTo(-5, -12); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(5, -28 - b); ctx.lineTo(2, -21); ctx.lineTo(6, -14); ctx.stroke();
+    ctx.restore();
+    facet(ctx, [[-6, -30 - b], [6, -31 - b], [5, -41 - b], [-5, -40 - b]], '#42322c', '#7a5c50');   // helm
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = A.alpha('#ffb04a', f); ctx.fillRect(-4.5, -38 - b, 9, 2.6); ctx.restore();      // burning visor
+    facet(ctx, [[-5, -41 - b], [-8, -51 - b], [-1, -42 - b]], '#241b18', '#4a3028');                // broken horns
+    facet(ctx, [[5, -41 - b], [8, -51 - b], [1, -42 - b]], '#241b18', '#4a3028');
+    limb(ctx, 16, -15, 22, -30, 2.6, 2, '#241b18');                                                 // grip
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';                                           // ember greatsword
+    ctx.strokeStyle = A.alpha('#ff7a2a', 0.85); ctx.lineWidth = 5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(22, -30); ctx.lineTo(33, -52); ctx.stroke();
+    ctx.strokeStyle = A.alpha('#ffe08a', f); ctx.lineWidth = 1.8; ctx.stroke(); ctx.restore();
+    facet(ctx, [[19, -28], [26, -32], [24, -25]], '#3a2c26', '#6a5048'); };                          // crossguard
+
+  BossSil.warden = (ctx, p) => { // Last Warden — arcane construct, tower shield
+    const S2 = RS.RAMP.stone, b = p.breathe, spin = p.t * 0.7;
+    stance(ctx, -9, 12, 8, 4.2, S2.shadow);
+    torso(ctx, -31 - b, -11, 12, 8.5, S2.mid, S2.rim);
+    facet(ctx, [[-9, -21], [9, -22], [8, -12], [-8, -12]], A.mul(S2.mid, 0.72));
+    limb(ctx, -11, -27 - b, -17, -14, 3.2, 2.4, S2.shadow);                                          // shield arm
+    limb(ctx, 11, -27 - b, 17, -12, 3.2, 2.4, S2.shadow);
+    pauldron(ctx, -11, -29 - b, -1, 8, A.mul(S2.mid, 1.15), S2.rim);
+    pauldron(ctx, 11, -30 - b, 1, 8, A.mul(S2.mid, 1.15), S2.rim);
+    facet(ctx, [[-6, -31 - b], [6, -32 - b], [5, -41 - b], [-5, -40 - b]], S2.light, S2.rim);
+    circ(ctx, 0, -36 - b, 2.6, '#9fd0ff', '#dff0ff');                                                // single core eye
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';                                            // rune ring
+    for (let i = 0; i < 4; i++) { const a = spin + i * (TAU / 4);
+      circ(ctx, Math.cos(a) * 15, -22 - b + Math.sin(a) * 5, 2, A.alpha('#7fb0ff', 0.9)); }
+    ctx.restore();
+    facet(ctx, [[-27, -33], [-14, -37], [-14, 6], [-27, 1]], A.mul(S2.mid, 1.1), S2.rim);            // tower shield
+    facet(ctx, [[-25, -31], [-16, -34], [-16, 2], [-25, -2]], A.mul(S2.mid, 0.86));
+    ctx.strokeStyle = '#9fd0ff'; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-20.5, -31); ctx.lineTo(-20.5, 1); ctx.moveTo(-26, -16); ctx.lineTo(-15, -16); ctx.stroke(); };
+
+  BossSil.stormwyrm = (ctx, p) => { // Storm Wyrm — winged serpent, hovers
+    const flap = Math.sin(p.t * 3.4) * 9, R = RS.RAMP.arcane, hov = Math.sin(p.t * 1.3) * 2.5;
+    ctx.save(); ctx.translate(0, -16 + hov);
+    // far wing first (darker) then the near wing, so the pair reads as depth
+    for (const s of [-1, 1]) {
+      const far = s < 0, lift = flap * (far ? 0.6 : 1);
+      const wc = far ? A.mul(R.shadow, 0.9) : A.mul(R.mid, 0.92);
+      facet(ctx, [[s * 5, -14], [s * 20, -30 - lift], [s * 36, -26 - lift], [s * 33, -10 - lift * 0.4], [s * 18, 1], [s * 5, -3]], wc, R.rim);
+      ctx.strokeStyle = A.mul(R.shadow, 0.75); ctx.lineWidth = 1.5; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(s * 5, -13); ctx.lineTo(s * 19, -28 - lift); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s * 5, -12); ctx.lineTo(s * 31, -22 - lift * 0.8); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s * 5, -10); ctx.lineTo(s * 24, -6 - lift * 0.3); ctx.stroke();
+    }
+    // serpentine tail: a tapering chain of segments, not one flat stroke
+    for (let i = 0; i < 7; i++) {
+      const f = i / 6, tx = -4 - f * 30, ty = 2 + Math.sin(p.t * 2 + f * 3.4) * 5 * f + f * 6;
+      circ(ctx, tx, ty, 4.6 * (1 - f * 0.78), i % 2 ? R.mid : R.shadow, R.rim);
+    }
+    facet(ctx, [[-8, 3], [-5, -13], [8, -14], [10, 3]], R.shadow, R.rim);                   // chest
+    facet(ctx, [[-4, -1], [6, -2], [5, 4], [-3, 4]], A.mul(R.mid, 1.15));                   // belly plate
+    limb(ctx, 5, -11, 17, -24, 4.4, 3.2, R.mid, R.rim);                                     // neck
+    facet(ctx, [[12, -29], [28, -32], [32, -22], [15, -19]], R.mid, R.rim);                 // head
+    facet(ctx, [[25, -28], [32, -24], [24, -22]], '#e8dcc0');                               // jaw
+    circ(ctx, 20, -27, 2, '#dff0ff', '#ffffff');                                            // eye
+    facet(ctx, [[13, -31], [15, -43], [21, -30]], R.light, R.rim);                          // crest
+    facet(ctx, [[16, -30], [18, -38], [22, -29]], A.mul(R.light, 1.15));
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';                                   // storm arcs
+    ctx.strokeStyle = A.alpha('#bfe0ff', 0.4 + Math.sin(p.t * 9) * 0.4); ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(-24, -22); ctx.lineTo(-14, -13); ctx.lineTo(-19, -8); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(26, -16); ctx.lineTo(18, -9); ctx.lineTo(24, -3); ctx.stroke();
+    ctx.restore(); ctx.restore(); };
+
+  BossSil.malgrath = (ctx, p) => { // Bone Sovereign — crowned skeletal king, floats
+    const B = RS.RAMP.bone, b = p.breathe, float = Math.sin(p.t * 1.1) * 2.5;
+    ctx.save(); ctx.translate(0, float);
+    facet(ctx, [[-16, -34 - b], [16, -34 - b], [12, 13], [-12, 13]], '#2c1f38', '#5f4478');            // regal shroud
+    facet(ctx, [[-8, -12], [-7, -30 - b], [7, -31 - b], [8, -12]], B.shadow);                          // ribcage
+    ctx.strokeStyle = B.light; ctx.lineWidth = 1.8; ctx.lineCap = 'round';
+    for (let i = 0; i < 4; i++) { const y = -27 + i * 4.6 - b; ctx.beginPath(); ctx.moveTo(-5.5, y); ctx.quadraticCurveTo(0, y + 3, 5.5, y); ctx.stroke(); }
+    limb(ctx, -10, -28 - b, -17, -14, 2.4, 1.8, B.mid, B.rim);                                         // bone arms
+    limb(ctx, 10, -28 - b, 16, -16, 2.4, 1.8, B.mid, B.rim);
+    pauldron(ctx, -10, -30 - b, -1, 7.5, B.mid, B.rim);
+    pauldron(ctx, 10, -31 - b, 1, 7.5, B.mid, B.rim);
+    circ(ctx, 0, -37 - b, 5.2, B.light, B.rim);                                                        // skull
+    circ(ctx, -2, -37.5 - b, 1.6, '#8fd4a8'); circ(ctx, 2, -37.5 - b, 1.6, '#8fd4a8');
+    ctx.strokeStyle = B.shadow; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-2.6, -33.5 - b); ctx.lineTo(2.6, -33.5 - b); ctx.stroke();
+    facet(ctx, [[-8, -42 - b], [-6, -52 - b], [-2.5, -43 - b], [0, -54 - b], [2.5, -43 - b], [6, -52 - b], [8, -42 - b]],
+      RS.RAMP.gold.mid, RS.RAMP.gold.rim);                                                             // crown
+    limb(ctx, 16, -16, 20, -44, 2.2, 1.8, B.mid, B.rim);                                               // bone staff
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    circ(ctx, 20, -48, 7, A.alpha('#8fd4a8', 0.3)); ctx.restore();
+    circ(ctx, 20, -48, 3.2, '#a8e8c0', '#dff8e8');
+    ctx.restore(); };
+
+  BossSil.forgemaster = (ctx, p) => { // Obsidian Forgemaster — molten smith + hammer
+    const b = p.breathe, heat = 0.5 + Math.abs(Math.sin(p.t * 2.4)) * 0.5;
+    stance(ctx, -9, 13, 10, 5, '#151114');
+    torso(ctx, -30 - b, -11, 16, 11.5, '#231c22', '#5a4a56');                                          // obsidian bulk
+    facet(ctx, [[-13, -20], [13, -21], [11, -12], [-11, -12]], '#100c10');
+    limb(ctx, -15, -26 - b, -22, -11, 4, 2.8, '#221a20');
+    limb(ctx, 15, -26 - b, 22, -15, 4, 2.8, '#221a20');
+    pauldron(ctx, -15, -28 - b, -1, 10, '#2a2028', '#6a5a66');
+    pauldron(ctx, 15, -29 - b, 1, 10, '#2a2028', '#6a5a66');
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';                                              // forge-fire chest
+    const gr = ctx.createRadialGradient(0, -21 - b, 1, 0, -21 - b, 15);
+    gr.addColorStop(0, A.alpha('#ff8a2a', heat)); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, -21 - b, 15, 0, TAU); ctx.fill(); ctx.restore();
+    facet(ctx, [[-5, -16 - b], [5, -16 - b], [3.5, -27 - b], [-3.5, -27 - b]], A.alpha('#ff7a1e', heat)); // furnace mouth
+    facet(ctx, [[-7, -30 - b], [7, -31 - b], [6, -40 - b], [-6, -39 - b]], '#241c22', '#584a54');       // anvil head
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = A.alpha('#ffc24a', heat); ctx.fillRect(-4.5, -37 - b, 9, 2.4); ctx.restore();
+    facet(ctx, [[-10, -40 - b], [10, -41 - b], [8, -46 - b], [-8, -45 - b]], '#332a30', '#6a5a66');     // brow
+    limb(ctx, 22, -15, 29, -38, 3.4, 2.6, '#2a2228', '#544850');                                        // haft
+    // blacksmith's maul: square striking face, tapered poll, bound socket
+    facet(ctx, [[26, -49], [46, -44], [46, -24], [26, -19]], '#3a3038', '#8a7a86');                      // head block
+    facet(ctx, [[28, -46], [42, -42], [42, -27], [28, -23]], '#4a3f48');                                 // face bevel
+    facet(ctx, [[46, -44], [51, -39], [51, -29], [46, -24]], '#2b232a', '#6a5a66');                      // striking face
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';                                                // heat still in the steel
+    facet(ctx, [[29, -44], [41, -40], [41, -29], [29, -25]], A.alpha('#ff6a1e', heat * 0.55)); ctx.restore();
+    socket(ctx, 27, -34, -1.32, 7, 3, '#1d171c', '#6a5a66'); };
+
+  BossSil.azhrakoth = (ctx, p) => { // Ember Throne — the great horned demon lord
+    const b = p.breathe, f = 0.55 + Math.abs(Math.sin(p.t * 2.2)) * 0.45, wing = Math.sin(p.t * 1.5) * 5;
+    for (const s of [-1, 1]) {                                                                          // tattered wings
+      facet(ctx, [[s * 9, -30], [s * 34, -46 - wing], [s * 40, -22 - wing], [s * 26, -6], [s * 8, -14]], '#2a0f10', '#7a2418');
+      ctx.strokeStyle = '#5a1a14'; ctx.lineWidth = 1.6;
+      for (const q of [0.5, 0.78, 1]) { ctx.beginPath(); ctx.moveTo(s * 9, -29); ctx.lineTo(s * (9 + 27 * q), -44 * q - wing * q + 2); ctx.stroke(); }
+    }
+    stance(ctx, -9, 13, 10, 5, '#4a1414');
+    torso(ctx, -32 - b, -11, 15, 11, '#7a2222', '#c25438');                                              // body
+    facet(ctx, [[-12, -21], [12, -22], [10, -12], [-10, -12]], '#521616');
+    limb(ctx, -14, -28 - b, -21, -12, 4, 2.8, '#5e1a1a');
+    limb(ctx, 14, -28 - b, 21, -12, 4, 2.8, '#5e1a1a');
+    pauldron(ctx, -14, -30 - b, -1, 10, '#4a1414', '#8a3020');
+    pauldron(ctx, 14, -31 - b, 1, 10, '#4a1414', '#8a3020');
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';                                                // core furnace
+    const gr = ctx.createRadialGradient(0, -22 - b, 1, 0, -22 - b, 16);
+    gr.addColorStop(0, A.alpha('#ff5a2a', f)); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, -22 - b, 16, 0, TAU); ctx.fill(); ctx.restore();
+    facet(ctx, [[-7, -32 - b], [7, -33 - b], [6, -43 - b], [-6, -42 - b]], '#8a2626', '#cc6244');        // head
+    eyes(ctx, 0, -38 - b, '#ffd45a', 1.9);
+    facet(ctx, [[-5, -35 - b], [5, -35 - b], [3, -32 - b], [-3, -32 - b]], '#1c0a0a');                   // maw
+    ctx.strokeStyle = '#1e0d0c'; ctx.lineWidth = 3.6; ctx.lineCap = 'round';                             // horn crown
+    for (const s of [-1, 1]) {
+      ctx.beginPath(); ctx.moveTo(s * 5, -43 - b); ctx.quadraticCurveTo(s * 17, -56 - b, s * 10, -66 - b); ctx.stroke();
+      ctx.lineWidth = 2.6;
+      ctx.beginPath(); ctx.moveTo(s * 7, -39 - b); ctx.quadraticCurveTo(s * 20, -43 - b, s * 23, -53 - b); ctx.stroke();
+      ctx.lineWidth = 3.6;
+    } };
+
+  BossSil.herald = (ctx, p) => { // Grey Herald — faceless envoy, orbiting mirror shards
+    const b = p.breathe, float = Math.sin(p.t * 1.0) * 3.2, spin = p.t * 0.5;
+    ctx.save(); ctx.translate(0, float);
+    facet(ctx, [[0, -48 - b], [18, 13], [-18, 13]], '#5a5f6b', '#a8b2c0');                              // robed cone
+    facet(ctx, [[0, -48 - b], [9, -14], [-9, -14]], A.mul('#5a5f6b', 0.78));                             // inner fold
+    facet(ctx, [[0, -48 - b], [-8, -28], [8, -28]], '#383c45');                                          // deep cowl
+    circ(ctx, 0, -36 - b, 3.8, 'rgba(0,0,0,0.88)');
+    circ(ctx, 0, -36 - b, 1.7, A.alpha('#dfe8ff', 0.55 + Math.sin(p.t * 3) * 0.35));                     // one pale light
+    limb(ctx, -9, -30 - b, -16, -16, 2.4, 1.8, '#4c5058', '#8a939f');                                    // sleeves
+    limb(ctx, 9, -30 - b, 16, -16, 2.4, 1.8, '#4c5058', '#8a939f');
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';                                                // mirror shards
+    for (let i = 0; i < 5; i++) {
+      const a = spin + i * (TAU / 5), rx = Math.cos(a) * 23, ry = -26 + Math.sin(a) * 9;
+      facet(ctx, [[rx, ry - 4.4], [rx + 3.2, ry], [rx, ry + 4.4], [rx - 3.2, ry]], A.alpha('#cbd6ea', 0.8));
+    }
+    ctx.restore(); ctx.restore(); };
+
+
+
+  // Dispatch: draw one boss body, feet at origin, facing right.
+  function drawBossBody(ctx, bossKey, t, hurt) {
+    const fn = BossSil[bossKey] || BossSil.corvin;
+    fn(ctx, { t, breathe: Math.sin(t * 1.3) * 1.2, hurt: !!hurt });
+  }
+
+  RS.Sprites = { facet, poly, circ, drawTower, drawTowerIcon, drawEnemy, drawBody, getSheet, Sil, R0, BossSil, drawBossBody };
 })();
 
 ;
@@ -5125,7 +5613,13 @@ button:hover::after { transform: translateX(120%); }
       if (this._fpsT >= 0.5) { this._fps = Math.round(this._fpsN / this._fpsT); this._fpsT = 0; this._fpsN = 0; }
     }
 
-    _bossEntrance(m, e) { this.bossBanner = { name: e.def.name, t: 0 }; VFX.ring(e.x, e.y, '#ff5a2a', 8, 90, 0.6, 5); VFX.embers(e.x, e.y, 20, '#ff8a3a'); RS.Audio && RS.Audio.boss(); }
+    _bossEntrance(m, e) {
+      const A2 = Renderer.BOSS_AURA[e.def.boss] || Renderer.BOSS_AURA.corvin;
+      this.bossBanner = { name: e.def.name, title: e.def.title || '', glow: A2.glow, t: 0 };
+      VFX.ring(e.x, e.y, A2.glow, 8, 90, 0.6, 5);
+      if (A2.fx === 'shard') VFX.shards(e.x, e.y, 20, A2.glow); else VFX.embers(e.x, e.y, 20, A2.glow);
+      RS.Audio && RS.Audio.boss();
+    }
 
     _enemyDeath(info) {
       const x = info.x, y = info.y;
@@ -6056,17 +6550,38 @@ button:hover::after { transform: translateX(120%); }
         bar(e.coldHp / e.coldMax, '#8fd4e8', (y) => { ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.strokeRect(e.x - w / 2 + 0.5, y + 0.5, w - 1, h - 1); });
       }
     }
+    // Per-boss ambience: aura colour + which particle a boss trails. Keyed by
+    // the boss's own `boss` id so each fight has its own read at a glance.
     _drawBoss(ctx, e) {
-      // bosses drawn live at big scale with ambient embers
-      const t = this.clock; const scale = 2.3;
-      if (Math.random() < 0.25) VFX.embers(e.x + (Math.random() - 0.5) * 30, e.y, 1, '#ff8a3a');
-      ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(e.x, e.y + 12, 26, 9, 0, 0, TAU); ctx.fill();
-      ctx.save(); ctx.translate(e.x, e.y + Math.sin(t * 1.2) * 2); ctx.scale(scale, scale);
-      const flash = e.flashT > 0;
-      S.drawBody(ctx, 'demon', t % TAU, false);
-      // crown of horns + glow eyes extra
-      S.facet(ctx, [[-6, -14], [-2, -20], [0, -14]], RS.RAMP.void.shadow); S.facet(ctx, [[6, -14], [2, -20], [0, -14]], RS.RAMP.void.shadow);
-      if (flash) { ctx.globalAlpha = 0.8; S.drawBody(ctx, 'demon', t % TAU, true); ctx.globalAlpha = 1; }
+      const t = this.clock, scale = 2.3;
+      const key = e.def.boss || 'corvin';
+      const A2 = Renderer.BOSS_AURA[key] || Renderer.BOSS_AURA.corvin;
+      // ambient particles in the boss's own colour
+      if (VFX.enabled && Math.random() < 0.22) {
+        const px = e.x + (Math.random() - 0.5) * 34, py = e.y - Math.random() * 10;
+        if (A2.fx === 'smoke') VFX.smoke(px, py, 1, A2.glow);
+        else if (A2.fx === 'shard') VFX.shards(px, py, 1, A2.glow);
+        else VFX.embers(px, py, 1, A2.glow);
+      }
+      // ground shadow + a slow pulsing aura pool so the boss owns its footprint
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const rr = 40 + Math.sin(t * 1.4) * 4;
+      const g = ctx.createRadialGradient(e.x, e.y + 6, 2, e.x, e.y + 6, S.R0(rr) || 1);
+      g.addColorStop(0, A.alpha(A2.glow, 0.24)); g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(e.x, e.y + 6, rr, 0, TAU); ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = 'rgba(0,0,0,0.38)'; ctx.beginPath(); ctx.ellipse(e.x, e.y + 12, 28, 9, 0, 0, TAU); ctx.fill();
+      ctx.save();
+      ctx.translate(e.x, e.y + 10 + Math.sin(t * 1.2) * 2);
+      ctx.scale(scale, scale);
+      S.drawBossBody(ctx, key, t, e.flashT > 0);
+      if (e.flashT > 0) {   // hit flash: re-stamp the silhouette in white
+        ctx.save(); ctx.globalAlpha = 0.55; ctx.globalCompositeOperation = 'lighter';
+        ctx.filter = 'brightness(0) invert(1)';
+        S.drawBossBody(ctx, key, t, true);
+        ctx.filter = 'none'; ctx.restore();
+      }
       ctx.restore();
     }
 
@@ -6202,13 +6717,25 @@ button:hover::after { transform: translateX(120%); }
     _bossBannerDraw(ctx, W, H) {
       if (!this.bossBanner) return; const b = this.bossBanner;
       const drop = RS.EASE.easeOutBack(RS.art.clamp(b.t / RS.ANIM.bannerDrop, 0, 1));
-      const out = b.t > 2.4 ? (b.t - 2.4) / 0.8 : 0;
-      const y = -50 + drop * 60 - out * 60;
+      const out = b.t > 2.8 ? (b.t - 2.8) / 0.8 : 0;
+      const y = -60 + drop * 70 - out * 70, x = W / 2, hw = 210, hh = b.title ? 58 : 44;
+      const col = b.glow || '#ff5a2a';
       ctx.save(); ctx.globalAlpha = 1 - out;
-      ctx.fillStyle = 'rgba(20,10,10,0.9)'; ctx.fillRect(W / 2 - 200, y, 400, 44);
-      ctx.strokeStyle = '#a02c2c'; ctx.lineWidth = 2; ctx.strokeRect(W / 2 - 200, y, 400, 44);
-      ctx.fillStyle = '#d9a441'; ctx.font = 'bold 12px serif'; ctx.textAlign = 'center'; ctx.fillText('⚔ BOSS APPROACHES ⚔', W / 2, y + 16);
-      ctx.fillStyle = '#e8dcc0'; ctx.font = 'bold 18px serif'; ctx.fillText(b.name, W / 2, y + 36);
+      // plate with a bevel and the boss's own accent, not a flat red box
+      const gg = ctx.createLinearGradient(0, y, 0, y + hh);
+      gg.addColorStop(0, 'rgba(28,20,18,0.96)'); gg.addColorStop(1, 'rgba(12,9,8,0.96)');
+      ctx.fillStyle = gg; ctx.fillRect(x - hw, y, hw * 2, hh);
+      ctx.strokeStyle = A.alpha(col, 0.85); ctx.lineWidth = 2; ctx.strokeRect(x - hw, y, hw * 2, hh);
+      ctx.strokeStyle = A.alpha(col, 0.25); ctx.lineWidth = 1; ctx.strokeRect(x - hw + 3, y + 3, hw * 2 - 6, hh - 6);
+      // accent rules flanking the eyebrow text
+      ctx.strokeStyle = A.alpha(col, 0.6);
+      ctx.beginPath(); ctx.moveTo(x - 150, y + 14); ctx.lineTo(x - 74, y + 14);
+      ctx.moveTo(x + 74, y + 14); ctx.lineTo(x + 150, y + 14); ctx.stroke();
+      ctx.textAlign = 'center';
+      ctx.fillStyle = A.alpha(col, 0.95); ctx.font = 'bold 10px sans-serif';
+      ctx.fillText('B O S S   A P P R O A C H E S', x, y + 17);
+      ctx.fillStyle = '#f2e6c8'; ctx.font = 'bold 19px Georgia, serif'; ctx.fillText(b.name, x, y + 38);
+      if (b.title) { ctx.fillStyle = 'rgba(200,188,160,0.75)'; ctx.font = 'italic 12px Georgia, serif'; ctx.fillText(b.title, x, y + 52); }
       ctx.textAlign = 'left'; ctx.restore();
     }
 
@@ -6218,7 +6745,249 @@ button:hover::after { transform: translateX(120%); }
     _towerGlyph(ctx, t, x, y, rc, flash) { S.drawTowerIcon(ctx, t.def, x, y, 34); }
   }
 
+  // Per-boss aura colour + trail particle (see _drawBoss / _bossEntrance).
+  Renderer.BOSS_AURA = {
+    corvin:      { glow: '#ffcf5a', fx: 'ember' },
+    thane:       { glow: '#6ff0d0', fx: 'shard' },
+    hollow:      { glow: '#c9f57a', fx: 'smoke' },
+    gruumak:     { glow: '#ff6a2a', fx: 'ember' },
+    frostjarl:   { glow: '#dff8ff', fx: 'shard' },
+    bogfather:   { glow: '#b8f05a', fx: 'smoke' },
+    cinderlord:  { glow: '#ff7a2a', fx: 'ember' },
+    warden:      { glow: '#7fb0ff', fx: 'shard' },
+    stormwyrm:   { glow: '#bfe0ff', fx: 'shard' },
+    malgrath:    { glow: '#8fd4a8', fx: 'smoke' },
+    forgemaster: { glow: '#ff8a2a', fx: 'ember' },
+    azhrakoth:   { glow: '#ff5a2a', fx: 'ember' },
+    herald:      { glow: '#c9d4e8', fx: 'shard' },
+  };
+
   RS.Renderer = Renderer;
+})();
+
+;
+/* ===== js/tutorial.js ===== */
+/* =========================================================================
+ * REALM SIEGE — js/tutorial.js
+ * A one-time guided walkthrough on the player's first battle, plus contextual
+ * "field tips" that fire the first time a confusing mechanic appears.
+ *
+ * Design rules:
+ *   - Every guided step advances on the player DOING the thing, never a timer.
+ *     Reading a wall of text teaches nothing; placing the tower does.
+ *   - The board is never blocked. The spotlight dims the rest of the screen
+ *     with a cut-out, so the player can always see what they're being told about.
+ *   - Field tips are separate from the guided flow and fire whenever the
+ *     mechanic first shows up — Flying, Armoured, Stealth and Mark are the four
+ *     that actually confuse people ("why won't my swordsman hit that griffon?").
+ *   - Everything is skippable, and every flag lives on the profile so nothing
+ *     is ever shown twice.
+ *
+ * PURELY PRESENTATIONAL. Reads match state, never mutates it.
+ * ========================================================================= */
+(function () {
+  'use strict';
+  const RS = (window.RS = window.RS || {});
+
+  const $ = (s, r) => (r || document).querySelector(s);
+
+  /* --------------------------- guided steps --------------------------- */
+  // advance: the event id that completes the step; null = manual "Got it".
+  const STEPS = [
+    { id: 'welcome', title: 'Hold the road', target: null, advance: null,
+      body: 'The horde walks the road to your keep. Every one that reaches the end costs you a life. Build along the road and stop them.' },
+    { id: 'pick', title: 'Pick a defender', target: '#hTray', place: 'above', advance: 'select',
+      body: 'This is your warband. Click one to pick it up — the number under it is what it costs in gold.' },
+    { id: 'place', title: 'Set it down', target: '#game', place: 'center', advance: 'place', dim: 0.35,
+      body: 'Click any open tile beside the road. Towers can only hit what comes near them, so hug the path — corners are best, enemies linger there.' },
+    { id: 'range', title: 'That circle is its reach', target: 'tower', place: 'right', advance: null,
+      body: 'A tower only attacks inside its ring. Anything outside walks past untouched. Spread your towers so their rings overlap the road, not each other.' },
+    { id: 'wave', title: 'Call them in', target: '#btnWave', place: 'left', advance: 'waveStart',
+      body: 'Send the wave when you are ready. Calling it early pays bonus gold, so there is a reward for being confident.' },
+    { id: 'upgrade', title: 'Grow what you have', target: '#game', place: 'center', advance: 'towerSelect', dim: 0.3,
+      body: 'Click one of your towers. You can upgrade it or change its targeting — an upgraded tower beats two weak ones almost every time.' },
+    { id: 'done', title: 'You have the idea', target: null, advance: null,
+      body: 'Gold comes from kills and from clearing waves. Keep spending it: a defence that stops growing gets overrun around wave ten. Good luck.' },
+  ];
+
+  /* ---------------------------- field tips ---------------------------- */
+  // Fire once ever, the first time the mechanic actually appears on screen.
+  const TIPS = {
+    flying: { icon: '🦅', title: 'Flyers ignore your front line',
+      body: 'Flying enemies leave the ground — melee towers and blockers <b>cannot reach them at all</b>. Keep an archer, mage or other ranged tower in every loadout.' },
+    armored: { icon: '🛡', title: 'Armour blunts blades and arrows',
+      body: 'Armoured foes shrug off most physical hits. <b>Magic, Siege and True</b> damage cut straight through — check the icon on each tower card.' },
+    stealth: { icon: '👁', title: 'Something is hiding',
+      body: 'Stealthed enemies cannot be targeted until they are revealed. A <b>Torchbearer</b> or <b>Watchtower Scout</b> exposes everything near it.' },
+    mark: { icon: '🎯', title: 'Marked',
+      body: 'A marked enemy takes <b>extra damage from every source</b>, not just the tower that marked it. Mark the big one, then focus it down.' },
+    boss: { icon: '💀', title: 'This map has its own boss',
+      body: 'Every map ends with a different boss, each with its own tricks. Leaking a boss costs <b>5 lives</b>, so do not let it walk.' },
+  };
+
+  const T = {
+    active: false, i: 0, el: null, _tipEl: null, _tipT: 0, _seenTip: {},
+
+    _flags() {
+      const p = RS.Meta && RS.Meta.p; if (!p) return null;
+      if (!p.tutorial) p.tutorial = { done: false, tips: {} };
+      if (!p.tutorial.tips) p.tutorial.tips = {};
+      return p.tutorial;
+    },
+
+    // Called when a match starts. Runs only on a player's very first battle.
+    maybeStart() {
+      const f = this._flags(); if (!f || f.done) return;
+      this.active = true; this.i = 0;
+      this._build();
+      this._render();
+    },
+
+    skip() { const f = this._flags(); if (f) { f.done = true; RS.Meta.save(); } this._teardown(); },
+    finish() { this.skip(); },
+
+    /* --------------------------- step driving ------------------------- */
+    event(name) {
+      if (!this.active) return;
+      const step = STEPS[this.i];
+      if (!step || step.advance !== name) return;
+      this.next();
+    },
+    next() {
+      if (!this.active) return;
+      this.i++;
+      if (this.i >= STEPS.length) { this.finish(); return; }
+      this._render();
+    },
+
+    /* ------------------------------ tips ------------------------------ */
+    // Scan live match state for the first appearance of a teachable mechanic.
+    scan(m) {
+      if (!m || !RS.Meta || !RS.Meta.p) return;
+      // Don't stack a tip on top of the guided flow — it would fight for focus.
+      if (this.active) return;
+      for (const e of m.enemies) {
+        if (!e.alive) continue;
+        if (e.isBoss) { this.tip('boss'); continue; }
+        if (e.isFlying) this.tip('flying');
+        else if (e.def.traits.includes('Stealth')) this.tip('stealth');
+        if (e.armor >= 18) this.tip('armored');
+        if (e.status && e.status.mark) this.tip('mark');
+      }
+    },
+
+    tip(id) {
+      const f = this._flags(); if (!f || f.tips[id] || this._tipEl) return;
+      const t = TIPS[id]; if (!t) return;
+      f.tips[id] = true; RS.Meta.save();
+      const el = document.createElement('div');
+      el.className = 'tut-tip';
+      el.innerHTML = `<div class="tut-tip-icon">${t.icon}</div>
+        <div class="tut-tip-txt"><b>${t.title}</b><p>${t.body}</p></div>
+        <button class="tut-tip-x" aria-label="Dismiss">✕</button>`;
+      (document.getElementById('hud') || document.body).appendChild(el);
+      requestAnimationFrame(() => el.classList.add('in'));
+      const kill = () => { el.classList.remove('in'); setTimeout(() => el.remove(), 260); this._tipEl = null; clearTimeout(this._tipT); };
+      el.querySelector('.tut-tip-x').onclick = kill;
+      this._tipEl = el;
+      this._tipT = setTimeout(kill, 9000);
+    },
+
+    /* ------------------------------ chrome ---------------------------- */
+    _build() {
+      this._teardown(true);
+      const el = document.createElement('div');
+      el.className = 'tut';
+      el.innerHTML = `<div class="tut-hole" id="tutHole"></div>
+        <div class="tut-card" id="tutCard">
+          <div class="tut-step" id="tutStep"></div>
+          <h4 id="tutTitle"></h4>
+          <p id="tutBody"></p>
+          <div class="tut-actions">
+            <button class="tut-skip" id="tutSkip">Skip tutorial</button>
+            <button class="tut-next" id="tutNext">Got it</button>
+          </div>
+          <div class="tut-wait" id="tutWait"></div>
+        </div>`;
+      (document.getElementById('hud') || document.body).appendChild(el);
+      $('#tutSkip', el).onclick = () => this.skip();
+      $('#tutNext', el).onclick = () => this.next();
+      this.el = el;
+    },
+
+    _teardown(keepFlag) {
+      if (this.el) { this.el.remove(); this.el = null; }
+      if (!keepFlag) this.active = false;
+    },
+
+    _render() {
+      if (!this.el) return;
+      const s = STEPS[this.i]; if (!s) return;
+      $('#tutStep', this.el).textContent = `Step ${this.i + 1} of ${STEPS.length}`;
+      $('#tutTitle', this.el).textContent = s.title;
+      $('#tutBody', this.el).innerHTML = s.body;
+      const manual = !s.advance;
+      $('#tutNext', this.el).style.display = manual ? '' : 'none';
+      $('#tutNext', this.el).textContent = this.i === STEPS.length - 1 ? 'Begin' : 'Got it';
+      const wait = $('#tutWait', this.el);
+      wait.style.display = manual ? 'none' : '';
+      wait.textContent = { select: 'Waiting — pick a tower from the tray…', place: 'Waiting — click a tile beside the road…',
+        waveStart: 'Waiting — press Start Wave…', towerSelect: 'Waiting — click one of your towers…' }[s.advance] || '';
+      this._position();
+    },
+
+    // Move the spotlight hole + card to the current step's target.
+    _position() {
+      if (!this.el) return;
+      const s = STEPS[this.i]; if (!s) return;
+      const hole = $('#tutHole', this.el), card = $('#tutCard', this.el);
+      const host = (document.getElementById('hud') || document.body).getBoundingClientRect();
+      let r = null;
+      if (s.target === 'tower') {
+        const m = RS.UI && RS.UI.match, cv = RS.UI && RS.UI.canvas;
+        const tw = m && m.towers[m.towers.length - 1];
+        if (tw && cv) {
+          const cr = cv.getBoundingClientRect();
+          const sx = cr.width / cv.width, sy = cr.height / cv.height;
+          const rad = (m._effectiveRange ? m._effectiveRange(tw) : 60) * sx + 14;
+          r = { left: cr.left + tw.x * sx - rad, top: cr.top + tw.y * sy - rad, width: rad * 2, height: rad * 2, round: true };
+        }
+      } else if (s.target) {
+        const t = document.querySelector(s.target);
+        if (t) { const b = t.getBoundingClientRect(); r = { left: b.left - 8, top: b.top - 8, width: b.width + 16, height: b.height + 16 }; }
+      }
+      const dim = s.dim != null ? s.dim : 0.55;
+      if (r) {
+        hole.style.display = '';
+        hole.style.left = (r.left - host.left) + 'px';
+        hole.style.top = (r.top - host.top) + 'px';
+        hole.style.width = r.width + 'px';
+        hole.style.height = r.height + 'px';
+        hole.style.borderRadius = r.round ? '50%' : '12px';
+        hole.style.boxShadow = `0 0 0 9999px rgba(8,6,5,${dim})`;
+      } else {
+        hole.style.display = 'none';
+        this.el.style.background = `rgba(8,6,5,${dim})`;
+      }
+      if (!r) { this.el.style.background = `rgba(8,6,5,${dim})`; } else { this.el.style.background = 'transparent'; }
+      // Place the card clear of the highlighted element.
+      card.classList.remove('at-center', 'at-above', 'at-below', 'at-left', 'at-right');
+      if (!r || s.place === 'center') { card.classList.add('at-center'); card.style.left = ''; card.style.top = ''; return; }
+      const cw = 330, gap = 16;
+      let left, top;
+      if (s.place === 'above') { left = r.left - host.left + r.width / 2 - cw / 2; top = r.top - host.top - gap - 190; }
+      else if (s.place === 'left') { left = r.left - host.left - cw - gap; top = r.top - host.top - 60; }
+      else { left = r.left - host.left + r.width + gap; top = r.top - host.top; }
+      left = Math.max(12, Math.min(left, host.width - cw - 12));
+      top = Math.max(12, Math.min(top, host.height - 210));
+      card.style.left = left + 'px'; card.style.top = top + 'px';
+    },
+
+    // Keep the spotlight glued to its target while the board resizes/animates.
+    reposition() { if (this.active && this.el) this._position(); },
+  };
+
+  RS.Tutorial = T;
 })();
 
 ;
@@ -6783,12 +7552,45 @@ button:hover::after { transform: translateX(120%); }
           <div class="codexgrid">
           ${RS.ENEMIES.filter((e) => !e.hidden && !e.traits.includes('Boss')).map((e) => { const seen = Meta.p.codex.enemies.includes(e.id); return `<div class="codexcard ${seen ? '' : 'locked'}"><b>${seen ? e.name : '???'}</b><span>${e.family}</span>${seen ? `<em>HP ${e.hp} · SPD ${e.speed} · AR ${e.armor}</em><div class="traits">${e.traits.map((t) => `<i>${t}</i>`).join('')}</div>` : '<em>Not yet encountered</em>'}</div>`; }).join('')}
           </div>
-          <h3>Bosses</h3>
-          <div class="codexgrid">
-          ${RS.ENEMIES.filter((e) => e.traits.includes('Boss')).map((e) => { const seen = Meta.p.codex.enemies.includes(e.id); return `<div class="codexcard boss ${seen ? '' : 'locked'}"><b>${seen ? e.name : '??? Boss'}</b><span>${e.family}</span>${seen ? `<em>HP ${fmt(e.hp)}</em>` : '<em>Undiscovered</em>'}</div>`; }).join('')}
+          <h3>Bosses <small>one per map</small></h3>
+          <div class="codexgrid bossgrid">
+          ${RS.ENEMIES.filter((e) => e.traits.includes('Boss')).map((e) => {
+            const seen = Meta.p.codex.enemies.includes(e.id);
+            const home = RS.MAPS.find((mp) => mp.boss === e.id);
+            return `<div class="codexcard boss ${seen ? '' : 'locked'}">
+              <canvas class="bossport" data-boss="${e.boss || ''}" width="104" height="88"></canvas>
+              <b>${seen ? e.name : '??? Boss'}</b>
+              <span>${seen ? (e.title || e.family) : 'Undiscovered'}</span>
+              ${seen ? `<em>${home ? home.name : 'Endless'} · HP ${fmt(e.hp)}</em>
+                <div class="traits">${e.traits.filter((t) => t !== 'Boss').map((t) => `<i>${t}</i>`).join('')}</div>
+                ${e.lore ? `<p class="bosslore">${e.lore}</p>` : ''}` : '<em>Defeat it to record its entry</em>'}
+            </div>`;
+          }).join('')}
           </div>
         </div>`;
       this._wireGo();
+      this._drawBossPortraits();
+    },
+
+    // Boss portraits in the codex, drawn with the same silhouettes the match
+    // uses (locked entries stay as a black cut-out so the shape is a teaser).
+    _drawBossPortraits() {
+      $$('canvas.bossport', document).forEach((cv) => {
+        const key = cv.dataset.boss; if (!key) return;
+        const locked = cv.parentElement.classList.contains('locked');
+        const c = cv.getContext('2d');
+        c.clearRect(0, 0, cv.width, cv.height);
+        const aura = (RS.Renderer.BOSS_AURA || {})[key];
+        if (!locked && aura) {
+          const g = c.createRadialGradient(52, 52, 2, 52, 52, 46);
+          g.addColorStop(0, RS.art.alpha(aura.glow, 0.20)); g.addColorStop(1, 'rgba(0,0,0,0)');
+          c.fillStyle = g; c.fillRect(0, 0, cv.width, cv.height);
+        }
+        c.save(); c.translate(52, 78); c.scale(1.35, 1.35);
+        if (locked) { c.globalAlpha = 0.55; c.filter = 'brightness(0)'; }
+        RS.Sprites.drawBossBody(c, key, performance.now() / 1000, false);
+        c.restore();
+      });
     },
 
     /* ---------------------------- settings ---------------------------- */
@@ -6858,9 +7660,10 @@ button:hover::after { transform: translateX(120%); }
       $('#btnWave').onclick = () => this.onWaveButton();
       $('#btnPause').onclick = () => this.togglePause();
       $('#btnSpeed').onclick = () => this.cycleSpeed();
-      $('#btnMenu').onclick = () => { if (confirm('Abandon this battle?')) { this.match = null; this.show('mapselect'); } };
+      $('#btnMenu').onclick = () => { if (confirm('Abandon this battle?')) { RS.Tutorial && RS.Tutorial.skip(); this.match = null; this.show('mapselect'); } };
       $('#hMax').textContent = this.match.maxWaves > 900 ? '∞' : this.match.maxWaves;
       this.refreshHud();
+      RS.Tutorial && RS.Tutorial.maybeStart();
     },
 
     _buildTray() {
@@ -6891,12 +7694,13 @@ button:hover::after { transform: translateX(120%); }
       this.placing = t; this.renderer.ghost = t; this.selectedTower = null; this.renderer.selected = null;
       $$('.trayitem', document).forEach((b) => b.classList.toggle('active', b.dataset.place === id));
       this.refreshSelected();
+      RS.Tutorial && RS.Tutorial.event('select');
     },
 
     onWaveButton() {
       const m = this.match; if (!m) return;
       if (m.waveActive) m.callEarly();
-      else m.startWave();
+      else { m.startWave(); RS.Tutorial && RS.Tutorial.event('waveStart'); }
       this.refreshHud();
     },
     togglePause() { if (!this.match) return; this.match.paused = !this.match.paused; $('#btnPause').textContent = this.match.paused ? '▶' : '⏸'; },
@@ -6912,6 +7716,7 @@ button:hover::after { transform: translateX(120%); }
       this.renderer.updateVisuals(m, eff * m.speed); // presentational animation/VFX only
       this.renderer.draw(m);
       this.refreshHud(true);
+      if (RS.Tutorial) { RS.Tutorial.reposition(); RS.Tutorial.scan(m); }
       if (m.state === 'won' || m.state === 'lost') this.endMatch();
     },
 
@@ -7037,7 +7842,7 @@ button:hover::after { transform: translateX(120%); }
         const m = this.match; if (!m) return; const t = toTile(ev);
         if (this.placing) {
           const res = m.place(this.placing, t.c, t.r);
-          if (res.ok) { if (!(ev.shiftKey)) { this.placing = null; this.renderer.ghost = null; $$('.trayitem').forEach((b) => b.classList.remove('active')); } this.refreshSelected(); }
+          if (res.ok) { if (!(ev.shiftKey)) { this.placing = null; this.renderer.ghost = null; $$('.trayitem').forEach((b) => b.classList.remove('active')); } this.refreshSelected(); RS.Tutorial && RS.Tutorial.event('place'); }
           else this.toast(res.reason, RS.PALETTE.bad);
           return;
         }
@@ -7045,6 +7850,7 @@ button:hover::after { transform: translateX(120%); }
         let hit = null, bd = 1e9;
         for (const tw of m.towers) { const d = (tw.x - t.x) ** 2 + (tw.y - t.y) ** 2; if (d < 22 * 22 && d < bd) { bd = d; hit = tw; } }
         this.selectedTower = hit; this.renderer.selected = hit; this.refreshSelected();
+        if (hit) RS.Tutorial && RS.Tutorial.event('towerSelect');
       };
     },
 
@@ -7067,6 +7873,7 @@ button:hover::after { transform: translateX(120%); }
     /* -------------------------- match resolve ------------------------- */
     endMatch() {
       const m = this.match; if (this._ended) return; this._ended = true;
+      RS.Tutorial && RS.Tutorial.skip();   // first battle finished: never show it again
       const won = m.state === 'won';
       // record codex from encountered
       m.encountered.forEach((k) => { if (k.startsWith('enemy:')) Meta.seeEnemy(k.slice(6)); });

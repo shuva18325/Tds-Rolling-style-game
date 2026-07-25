@@ -33,6 +33,8 @@
       profile: { name: '', avatar: '⚔️', createdAt: 0 },
       // Champions' Ladder personal-best records (all derived at match end).
       records: { highestWave: 0, kills: 0, fastestVictory: 0, goldBanked: 0, topTowerDamage: 0, totalRolls: 0 },
+      // First-battle walkthrough + one-shot field tips (js/tutorial.js).
+      tutorial: { done: false, tips: {} },
       badges: {},        // badge id -> true
       defeated: {},      // rival id -> true
       bestRank: 10,      // lower is better; 10 = unranked
@@ -68,6 +70,8 @@
       out.tokens = Object.assign({}, base.tokens, s.tokens);
       out.rolls = Object.assign({}, base.rolls, s.rolls);
       out.pity = Object.assign({}, base.pity, s.pity);
+      out.tutorial = Object.assign({}, base.tutorial, s.tutorial);
+      out.tutorial.tips = Object.assign({}, s.tutorial && s.tutorial.tips);
       out.shards = Object.assign({}, base.shards, s.shards);
       out.account = Object.assign({}, base.account, s.account);
       out.settings = Object.assign({}, base.settings, s.settings);

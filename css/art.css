@@ -369,3 +369,70 @@ button:hover::after { transform: translateX(120%); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001s !important; animation-iteration-count: 1 !important; }
 }
+
+/* ===== boss codex cards (one boss per map) ===== */
+.bossgrid { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.codexcard.boss { display: flex; flex-direction: column; align-items: center; text-align: center;
+  background: linear-gradient(170deg, #241a18, #16110f); border-color: #5a3028; padding: 12px 12px 14px; }
+.codexcard.boss:not(.locked) { box-shadow: 0 4px 16px rgba(0,0,0,.5), inset 0 0 0 1px rgba(217,164,65,.10); }
+.codexcard.boss b { font-size: 14px; margin-top: 2px; color: #f2e6c8; }
+.codexcard.boss span { font-style: italic; color: #c8a06a; }
+.codexcard.boss em { color: var(--dim); font-style: normal; margin-top: 3px; }
+.codexcard.boss .traits { justify-content: center; margin-top: 6px; }
+.bossport { width: 104px; height: 88px; display: block; }
+.codexcard.boss.locked .bossport { opacity: .45; }
+.bosslore { margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(217,164,65,.14);
+  font-size: 11.5px; font-style: italic; color: #9a8f7a; line-height: 1.45; }
+
+/* ===== first-battle tutorial + field tips ===== */
+/* NOTE: style.css has `#hud > * { pointer-events: auto }`, which outranks a bare
+   `.tut` class rule — the overlay swallowed every click it was pointing at.
+   The #hud-qualified selector wins the specificity fight. */
+.tut, #hud > .tut { position: absolute; inset: 0; z-index: 60; pointer-events: none; transition: background .25s; }
+/* the spotlight: a transparent box with a colossal outer shadow = a cut-out */
+.tut-hole { position: absolute; pointer-events: none; border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgba(8,6,5,.55);
+  outline: 2px solid rgba(217,164,65,.85); outline-offset: 0;
+  transition: left .28s cubic-bezier(.3,1,.4,1), top .28s cubic-bezier(.3,1,.4,1),
+              width .28s cubic-bezier(.3,1,.4,1), height .28s cubic-bezier(.3,1,.4,1);
+  animation: tutHole 1.9s ease-in-out infinite; }
+@keyframes tutHole { 50% { outline-color: rgba(255,214,130,.45); } }
+
+.tut-card { position: absolute; width: 330px; pointer-events: auto;
+  background: linear-gradient(165deg, #2b2822, #191712);
+  border: 1px solid var(--gold); border-radius: 10px; padding: 14px 16px 12px;
+  box-shadow: 0 14px 40px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.06);
+  animation: tutIn .28s cubic-bezier(.2,1.3,.4,1) backwards; }
+.tut-card.at-center { left: 50%; top: 50%; transform: translate(-50%,-50%); }
+@keyframes tutIn { from { opacity: 0; transform: translateY(10px) scale(.97); } }
+.tut-card.at-center { animation-name: tutInC; }
+@keyframes tutInC { from { opacity: 0; transform: translate(-50%,-46%) scale(.97); } }
+.tut-step { font-size: 10px; letter-spacing: 1.4px; text-transform: uppercase; color: #8a7f68; margin-bottom: 5px; }
+.tut-card h4 { font-family: Georgia, serif; font-size: 17px; color: var(--gold); margin-bottom: 6px; }
+.tut-card p { font-size: 13px; line-height: 1.5; color: #ddd2b8; }
+.tut-card p b { color: #f5e3b4; }
+.tut-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; }
+.tut-skip { font-size: 11px; padding: 5px 9px; background: transparent; border-color: transparent; color: #8a7f68; box-shadow: none; }
+.tut-skip:hover { color: var(--text); border-color: var(--line); }
+.tut-next { font-size: 13px; font-weight: 700; padding: 7px 18px;
+  background: linear-gradient(#4a3a1c,#2a2112); border: 1px solid var(--gold); color: var(--gold); }
+.tut-wait { margin-top: 10px; font-size: 11.5px; font-style: italic; color: #c8a860;
+  border-top: 1px solid rgba(217,164,65,.18); padding-top: 8px;
+  animation: tutPulse 1.6s ease-in-out infinite; }
+@keyframes tutPulse { 50% { opacity: .5; } }
+
+/* contextual one-shot field tips */
+.tut-tip { position: absolute; top: 58px; left: 50%; transform: translate(-50%,-14px);
+  display: flex; gap: 11px; align-items: flex-start; width: min(430px, 84vw); z-index: 55;
+  background: linear-gradient(165deg, #2b2822, #191712);
+  border: 1px solid var(--gold); border-left: 4px solid var(--gold); border-radius: 10px;
+  padding: 11px 13px; box-shadow: 0 10px 30px rgba(0,0,0,.6);
+  opacity: 0; transition: opacity .26s, transform .26s cubic-bezier(.2,1.2,.4,1); pointer-events: auto; }
+.tut-tip.in { opacity: 1; transform: translate(-50%,0); }
+.tut-tip-icon { font-size: 21px; line-height: 1.1; filter: drop-shadow(0 0 6px rgba(217,164,65,.4)); }
+.tut-tip-txt b { display: block; font-family: Georgia, serif; font-size: 14px; color: var(--gold); margin-bottom: 3px; }
+.tut-tip-txt p { font-size: 12.5px; line-height: 1.45; color: #ddd2b8; }
+.tut-tip-txt p b { display: inline; font-family: inherit; font-size: inherit; color: #f5e3b4; }
+.tut-tip-x { margin-left: auto; align-self: flex-start; font-size: 11px; padding: 2px 7px;
+  background: transparent; border-color: transparent; color: #8a7f68; box-shadow: none; }
+.tut-tip-x:hover { color: var(--text); border-color: var(--line); }

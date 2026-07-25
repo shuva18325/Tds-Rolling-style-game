@@ -131,7 +131,13 @@
       if (this._fpsT >= 0.5) { this._fps = Math.round(this._fpsN / this._fpsT); this._fpsT = 0; this._fpsN = 0; }
     }
 
-    _bossEntrance(m, e) { this.bossBanner = { name: e.def.name, t: 0 }; VFX.ring(e.x, e.y, '#ff5a2a', 8, 90, 0.6, 5); VFX.embers(e.x, e.y, 20, '#ff8a3a'); RS.Audio && RS.Audio.boss(); }
+    _bossEntrance(m, e) {
+      const A2 = Renderer.BOSS_AURA[e.def.boss] || Renderer.BOSS_AURA.corvin;
+      this.bossBanner = { name: e.def.name, title: e.def.title || '', glow: A2.glow, t: 0 };
+      VFX.ring(e.x, e.y, A2.glow, 8, 90, 0.6, 5);
+      if (A2.fx === 'shard') VFX.shards(e.x, e.y, 20, A2.glow); else VFX.embers(e.x, e.y, 20, A2.glow);
+      RS.Audio && RS.Audio.boss();
+    }
 
     _enemyDeath(info) {
       const x = info.x, y = info.y;
@@ -1062,17 +1068,38 @@
         bar(e.coldHp / e.coldMax, '#8fd4e8', (y) => { ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.strokeRect(e.x - w / 2 + 0.5, y + 0.5, w - 1, h - 1); });
       }
     }
+    // Per-boss ambience: aura colour + which particle a boss trails. Keyed by
+    // the boss's own `boss` id so each fight has its own read at a glance.
     _drawBoss(ctx, e) {
-      // bosses drawn live at big scale with ambient embers
-      const t = this.clock; const scale = 2.3;
-      if (Math.random() < 0.25) VFX.embers(e.x + (Math.random() - 0.5) * 30, e.y, 1, '#ff8a3a');
-      ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(e.x, e.y + 12, 26, 9, 0, 0, TAU); ctx.fill();
-      ctx.save(); ctx.translate(e.x, e.y + Math.sin(t * 1.2) * 2); ctx.scale(scale, scale);
-      const flash = e.flashT > 0;
-      S.drawBody(ctx, 'demon', t % TAU, false);
-      // crown of horns + glow eyes extra
-      S.facet(ctx, [[-6, -14], [-2, -20], [0, -14]], RS.RAMP.void.shadow); S.facet(ctx, [[6, -14], [2, -20], [0, -14]], RS.RAMP.void.shadow);
-      if (flash) { ctx.globalAlpha = 0.8; S.drawBody(ctx, 'demon', t % TAU, true); ctx.globalAlpha = 1; }
+      const t = this.clock, scale = 2.3;
+      const key = e.def.boss || 'corvin';
+      const A2 = Renderer.BOSS_AURA[key] || Renderer.BOSS_AURA.corvin;
+      // ambient particles in the boss's own colour
+      if (VFX.enabled && Math.random() < 0.22) {
+        const px = e.x + (Math.random() - 0.5) * 34, py = e.y - Math.random() * 10;
+        if (A2.fx === 'smoke') VFX.smoke(px, py, 1, A2.glow);
+        else if (A2.fx === 'shard') VFX.shards(px, py, 1, A2.glow);
+        else VFX.embers(px, py, 1, A2.glow);
+      }
+      // ground shadow + a slow pulsing aura pool so the boss owns its footprint
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const rr = 40 + Math.sin(t * 1.4) * 4;
+      const g = ctx.createRadialGradient(e.x, e.y + 6, 2, e.x, e.y + 6, S.R0(rr) || 1);
+      g.addColorStop(0, A.alpha(A2.glow, 0.24)); g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(e.x, e.y + 6, rr, 0, TAU); ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = 'rgba(0,0,0,0.38)'; ctx.beginPath(); ctx.ellipse(e.x, e.y + 12, 28, 9, 0, 0, TAU); ctx.fill();
+      ctx.save();
+      ctx.translate(e.x, e.y + 10 + Math.sin(t * 1.2) * 2);
+      ctx.scale(scale, scale);
+      S.drawBossBody(ctx, key, t, e.flashT > 0);
+      if (e.flashT > 0) {   // hit flash: re-stamp the silhouette in white
+        ctx.save(); ctx.globalAlpha = 0.55; ctx.globalCompositeOperation = 'lighter';
+        ctx.filter = 'brightness(0) invert(1)';
+        S.drawBossBody(ctx, key, t, true);
+        ctx.filter = 'none'; ctx.restore();
+      }
       ctx.restore();
     }
 
@@ -1208,13 +1235,25 @@
     _bossBannerDraw(ctx, W, H) {
       if (!this.bossBanner) return; const b = this.bossBanner;
       const drop = RS.EASE.easeOutBack(RS.art.clamp(b.t / RS.ANIM.bannerDrop, 0, 1));
-      const out = b.t > 2.4 ? (b.t - 2.4) / 0.8 : 0;
-      const y = -50 + drop * 60 - out * 60;
+      const out = b.t > 2.8 ? (b.t - 2.8) / 0.8 : 0;
+      const y = -60 + drop * 70 - out * 70, x = W / 2, hw = 210, hh = b.title ? 58 : 44;
+      const col = b.glow || '#ff5a2a';
       ctx.save(); ctx.globalAlpha = 1 - out;
-      ctx.fillStyle = 'rgba(20,10,10,0.9)'; ctx.fillRect(W / 2 - 200, y, 400, 44);
-      ctx.strokeStyle = '#a02c2c'; ctx.lineWidth = 2; ctx.strokeRect(W / 2 - 200, y, 400, 44);
-      ctx.fillStyle = '#d9a441'; ctx.font = 'bold 12px serif'; ctx.textAlign = 'center'; ctx.fillText('⚔ BOSS APPROACHES ⚔', W / 2, y + 16);
-      ctx.fillStyle = '#e8dcc0'; ctx.font = 'bold 18px serif'; ctx.fillText(b.name, W / 2, y + 36);
+      // plate with a bevel and the boss's own accent, not a flat red box
+      const gg = ctx.createLinearGradient(0, y, 0, y + hh);
+      gg.addColorStop(0, 'rgba(28,20,18,0.96)'); gg.addColorStop(1, 'rgba(12,9,8,0.96)');
+      ctx.fillStyle = gg; ctx.fillRect(x - hw, y, hw * 2, hh);
+      ctx.strokeStyle = A.alpha(col, 0.85); ctx.lineWidth = 2; ctx.strokeRect(x - hw, y, hw * 2, hh);
+      ctx.strokeStyle = A.alpha(col, 0.25); ctx.lineWidth = 1; ctx.strokeRect(x - hw + 3, y + 3, hw * 2 - 6, hh - 6);
+      // accent rules flanking the eyebrow text
+      ctx.strokeStyle = A.alpha(col, 0.6);
+      ctx.beginPath(); ctx.moveTo(x - 150, y + 14); ctx.lineTo(x - 74, y + 14);
+      ctx.moveTo(x + 74, y + 14); ctx.lineTo(x + 150, y + 14); ctx.stroke();
+      ctx.textAlign = 'center';
+      ctx.fillStyle = A.alpha(col, 0.95); ctx.font = 'bold 10px sans-serif';
+      ctx.fillText('B O S S   A P P R O A C H E S', x, y + 17);
+      ctx.fillStyle = '#f2e6c8'; ctx.font = 'bold 19px Georgia, serif'; ctx.fillText(b.name, x, y + 38);
+      if (b.title) { ctx.fillStyle = 'rgba(200,188,160,0.75)'; ctx.font = 'italic 12px Georgia, serif'; ctx.fillText(b.title, x, y + 52); }
       ctx.textAlign = 'left'; ctx.restore();
     }
 
@@ -1223,6 +1262,23 @@
     // Back-compat glyph used by UI cards/collection/tray.
     _towerGlyph(ctx, t, x, y, rc, flash) { S.drawTowerIcon(ctx, t.def, x, y, 34); }
   }
+
+  // Per-boss aura colour + trail particle (see _drawBoss / _bossEntrance).
+  Renderer.BOSS_AURA = {
+    corvin:      { glow: '#ffcf5a', fx: 'ember' },
+    thane:       { glow: '#6ff0d0', fx: 'shard' },
+    hollow:      { glow: '#c9f57a', fx: 'smoke' },
+    gruumak:     { glow: '#ff6a2a', fx: 'ember' },
+    frostjarl:   { glow: '#dff8ff', fx: 'shard' },
+    bogfather:   { glow: '#b8f05a', fx: 'smoke' },
+    cinderlord:  { glow: '#ff7a2a', fx: 'ember' },
+    warden:      { glow: '#7fb0ff', fx: 'shard' },
+    stormwyrm:   { glow: '#bfe0ff', fx: 'shard' },
+    malgrath:    { glow: '#8fd4a8', fx: 'smoke' },
+    forgemaster: { glow: '#ff8a2a', fx: 'ember' },
+    azhrakoth:   { glow: '#ff5a2a', fx: 'ember' },
+    herald:      { glow: '#c9d4e8', fx: 'shard' },
+  };
 
   RS.Renderer = Renderer;
 })();

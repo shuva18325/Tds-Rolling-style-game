@@ -545,5 +545,366 @@
     if (e.shieldHits > 0) { ctx.strokeStyle = A.alpha('#8fd4e8', 0.5 + Math.sin(time * 4) * 0.2); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(e.x, e.y - 8, S * 0.28, 0, TAU); ctx.stroke(); }
   }
 
-  RS.Sprites = { facet, poly, circ, drawTower, drawTowerIcon, drawEnemy, drawBody, getSheet, Sil, R0 };
+  /* ============================== BOSSES =============================
+   * One silhouette per boss. Every boss used to render as the same horned
+   * demon body, so Bandit King Corvin and Azhrakoth were visually identical.
+   * Each routine draws feet-at-origin facing right at roughly 1x scale (the
+   * renderer scales up), and takes `p` = { t, breathe, hurt } for idle motion.
+   *
+   * House style, kept deliberately tight so 13 bosses read as one set:
+   *   - one silhouette-defining mass + one signature weapon/feature
+   *   - a shoulder/head accent to break the outline
+   *   - one emissive colour per boss, used sparingly (eyes + weapon only)
+   * ================================================================== */
+  const BossSil = {};
+
+  /* Shared boss anatomy. The first pass drew weapons and pauldrons as loose
+   * quads with nothing joining them to the body, so every boss read as a box
+   * with floating paper shapes around it. Everything is now hung off real
+   * limbs: legs plant the figure, arms reach to whatever it is holding. */
+  function limb(ctx, x1, y1, x2, y2, w1, w2, col, rim) {
+    const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1;
+    const nx = -dy / L, ny = dx / L;
+    facet(ctx, [[x1 + nx * w1, y1 + ny * w1], [x2 + nx * w2, y2 + ny * w2],
+                [x2 - nx * w2, y2 - ny * w2], [x1 - nx * w1, y1 - ny * w1]], col, rim);
+  }
+  // Two planted legs + a shadowed gap, so a boss stands instead of hovering.
+  function stance(ctx, hipY, footY, spread, w, col) {
+    limb(ctx, -spread * 0.45, hipY, -spread, footY, w, w * 0.8, col);
+    limb(ctx, spread * 0.45, hipY, spread, footY, w, w * 0.8, col);
+  }
+  // A binding band where a weapon head meets its haft. Without it the big
+  // cleavers/axes/hammers read as loose slabs parked next to the figure.
+  function socket(ctx, x, y, ang, len, w, col, rim) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+    facet(ctx, [[-len, -w], [len, -w], [len, w], [-len, w]], col, rim);
+    ctx.restore();
+  }
+  const eyes = (ctx, x, y, col, r) => { circ(ctx, x - 2.4, y, r || 1.6, col); circ(ctx, x + 2.4, y, r || 1.6, col); };
+  // Pauldron that sits ON the shoulder line rather than beside it. Five-sided
+  // and swept downward-outward so it reads as a bevelled plate catching the
+  // key light, not an axis-aligned rectangle stuck to the arm.
+  function pauldron(ctx, sx, sy, dir, size, col, rim) {
+    const d = dir, z = size;
+    facet(ctx, [[sx - d * z * 0.25, sy - z * 0.62], [sx + d * z * 0.55, sy - z * 0.78],
+                [sx + d * z * 1.05, sy - z * 0.12], [sx + d * z * 0.82, sy + z * 0.58],
+                [sx - d * z * 0.18, sy + z * 0.42]], col, rim);
+    // lit top bevel
+    facet(ctx, [[sx - d * z * 0.22, sy - z * 0.58], [sx + d * z * 0.52, sy - z * 0.74],
+                [sx + d * z * 0.72, sy - z * 0.34], [sx - d * z * 0.1, sy - z * 0.22]], A.mul(col, 1.28));
+  }
+  // Torso tapered from a wide shoulder line down to a narrower waist. Drawing
+  // it as a plain quad (and often WIDER at the hip) is what made the first
+  // pass read as a stack of boxes rather than a figure.
+  function torso(ctx, shY, hipY, shW, hipW, col, rim) {
+    facet(ctx, [[-shW, shY], [shW, shY], [hipW, hipY], [-hipW, hipY]], col, rim);
+    facet(ctx, [[-shW * 0.55, shY + 1], [shW * 0.2, shY + 1.5], [hipW * 0.2, hipY], [-hipW * 0.6, hipY]], A.mul(col, 1.18));
+  }
+
+  BossSil.corvin = (ctx, p) => { // Bandit King — plumed sallet, sabre, torn cloak
+    const L = RS.RAMP.leather, I = RS.RAMP.iron, b = p.breathe;
+    facet(ctx, [[-14, -34 - b], [14, -34 - b], [11, 12], [-11, 12]], '#4a1f1f', '#7a3535'); // cloak behind
+    stance(ctx, -8, 12, 7, 3.4, L.shadow);
+    torso(ctx, -31 - b, -10, 10, 7.5, L.mid, L.rim);                                        // cuirass
+    facet(ctx, [[-8, -22], [8, -23], [7, -12], [-7, -12]], A.mul(L.mid, 0.72));             // belt/skirt
+    limb(ctx, -9, -27 - b, -14, -12, 3, 2.2, L.shadow);                                     // left arm
+    limb(ctx, 9, -27 - b, 15, -16, 3, 2.2, L.shadow);                                       // sword arm
+    pauldron(ctx, -9, -28 - b, -1, 7, I.mid, I.rim);
+    pauldron(ctx, 9, -29 - b, 1, 7, I.mid, I.rim);
+    facet(ctx, [[-6, -31 - b], [6, -32 - b], [5, -41 - b], [-5, -40 - b]], I.light, I.rim); // sallet
+    ctx.fillStyle = '#120e0c'; ctx.fillRect(-4.5, -38 - b, 9, 2.4);                          // visor slit
+    eyes(ctx, 0, -37 - b, '#ffcf5a', 1.2);
+    facet(ctx, [[-5, -41 - b], [-1, -50 - b], [7, -53 - b], [10, -48 - b], [2, -44 - b]], '#8f2420', '#c9483c'); // swept crest
+    facet(ctx, [[-4, -42 - b], [-1, -48 - b], [5, -50 - b], [1, -45 - b]], '#d9564a');
+    ctx.strokeStyle = RS.RAMP.steel.light; ctx.lineWidth = 2.8; ctx.lineCap = 'round';        // sabre
+    ctx.beginPath(); ctx.moveTo(15, -16); ctx.quadraticCurveTo(27, -26, 29, -42); ctx.stroke();
+    facet(ctx, [[13, -14], [19, -19], [18, -12]], RS.RAMP.gold.mid, RS.RAMP.gold.rim); };     // guard
+
+  BossSil.thane = (ctx, p) => { // Drowned Thane — waterlogged plate, kelp, trident
+    const P = A.mul('#41586a', 1), b = p.breathe, w = Math.sin(p.t * 1.4) * 2;
+    stance(ctx, -8, 12, 8, 4, '#28323c');
+    torso(ctx, -31 - b, -10, 12, 8.5, P, '#7fa8bd');                                          // barnacled plate
+    facet(ctx, [[-9, -21], [9, -22], [8, -11], [-8, -11]], A.mul('#41586a', 0.72));           // fauld
+    limb(ctx, -11, -27 - b, -16, -11, 3.2, 2.4, '#33424f');
+    limb(ctx, 11, -27 - b, 15, -14, 3.2, 2.4, '#33424f');
+    pauldron(ctx, -11, -29 - b, -1, 8, '#33424f', '#6d94a8');
+    pauldron(ctx, 11, -30 - b, 1, 8, '#33424f', '#6d94a8');
+    facet(ctx, [[-6, -31 - b], [6, -32 - b], [5, -42 - b], [-5, -41 - b]], A.mul('#41586a', 1.3)); // great helm
+    ctx.fillStyle = '#0a1418'; ctx.fillRect(-4.5, -39 - b, 9, 2.6);
+    eyes(ctx, 0, -38 - b, '#6ff0d0', 1.3);
+    ctx.strokeStyle = 'rgba(64,112,74,0.9)'; ctx.lineWidth = 2.2; ctx.lineCap = 'round';        // kelp streamers
+    for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(i * 4.4, -12); ctx.quadraticCurveTo(i * 5 - 3 + w, 1, i * 6 - 5 + w, 13); ctx.stroke(); }
+    limb(ctx, 15, -14, 19, -44, 2.2, 1.8, '#5d7f92', '#9fc4d4');                                // trident haft
+    for (const dx of [-5, 0, 5]) { ctx.strokeStyle = '#a8cfe0'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(19 + dx * 0.55, -44); ctx.lineTo(19 + dx, -54); ctx.stroke(); } };
+
+  BossSil.hollow = (ctx, p) => { // Hollow Mother — antlered bark-witch on root legs
+    const b = p.breathe, sway = Math.sin(p.t * 0.9) * 1.8;
+    ctx.strokeStyle = '#3b2d1e'; ctx.lineWidth = 3; ctx.lineCap = 'round';                      // root legs
+    for (const dx of [-8, -3, 3, 8]) { ctx.beginPath(); ctx.moveTo(dx * 0.55, -10); ctx.quadraticCurveTo(dx * 1.2, 2, dx * 1.7, 13); ctx.stroke(); }
+    torso(ctx, -33 - b, -10, 11.5, 8, '#4a3a26', '#7a6240');                                    // bark torso
+    facet(ctx, [[-4, -25], [4, -25], [3, -11], [-3, -11]], '#0f0b06');                          // the hollow
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    circ(ctx, 0, -18, 6, A.alpha('#9fe0a0', 0.30)); ctx.restore();
+    circ(ctx, 0, -18, 2.4, '#cdf5b8');                                                          // wisp inside
+    limb(ctx, -11, -29 - b, -19, -14, 2.6, 1.8, '#4a3a26', '#6d5636');                          // branch arms
+    limb(ctx, 11, -29 - b, 19, -14, 2.6, 1.8, '#4a3a26', '#6d5636');
+    ctx.strokeStyle = '#3b2d1e'; ctx.lineWidth = 1.6;
+    for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * 19, -14); ctx.lineTo(s * 23, -6); ctx.moveTo(s * 19, -14); ctx.lineTo(s * 24, -17); ctx.stroke(); }
+    facet(ctx, [[-5, -33 - b], [5, -34 - b], [4, -43 - b], [-4, -42 - b]], '#5c4a30', '#8a7048'); // skull face
+    eyes(ctx, 0, -39 - b, '#c9f57a', 1.5);
+    ctx.strokeStyle = '#6d5636'; ctx.lineWidth = 2.4; ctx.lineCap = 'round';                     // antler crown
+    for (const s of [-1, 1]) {
+      ctx.beginPath(); ctx.moveTo(s * 3, -43 - b); ctx.quadraticCurveTo(s * 9 + sway, -50 - b, s * 8 + sway, -58 - b); ctx.stroke();
+      ctx.lineWidth = 1.7;
+      ctx.beginPath(); ctx.moveTo(s * 6 + sway * 0.4, -48 - b); ctx.lineTo(s * 15 + sway, -51 - b); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s * 7.5 + sway * 0.7, -53 - b); ctx.lineTo(s * 13 + sway, -60 - b); ctx.stroke();
+    } };
+
+  BossSil.gruumak = (ctx, p) => { // Iron Tusk — armoured orc warlord with a cleaver
+    const I = RS.RAMP.iron, b = p.breathe;
+    stance(ctx, -8, 12, 9, 4.4, '#3d4a26');
+    torso(ctx, -30 - b, -10, 14, 10, '#5c7a3a', '#8ab04a');                                      // green bulk
+    facet(ctx, [[-11, -20], [11, -21], [9, -11], [-9, -11]], I.shadow);                          // iron belt
+    limb(ctx, -13, -26 - b, -19, -10, 3.6, 2.6, '#4a6330');
+    limb(ctx, 13, -26 - b, 19, -14, 3.6, 2.6, '#4a6330');
+    pauldron(ctx, -13, -28 - b, -1, 9, I.shadow, I.mid);
+    pauldron(ctx, 13, -29 - b, 1, 9, I.shadow, I.mid);
+    facet(ctx, [[-7, -30 - b], [7, -31 - b], [6, -40 - b], [-6, -39 - b]], '#6b8f45', '#9ec46a'); // head
+    eyes(ctx, 0, -36 - b, '#ff6a2a', 1.4);
+    facet(ctx, [[-6, -33 - b], [-1.5, -32 - b], [-5, -27 - b]], '#efe6c6');                       // tusks
+    facet(ctx, [[6, -33 - b], [1.5, -32 - b], [5, -27 - b]], '#efe6c6');
+    facet(ctx, [[-8, -40 - b], [8, -41 - b], [6, -46 - b], [-6, -45 - b]], I.shadow, I.mid);      // browplate
+    limb(ctx, 19, -14, 27, -38, 3, 2.4, RS.RAMP.timber.mid, RS.RAMP.timber.light);                // haft
+    // broad orc cleaver: swept edge, concave back, chipped tip, bound socket
+    facet(ctx, [[25, -34], [33, -50], [45, -44], [46, -28], [34, -22], [27, -26]],
+      RS.RAMP.steel.mid, RS.RAMP.steel.rim);
+    facet(ctx, [[27, -33], [33, -46], [40, -42], [36, -27], [28, -26]], RS.RAMP.steel.light);      // bevel
+    facet(ctx, [[45, -44], [46, -28], [41, -33]], A.mul(RS.RAMP.steel.shadow, 1.1));               // thick spine
+    socket(ctx, 26, -30, -1.25, 5.5, 2.6, RS.RAMP.iron.shadow, RS.RAMP.iron.mid); };
+
+  BossSil.frostjarl = (ctx, p) => { // Frost Jarl — ice giant, frozen beard, greataxe
+    const I = RS.RAMP.ice, b = p.breathe;
+    stance(ctx, -9, 13, 10, 4.8, '#3f5666');
+    torso(ctx, -32 - b, -11, 15, 11, '#6d8ba0', '#a8cfe0');
+    facet(ctx, [[-12, -21], [12, -22], [10, -12], [-10, -12]], '#4f6b7d');                        // hide belt
+    limb(ctx, -14, -28 - b, -21, -11, 4, 2.8, '#5b7688');
+    limb(ctx, 14, -28 - b, 21, -15, 4, 2.8, '#5b7688');
+    pauldron(ctx, -14, -30 - b, -1, 10, '#5e7d90', '#a8cfe0');                                    // rime pauldrons
+    pauldron(ctx, 14, -31 - b, 1, 10, '#5e7d90', '#a8cfe0');
+    facet(ctx, [[-14, -34 - b], [-11, -44 - b], [-8, -32 - b]], I.light, I.rim);                  // shoulder shards
+    facet(ctx, [[14, -35 - b], [11, -45 - b], [8, -33 - b]], I.light, I.rim);
+    facet(ctx, [[-7, -32 - b], [7, -33 - b], [6, -43 - b], [-6, -42 - b]], '#7d9bb0', '#b4d6e6');
+    eyes(ctx, 0, -39 - b, '#dff8ff', 1.7);
+    facet(ctx, [[-6, -35 - b], [6, -35 - b], [3.5, -21 - b], [-3.5, -21 - b]], '#d6ecf5', '#ffffff'); // frozen beard
+    facet(ctx, [[-6, -43 - b], [0, -54 - b], [6, -43 - b]], I.mid, I.rim);                        // crown spike
+    limb(ctx, 21, -15, 29, -40, 3.2, 2.6, RS.RAMP.timber.shadow, RS.RAMP.timber.mid);            // haft
+    // crescent ice bit: bearded edge sweeping away from the socket
+    facet(ctx, [[27, -37], [36, -52], [47, -42], [48, -26], [37, -20], [29, -27]], I.mid, I.rim);
+    facet(ctx, [[29, -36], [36, -48], [43, -41], [38, -26], [30, -28]], I.light);
+    facet(ctx, [[36, -52], [47, -42], [41, -44]], A.mul(I.light, 1.2));                            // lit crest
+    socket(ctx, 28, -32, -1.28, 6, 2.8, '#4f6b7d', '#a8cfe0'); };
+
+  BossSil.bogfather = (ctx, p) => { // Bogfather — bloated mire horror with a lantern lure
+    const b = p.breathe, bob = Math.sin(p.t * 1.6) * 2.2;
+    facet(ctx, [[-9, 4], [-13, 13], [-4, 13]], '#2f3a22'); facet(ctx, [[9, 4], [13, 13], [4, 13]], '#2f3a22'); // splayed feet
+    facet(ctx, [[-13, -25 - b], [13, -26 - b], [18, -6], [11, 5], [-11, 5], [-18, -6]], '#4a5236', '#75824e'); // bloated mass
+    facet(ctx, [[-14, -6], [14, -6], [11, 8], [-11, 8]], '#3a4028', '#525c34');                    // sagging gut
+    for (let i = 0; i < 5; i++) circ(ctx, -10 + i * 5, -1 + (i % 2) * 4, 2.4, 'rgba(126,158,92,0.45)');
+    limb(ctx, -16, -20 - b, -23, -4, 3.6, 2.6, '#414a2e');
+    limb(ctx, 16, -20 - b, 23, -6, 3.6, 2.6, '#414a2e');
+    facet(ctx, [[-7, -25 - b], [7, -26 - b], [6, -34 - b], [-6, -33 - b]], '#5c6640', '#87945a');  // squat head
+    eyes(ctx, 0, -31 - b, '#b8f05a', 1.7);
+    facet(ctx, [[-5, -28 - b], [5, -28 - b], [3, -25 - b], [-3, -25 - b]], '#1c2114');             // maw
+    ctx.strokeStyle = '#3a4028'; ctx.lineWidth = 2.6; ctx.lineCap = 'round';                        // lure stalk
+    ctx.beginPath(); ctx.moveTo(3, -34 - b); ctx.quadraticCurveTo(17, -48, 24 + bob, -53); ctx.stroke();
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    circ(ctx, 24 + bob, -54, 8, A.alpha('#c8ff8a', 0.28)); ctx.restore();
+    circ(ctx, 24 + bob, -54, 2.8, '#eaffb8', '#ffffff');
+    ctx.strokeStyle = 'rgba(96,116,72,0.85)'; ctx.lineWidth = 1.8;                                  // reeds at the base
+    for (const dx of [-15, -8, 9, 16]) { ctx.beginPath(); ctx.moveTo(dx, 8); ctx.lineTo(dx + (dx > 0 ? 4 : -4), -8); ctx.stroke(); } };
+
+  BossSil.cinderlord = (ctx, p) => { // Cinderlord — burnt knight lit from within
+    const b = p.breathe, f = 0.55 + Math.abs(Math.sin(p.t * 3)) * 0.45;
+    facet(ctx, [[-13, -32 - b], [13, -32 - b], [10, 13], [-10, 13]], '#311914', '#5e3020');        // scorched cloak
+    stance(ctx, -8, 12, 7, 3.6, '#1d1614');
+    torso(ctx, -30 - b, -10, 11, 8, '#3a2c28', '#6a5048');                                         // charred plate
+    facet(ctx, [[-9, -20], [9, -21], [8, -11], [-8, -11]], '#221a17');
+    limb(ctx, -10, -26 - b, -16, -11, 3.2, 2.4, '#241b18');
+    limb(ctx, 10, -26 - b, 16, -15, 3.2, 2.4, '#241b18');
+    pauldron(ctx, -10, -28 - b, -1, 8, '#2e231e', '#6a4c40');
+    pauldron(ctx, 10, -29 - b, 1, 8, '#2e231e', '#6a4c40');
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';                                           // molten cracks
+    ctx.strokeStyle = A.alpha('#ff6a1e', f); ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-5, -27 - b); ctx.lineTo(-1, -19); ctx.lineTo(-5, -12); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(5, -28 - b); ctx.lineTo(2, -21); ctx.lineTo(6, -14); ctx.stroke();
+    ctx.restore();
+    facet(ctx, [[-6, -30 - b], [6, -31 - b], [5, -41 - b], [-5, -40 - b]], '#42322c', '#7a5c50');   // helm
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = A.alpha('#ffb04a', f); ctx.fillRect(-4.5, -38 - b, 9, 2.6); ctx.restore();      // burning visor
+    facet(ctx, [[-5, -41 - b], [-8, -51 - b], [-1, -42 - b]], '#241b18', '#4a3028');                // broken horns
+    facet(ctx, [[5, -41 - b], [8, -51 - b], [1, -42 - b]], '#241b18', '#4a3028');
+    limb(ctx, 16, -15, 22, -30, 2.6, 2, '#241b18');                                                 // grip
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';                                           // ember greatsword
+    ctx.strokeStyle = A.alpha('#ff7a2a', 0.85); ctx.lineWidth = 5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(22, -30); ctx.lineTo(33, -52); ctx.stroke();
+    ctx.strokeStyle = A.alpha('#ffe08a', f); ctx.lineWidth = 1.8; ctx.stroke(); ctx.restore();
+    facet(ctx, [[19, -28], [26, -32], [24, -25]], '#3a2c26', '#6a5048'); };                          // crossguard
+
+  BossSil.warden = (ctx, p) => { // Last Warden — arcane construct, tower shield
+    const S2 = RS.RAMP.stone, b = p.breathe, spin = p.t * 0.7;
+    stance(ctx, -9, 12, 8, 4.2, S2.shadow);
+    torso(ctx, -31 - b, -11, 12, 8.5, S2.mid, S2.rim);
+    facet(ctx, [[-9, -21], [9, -22], [8, -12], [-8, -12]], A.mul(S2.mid, 0.72));
+    limb(ctx, -11, -27 - b, -17, -14, 3.2, 2.4, S2.shadow);                                          // shield arm
+    limb(ctx, 11, -27 - b, 17, -12, 3.2, 2.4, S2.shadow);
+    pauldron(ctx, -11, -29 - b, -1, 8, A.mul(S2.mid, 1.15), S2.rim);
+    pauldron(ctx, 11, -30 - b, 1, 8, A.mul(S2.mid, 1.15), S2.rim);
+    facet(ctx, [[-6, -31 - b], [6, -32 - b], [5, -41 - b], [-5, -40 - b]], S2.light, S2.rim);
+    circ(ctx, 0, -36 - b, 2.6, '#9fd0ff', '#dff0ff');                                                // single core eye
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';                                            // rune ring
+    for (let i = 0; i < 4; i++) { const a = spin + i * (TAU / 4);
+      circ(ctx, Math.cos(a) * 15, -22 - b + Math.sin(a) * 5, 2, A.alpha('#7fb0ff', 0.9)); }
+    ctx.restore();
+    facet(ctx, [[-27, -33], [-14, -37], [-14, 6], [-27, 1]], A.mul(S2.mid, 1.1), S2.rim);            // tower shield
+    facet(ctx, [[-25, -31], [-16, -34], [-16, 2], [-25, -2]], A.mul(S2.mid, 0.86));
+    ctx.strokeStyle = '#9fd0ff'; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-20.5, -31); ctx.lineTo(-20.5, 1); ctx.moveTo(-26, -16); ctx.lineTo(-15, -16); ctx.stroke(); };
+
+  BossSil.stormwyrm = (ctx, p) => { // Storm Wyrm — winged serpent, hovers
+    const flap = Math.sin(p.t * 3.4) * 9, R = RS.RAMP.arcane, hov = Math.sin(p.t * 1.3) * 2.5;
+    ctx.save(); ctx.translate(0, -16 + hov);
+    // far wing first (darker) then the near wing, so the pair reads as depth
+    for (const s of [-1, 1]) {
+      const far = s < 0, lift = flap * (far ? 0.6 : 1);
+      const wc = far ? A.mul(R.shadow, 0.9) : A.mul(R.mid, 0.92);
+      facet(ctx, [[s * 5, -14], [s * 20, -30 - lift], [s * 36, -26 - lift], [s * 33, -10 - lift * 0.4], [s * 18, 1], [s * 5, -3]], wc, R.rim);
+      ctx.strokeStyle = A.mul(R.shadow, 0.75); ctx.lineWidth = 1.5; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(s * 5, -13); ctx.lineTo(s * 19, -28 - lift); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s * 5, -12); ctx.lineTo(s * 31, -22 - lift * 0.8); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s * 5, -10); ctx.lineTo(s * 24, -6 - lift * 0.3); ctx.stroke();
+    }
+    // serpentine tail: a tapering chain of segments, not one flat stroke
+    for (let i = 0; i < 7; i++) {
+      const f = i / 6, tx = -4 - f * 30, ty = 2 + Math.sin(p.t * 2 + f * 3.4) * 5 * f + f * 6;
+      circ(ctx, tx, ty, 4.6 * (1 - f * 0.78), i % 2 ? R.mid : R.shadow, R.rim);
+    }
+    facet(ctx, [[-8, 3], [-5, -13], [8, -14], [10, 3]], R.shadow, R.rim);                   // chest
+    facet(ctx, [[-4, -1], [6, -2], [5, 4], [-3, 4]], A.mul(R.mid, 1.15));                   // belly plate
+    limb(ctx, 5, -11, 17, -24, 4.4, 3.2, R.mid, R.rim);                                     // neck
+    facet(ctx, [[12, -29], [28, -32], [32, -22], [15, -19]], R.mid, R.rim);                 // head
+    facet(ctx, [[25, -28], [32, -24], [24, -22]], '#e8dcc0');                               // jaw
+    circ(ctx, 20, -27, 2, '#dff0ff', '#ffffff');                                            // eye
+    facet(ctx, [[13, -31], [15, -43], [21, -30]], R.light, R.rim);                          // crest
+    facet(ctx, [[16, -30], [18, -38], [22, -29]], A.mul(R.light, 1.15));
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';                                   // storm arcs
+    ctx.strokeStyle = A.alpha('#bfe0ff', 0.4 + Math.sin(p.t * 9) * 0.4); ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(-24, -22); ctx.lineTo(-14, -13); ctx.lineTo(-19, -8); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(26, -16); ctx.lineTo(18, -9); ctx.lineTo(24, -3); ctx.stroke();
+    ctx.restore(); ctx.restore(); };
+
+  BossSil.malgrath = (ctx, p) => { // Bone Sovereign — crowned skeletal king, floats
+    const B = RS.RAMP.bone, b = p.breathe, float = Math.sin(p.t * 1.1) * 2.5;
+    ctx.save(); ctx.translate(0, float);
+    facet(ctx, [[-16, -34 - b], [16, -34 - b], [12, 13], [-12, 13]], '#2c1f38', '#5f4478');            // regal shroud
+    facet(ctx, [[-8, -12], [-7, -30 - b], [7, -31 - b], [8, -12]], B.shadow);                          // ribcage
+    ctx.strokeStyle = B.light; ctx.lineWidth = 1.8; ctx.lineCap = 'round';
+    for (let i = 0; i < 4; i++) { const y = -27 + i * 4.6 - b; ctx.beginPath(); ctx.moveTo(-5.5, y); ctx.quadraticCurveTo(0, y + 3, 5.5, y); ctx.stroke(); }
+    limb(ctx, -10, -28 - b, -17, -14, 2.4, 1.8, B.mid, B.rim);                                         // bone arms
+    limb(ctx, 10, -28 - b, 16, -16, 2.4, 1.8, B.mid, B.rim);
+    pauldron(ctx, -10, -30 - b, -1, 7.5, B.mid, B.rim);
+    pauldron(ctx, 10, -31 - b, 1, 7.5, B.mid, B.rim);
+    circ(ctx, 0, -37 - b, 5.2, B.light, B.rim);                                                        // skull
+    circ(ctx, -2, -37.5 - b, 1.6, '#8fd4a8'); circ(ctx, 2, -37.5 - b, 1.6, '#8fd4a8');
+    ctx.strokeStyle = B.shadow; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-2.6, -33.5 - b); ctx.lineTo(2.6, -33.5 - b); ctx.stroke();
+    facet(ctx, [[-8, -42 - b], [-6, -52 - b], [-2.5, -43 - b], [0, -54 - b], [2.5, -43 - b], [6, -52 - b], [8, -42 - b]],
+      RS.RAMP.gold.mid, RS.RAMP.gold.rim);                                                             // crown
+    limb(ctx, 16, -16, 20, -44, 2.2, 1.8, B.mid, B.rim);                                               // bone staff
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    circ(ctx, 20, -48, 7, A.alpha('#8fd4a8', 0.3)); ctx.restore();
+    circ(ctx, 20, -48, 3.2, '#a8e8c0', '#dff8e8');
+    ctx.restore(); };
+
+  BossSil.forgemaster = (ctx, p) => { // Obsidian Forgemaster — molten smith + hammer
+    const b = p.breathe, heat = 0.5 + Math.abs(Math.sin(p.t * 2.4)) * 0.5;
+    stance(ctx, -9, 13, 10, 5, '#151114');
+    torso(ctx, -30 - b, -11, 16, 11.5, '#231c22', '#5a4a56');                                          // obsidian bulk
+    facet(ctx, [[-13, -20], [13, -21], [11, -12], [-11, -12]], '#100c10');
+    limb(ctx, -15, -26 - b, -22, -11, 4, 2.8, '#221a20');
+    limb(ctx, 15, -26 - b, 22, -15, 4, 2.8, '#221a20');
+    pauldron(ctx, -15, -28 - b, -1, 10, '#2a2028', '#6a5a66');
+    pauldron(ctx, 15, -29 - b, 1, 10, '#2a2028', '#6a5a66');
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';                                              // forge-fire chest
+    const gr = ctx.createRadialGradient(0, -21 - b, 1, 0, -21 - b, 15);
+    gr.addColorStop(0, A.alpha('#ff8a2a', heat)); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, -21 - b, 15, 0, TAU); ctx.fill(); ctx.restore();
+    facet(ctx, [[-5, -16 - b], [5, -16 - b], [3.5, -27 - b], [-3.5, -27 - b]], A.alpha('#ff7a1e', heat)); // furnace mouth
+    facet(ctx, [[-7, -30 - b], [7, -31 - b], [6, -40 - b], [-6, -39 - b]], '#241c22', '#584a54');       // anvil head
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = A.alpha('#ffc24a', heat); ctx.fillRect(-4.5, -37 - b, 9, 2.4); ctx.restore();
+    facet(ctx, [[-10, -40 - b], [10, -41 - b], [8, -46 - b], [-8, -45 - b]], '#332a30', '#6a5a66');     // brow
+    limb(ctx, 22, -15, 29, -38, 3.4, 2.6, '#2a2228', '#544850');                                        // haft
+    // blacksmith's maul: square striking face, tapered poll, bound socket
+    facet(ctx, [[26, -49], [46, -44], [46, -24], [26, -19]], '#3a3038', '#8a7a86');                      // head block
+    facet(ctx, [[28, -46], [42, -42], [42, -27], [28, -23]], '#4a3f48');                                 // face bevel
+    facet(ctx, [[46, -44], [51, -39], [51, -29], [46, -24]], '#2b232a', '#6a5a66');                      // striking face
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';                                                // heat still in the steel
+    facet(ctx, [[29, -44], [41, -40], [41, -29], [29, -25]], A.alpha('#ff6a1e', heat * 0.55)); ctx.restore();
+    socket(ctx, 27, -34, -1.32, 7, 3, '#1d171c', '#6a5a66'); };
+
+  BossSil.azhrakoth = (ctx, p) => { // Ember Throne — the great horned demon lord
+    const b = p.breathe, f = 0.55 + Math.abs(Math.sin(p.t * 2.2)) * 0.45, wing = Math.sin(p.t * 1.5) * 5;
+    for (const s of [-1, 1]) {                                                                          // tattered wings
+      facet(ctx, [[s * 9, -30], [s * 34, -46 - wing], [s * 40, -22 - wing], [s * 26, -6], [s * 8, -14]], '#2a0f10', '#7a2418');
+      ctx.strokeStyle = '#5a1a14'; ctx.lineWidth = 1.6;
+      for (const q of [0.5, 0.78, 1]) { ctx.beginPath(); ctx.moveTo(s * 9, -29); ctx.lineTo(s * (9 + 27 * q), -44 * q - wing * q + 2); ctx.stroke(); }
+    }
+    stance(ctx, -9, 13, 10, 5, '#4a1414');
+    torso(ctx, -32 - b, -11, 15, 11, '#7a2222', '#c25438');                                              // body
+    facet(ctx, [[-12, -21], [12, -22], [10, -12], [-10, -12]], '#521616');
+    limb(ctx, -14, -28 - b, -21, -12, 4, 2.8, '#5e1a1a');
+    limb(ctx, 14, -28 - b, 21, -12, 4, 2.8, '#5e1a1a');
+    pauldron(ctx, -14, -30 - b, -1, 10, '#4a1414', '#8a3020');
+    pauldron(ctx, 14, -31 - b, 1, 10, '#4a1414', '#8a3020');
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';                                                // core furnace
+    const gr = ctx.createRadialGradient(0, -22 - b, 1, 0, -22 - b, 16);
+    gr.addColorStop(0, A.alpha('#ff5a2a', f)); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, -22 - b, 16, 0, TAU); ctx.fill(); ctx.restore();
+    facet(ctx, [[-7, -32 - b], [7, -33 - b], [6, -43 - b], [-6, -42 - b]], '#8a2626', '#cc6244');        // head
+    eyes(ctx, 0, -38 - b, '#ffd45a', 1.9);
+    facet(ctx, [[-5, -35 - b], [5, -35 - b], [3, -32 - b], [-3, -32 - b]], '#1c0a0a');                   // maw
+    ctx.strokeStyle = '#1e0d0c'; ctx.lineWidth = 3.6; ctx.lineCap = 'round';                             // horn crown
+    for (const s of [-1, 1]) {
+      ctx.beginPath(); ctx.moveTo(s * 5, -43 - b); ctx.quadraticCurveTo(s * 17, -56 - b, s * 10, -66 - b); ctx.stroke();
+      ctx.lineWidth = 2.6;
+      ctx.beginPath(); ctx.moveTo(s * 7, -39 - b); ctx.quadraticCurveTo(s * 20, -43 - b, s * 23, -53 - b); ctx.stroke();
+      ctx.lineWidth = 3.6;
+    } };
+
+  BossSil.herald = (ctx, p) => { // Grey Herald — faceless envoy, orbiting mirror shards
+    const b = p.breathe, float = Math.sin(p.t * 1.0) * 3.2, spin = p.t * 0.5;
+    ctx.save(); ctx.translate(0, float);
+    facet(ctx, [[0, -48 - b], [18, 13], [-18, 13]], '#5a5f6b', '#a8b2c0');                              // robed cone
+    facet(ctx, [[0, -48 - b], [9, -14], [-9, -14]], A.mul('#5a5f6b', 0.78));                             // inner fold
+    facet(ctx, [[0, -48 - b], [-8, -28], [8, -28]], '#383c45');                                          // deep cowl
+    circ(ctx, 0, -36 - b, 3.8, 'rgba(0,0,0,0.88)');
+    circ(ctx, 0, -36 - b, 1.7, A.alpha('#dfe8ff', 0.55 + Math.sin(p.t * 3) * 0.35));                     // one pale light
+    limb(ctx, -9, -30 - b, -16, -16, 2.4, 1.8, '#4c5058', '#8a939f');                                    // sleeves
+    limb(ctx, 9, -30 - b, 16, -16, 2.4, 1.8, '#4c5058', '#8a939f');
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';                                                // mirror shards
+    for (let i = 0; i < 5; i++) {
+      const a = spin + i * (TAU / 5), rx = Math.cos(a) * 23, ry = -26 + Math.sin(a) * 9;
+      facet(ctx, [[rx, ry - 4.4], [rx + 3.2, ry], [rx, ry + 4.4], [rx - 3.2, ry]], A.alpha('#cbd6ea', 0.8));
+    }
+    ctx.restore(); ctx.restore(); };
+
+
+
+  // Dispatch: draw one boss body, feet at origin, facing right.
+  function drawBossBody(ctx, bossKey, t, hurt) {
+    const fn = BossSil[bossKey] || BossSil.corvin;
+    fn(ctx, { t, breathe: Math.sin(t * 1.3) * 1.2, hurt: !!hurt });
+  }
+
+  RS.Sprites = { facet, poly, circ, drawTower, drawTowerIcon, drawEnemy, drawBody, getSheet, Sil, R0, BossSil, drawBossBody };
 })();

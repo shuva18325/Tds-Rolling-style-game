@@ -177,6 +177,17 @@
       return this._pool;
     }
 
+    // The MAP owns its boss; difficulty only scales it. `diff.boss` remains the
+    // fallback for Endless, which overrides it with the Grey Herald.
+    bossId() {
+      if (this.diff.endless) return this.diff.boss;
+      return this.map.boss || this.diff.boss;
+    }
+    // Bosses get a SOFTENED difficulty curve. Boss base HP now encodes the
+    // map's rating, so applying the full hpMult on top (up to 20x) double-
+    // scaled it — a rating-6 boss on Hardcore came out over a million HP.
+    _bossHpMult() { return 1 + (this.diff.hpMult - 1) * 0.45; }
+
     _archetypeFor(n) {
       if (n >= this.maxWaves) return 'Boss';
       if (n % RS.WAVE.miniBossEvery === 0) return 'Elite';
@@ -210,7 +221,7 @@
       const lanes = this.paths.length;
 
       if (arch === 'Boss') {
-        return { arch, groups: [{ enemyId: this.diff.boss, count: 1, spacing: 1, lane: 0, delay: 1 }],
+        return { arch, groups: [{ enemyId: this.bossId(), count: 1, spacing: 1, lane: 0, delay: 1 }],
           budget: 0, name: 'Boss' };
       }
 
@@ -565,7 +576,8 @@
       lane = lane % this.paths.length;
       const path = this.paths[lane];
       const isFlying = def.traits.includes('Flying');
-      const hpMult = this.diff.hpMult * this._earlyHpRamp(this.waveIndex);
+      const isBossDef = def.traits.includes('Boss');
+      const hpMult = isBossDef ? this._bossHpMult() : this.diff.hpMult * this._earlyHpRamp(this.waveIndex);
       const e = {
         active: true, alive: true, def, lane,
         progress: atProgress || 0,
