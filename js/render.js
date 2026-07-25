@@ -226,20 +226,11 @@
           }
         }
       }
-      // 2) special terrain as soft, slightly-overlapping rounded blobs (merge)
-      // Two-pass patch so neighbouring tiles of a kind merge into one smooth
-      // blob: first a big overlapping base (mid), then a soft inner highlight.
-      const patch = (k, ramp, raised) => {
-        const cells = [];
-        for (let r = 0; r < m.rows; r++) for (let col = 0; col < m.cols; col++) if (m.tileKind(col, r) === k) cells.push([col * TILE, r * TILE]);
-        if (!cells.length) return;
-        if (raised) { c.fillStyle = 'rgba(0,0,0,0.30)'; for (const [x, y] of cells) { this._roundRect(c, x - 6, y + 2, TILE + 12, TILE + 10, 16); c.fill(); } }
-        c.fillStyle = ramp.mid; for (const [x, y] of cells) { this._roundRect(c, x - 7, y - 7, TILE + 14, TILE + 14, 16); c.fill(); }
-        c.fillStyle = raised ? ramp.light : A.alpha(ramp.light, 0.55); for (const [x, y] of cells) { this._roundRect(c, x - 1, y - 1, TILE + 2, TILE - (raised ? 6 : 2), 12); c.fill(); }
-      };
-      patch('water', RS.RAMP.water); patch('unbuildable', RS.RAMP.stoneDark);
-      patch('highground', RS.RAMP.stone, true); patch('holy', RS.RAMP.holy);
-      patch('cursed', RS.RAMP.void); patch('hazard', RS.RAMP.lava);
+      // 2) special terrain — ONE merged organic silhouette per kind (_tileMask),
+      // painted through a mask instead of stamped per tile. This is what kills
+      // the visible checkerboard: no pass here ever knows where a tile edge is.
+      this._maskCache = null; // masks belong to this terrain build
+      for (const k of ['unbuildable', 'water', 'holy', 'cursed', 'hazard', 'highground']) this._paintRegion(c, m, k);
       // 3) flowing path splines
       for (const p of m.paths) this._smoothPath(c, p.pts);
       // 4) ruined houses (Winter map) — grouped into connected clusters so each
@@ -275,15 +266,51 @@
       const seed = ((cluster[0].col * 73856093) ^ (cluster[0].row * 19349663)) >>> 0;
       const rnd = (i) => (((seed >> (i * 3)) & 15) / 15);
       const pad = 5;
-      // ground: snow trampled to bare, frozen mud inside the footprint
-      c.fillStyle = '#463428'; this._roundRect(c, minX + pad, minY + pad, w - pad * 2, h - pad * 2, 8); c.fill();
-      c.fillStyle = '#2f251c'; this._roundRect(c, minX + pad + 3, minY + pad + 3, w - pad * 2 - 6, h - pad * 2 - 6, 6); c.fill();
+      // A drift of snow banked around the ruin, with a wandering edge. Without
+      // this the house was a hard rectangle pasted onto flat snow — the tile it
+      // sits on was plainly visible. The drift beds it into the field instead.
+      c.save();
+      c.filter = 'blur(4px)';
+      c.fillStyle = 'rgba(0,0,0,0.22)';
+      this._blob(c, minX - 3, minY - 1, w + 6, h + 8, seed ^ 0x51ed, 0.30); c.fill();
+      c.fillStyle = '#eef4fa';
+      this._blob(c, minX - 7, minY - 6, w + 14, h + 14, seed, 0.44); c.fill();
+      c.fillStyle = '#d3dfec';
+      this._blob(c, minX - 2, minY + 2, w + 4, h + 4, seed ^ 0x2f11, 0.38); c.fill();
+      c.restore();
+      // ground: snow trampled to bare, frozen mud — only the sheltered strip in
+      // front of the wall, warm brown rather than a black hole
+      const fy = minY + h * 0.34, fh = h - (fy - minY) - pad;
+      c.fillStyle = '#5a4634'; this._blob(c, minX + pad + 2, fy, w - pad * 2 - 4, fh, seed ^ 0x77aa, 0.20); c.fill();
+      c.fillStyle = '#463628'; this._blob(c, minX + pad + 7, fy + 5, w - pad * 2 - 14, fh - 9, seed ^ 0x1234, 0.24); c.fill();
       // scattered rubble/snow patches on the dirt floor
-      for (let i = 0; i < 5; i++) { const rx = minX + pad + 6 + rnd(i) * (w - pad * 2 - 12), ry = minY + pad + 6 + rnd(i + 4) * (h - pad * 2 - 12); c.fillStyle = i % 2 ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.35)'; c.beginPath(); c.arc(rx, ry, 2.5 + rnd(i + 1) * 2, 0, TAU); c.fill(); }
-      // weathered plaster back wall (the standing wall from the reference photo)
-      c.fillStyle = '#8a7c68'; this._roundRect(c, minX + pad, minY + pad, w - pad * 2, h * 0.4, 4); c.fill();
-      c.fillStyle = 'rgba(0,0,0,0.18)'; for (let i = 0; i < 3; i++) c.fillRect(minX + pad + 4 + i * (w / 4), minY + pad + 3, 1.5, h * 0.35); // crack lines
-      c.strokeStyle = 'rgba(60,45,30,0.5)'; c.lineWidth = 1; c.strokeRect(minX + pad + 0.5, minY + pad + 0.5, w - pad * 2 - 1, h * 0.4);
+      for (let i = 0; i < 5; i++) { const rx = minX + pad + 6 + rnd(i) * (w - pad * 2 - 12), ry = fy + 4 + rnd(i + 4) * Math.max(4, fh - 10); c.fillStyle = i % 2 ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.30)'; c.beginPath(); c.arc(rx, ry, 2.5 + rnd(i + 1) * 2, 0, TAU); c.fill(); }
+      // weathered plaster back wall, its top edge broken rather than ruler-straight
+      const wallH = h * 0.4, wx0 = minX + pad, wx1 = maxX - pad;
+      c.beginPath(); c.moveTo(wx0, minY + pad + wallH);
+      const notches = 7;
+      for (let i = 0; i <= notches; i++) {
+        const px = wx0 + (wx1 - wx0) * (i / notches);
+        c.lineTo(px, minY + pad + (i % 2 ? 2.5 : 0) + (rnd(i) - 0.5) * 5);
+      }
+      c.lineTo(wx1, minY + pad + wallH); c.closePath();
+      c.fillStyle = '#8a7c68'; c.fill();
+      // stone courses showing through the failed plaster
+      c.save(); c.clip();
+      c.fillStyle = 'rgba(96,86,72,0.85)';
+      for (let i = 0; i < 4; i++) for (let j = 0; j < 5; j++) {
+        if (((i * 5 + j + (seed >>> 2)) & 3) !== 0) continue;
+        c.fillRect(wx0 + 3 + j * ((wx1 - wx0) / 5) + (i % 2) * 5, minY + pad + 3 + i * (wallH / 4), (wx1 - wx0) / 5 - 5, wallH / 4 - 3);
+      }
+      c.restore();
+      c.fillStyle = 'rgba(0,0,0,0.18)'; for (let i = 0; i < 3; i++) c.fillRect(minX + pad + 4 + i * (w / 4), minY + pad + 3, 1.5, wallH * 0.85); // crack lines
+      // snow capping the broken wall top
+      c.strokeStyle = 'rgba(255,255,255,0.9)'; c.lineWidth = 2.4; c.lineCap = 'round'; c.beginPath();
+      for (let i = 0; i <= notches; i++) {
+        const px = wx0 + (wx1 - wx0) * (i / notches), py = minY + pad + (i % 2 ? 2.5 : 0) + (rnd(i) - 0.5) * 5;
+        i ? c.lineTo(px, py) : c.moveTo(px, py);
+      }
+      c.stroke();
       // a glowing window in the wall
       const wx = cx - 4, wy = minY + pad + h * 0.14;
       c.fillStyle = '#2a1f18'; c.fillRect(wx, wy, 9, 9);
@@ -293,34 +320,436 @@
       c.fillStyle = '#7a6d5a';
       this._roundRect(c, minX + pad, minY + pad, 6, h * 0.7, 2); c.fill();
       this._roundRect(c, maxX - pad - 6, minY + pad, 6, h * 0.55, 2); c.fill();
-      // collapsed roof: caved-in timber beams criss-crossing toward the low point,
-      // heavy snow load on the upper faces (matches the reference photo)
-      const lowX = cx + (rnd(2) - 0.5) * w * 0.3, lowY = cy + h * 0.18;
-      const beams = [
-        [minX + pad + 2, minY + pad - 2], [maxX - pad - 4, minY + pad + h * 0.3],
-        [minX + pad + w * 0.3, minY + pad - 4], [maxX - pad - 2, minY + pad + h * 0.1],
-        [minX + pad - 2, minY + pad + h * 0.45], [maxX - pad - w * 0.25, minY + pad - 3],
-      ];
+      // collapsed roof: rafters fallen roughly parallel across the ruin, resting
+      // on the wall top and sinking to the floor, each carrying a snow load
       c.lineCap = 'round';
-      for (let i = 0; i < beams.length; i += 2) {
-        c.strokeStyle = RS.RAMP.timber.shadow; c.lineWidth = 4; c.beginPath(); c.moveTo(beams[i][0], beams[i][1]); c.lineTo(lowX + (i - 3) * 3, lowY); c.stroke();
-        c.strokeStyle = RS.RAMP.timber.mid; c.lineWidth = 2.5; c.beginPath(); c.moveTo(beams[i][0], beams[i][1]); c.lineTo(lowX + (i - 3) * 3, lowY); c.stroke();
-        // snow riding the top edge of each beam
-        c.strokeStyle = 'rgba(255,255,255,0.92)'; c.lineWidth = 2; c.beginPath(); c.moveTo(beams[i][0], beams[i][1] - 1.5); c.lineTo(lowX + (i - 3) * 3, lowY - 1.5); c.stroke();
+      const nb = Math.max(3, Math.round(w / 30));
+      const lo = (v, a, b) => (v < a ? a : v > b ? b : v);
+      for (let i = 0; i < nb; i++) {
+        // NOTE: a fresh hash per beam. Reusing rnd(i+k) here made every rafter
+        // land at the same angle (the shift wraps past 32 bits and repeats),
+        // so the collapse read as a row of fence posts.
+        const hb = this._hash('beam' + seed + '_' + i);
+        const r0 = (hb & 255) / 255, r1 = ((hb >>> 8) & 255) / 255, r2 = ((hb >>> 16) & 255) / 255, r3 = ((hb >>> 24) & 255) / 255;
+        const f = (i + 0.5) / nb;
+        const ax = lo(minX + pad + 2 + f * (w - pad * 2 - 4) + (r0 - 0.5) * 12, minX + 2, maxX - 2);
+        const ay = minY + pad + 3 + r1 * 7;
+        const spread = (r2 - 0.35) * w * 0.7;                 // some lean left, some right
+        const bx = lo(ax + spread, minX + 3, maxX - 3);
+        const by = maxY - pad - 3 - r3 * (h * 0.28);
+        c.strokeStyle = RS.RAMP.timber.shadow; c.lineWidth = 4.5; c.beginPath(); c.moveTo(ax, ay); c.lineTo(bx, by); c.stroke();
+        c.strokeStyle = RS.RAMP.timber.mid; c.lineWidth = 2.6; c.beginPath(); c.moveTo(ax, ay); c.lineTo(bx, by); c.stroke();
+        // a thin snow ridge riding the lit top edge of the beam
+        c.strokeStyle = 'rgba(255,255,255,0.8)'; c.lineWidth = 1.1;
+        c.beginPath(); c.moveTo(ax + 1.4, ay - 1.6); c.lineTo(bx + 1.4, by - 1.6); c.stroke();
       }
-      // a couple of loose splintered planks jutting from the collapse
-      c.strokeStyle = RS.RAMP.timber.light; c.lineWidth = 2;
-      c.beginPath(); c.moveTo(lowX - 6, lowY + 2); c.lineTo(lowX + 10, lowY - 9); c.stroke();
       // drifted snow piled against the ruin's base
       c.fillStyle = 'rgba(255,255,255,0.85)';
       c.beginPath(); c.ellipse(minX + pad - 1, maxY - pad - 2, 7, 3.5, 0, 0, TAU); c.fill();
       c.beginPath(); c.ellipse(maxX - pad + 1, maxY - pad - 3, 6, 3, 0, 0, TAU); c.fill();
+    }
+    // An irregular closed blob inscribed in a box — used wherever a hard
+    // rectangle would betray the tile underneath (snow drifts, mud floors).
+    _blob(c, x, y, w, h, seed, wob) {
+      const n = this._noise(seed >>> 0);
+      const cx = x + w / 2, cy = y + h / 2, rx = w / 2, ry = h / 2, N = 24;
+      c.beginPath();
+      for (let i = 0; i <= N; i++) {
+        const a = (i / N) * TAU;
+        const k = 1 + (n(Math.cos(a) * 2.3 + 5, Math.sin(a) * 2.3 + 5) - 0.5) * wob;
+        const px = cx + Math.cos(a) * rx * k, py = cy + Math.sin(a) * ry * k;
+        i ? c.lineTo(px, py) : c.moveTo(px, py);
+      }
+      c.closePath();
     }
     _roundRect(c, x, y, w, h, r) {
       if (c.roundRect) { c.beginPath(); c.roundRect(x, y, w, h, r); return; }
       r = Math.min(r, w / 2, h / 2); c.beginPath();
       c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
       c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+    }
+
+    /* ==================== ORGANIC TERRAIN REGIONS ====================
+     * Special terrain used to be stamped as one rounded rect PER TILE, so
+     * water, lava, holy ground and bog all read as a checkerboard of squares.
+     * Now every terrain kind is merged into a SINGLE organic silhouette: its
+     * tiles are drawn as overlapping blobs, blurred, then alpha-thresholded
+     * against a wandering noise cut-off (the metaball trick). Ground texture,
+     * shoreline and animation are all painted THROUGH that mask, so no pass
+     * downstream knows where a tile boundary was — squares can't reappear.  */
+    _hash(str) { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+    // Smooth deterministic value noise on a 64×64 lattice -> 0..1.
+    _noise(seed) {
+      const G = 64, tab = new Float32Array(G * G);
+      let s = seed >>> 0;
+      for (let i = 0; i < G * G; i++) { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; tab[i] = s / 4294967296; }
+      const at = (a, b) => tab[(((a % G) + G) % G) * G + (((b % G) + G) % G)];
+      return (x, y) => {
+        const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi;
+        const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+        const a = at(xi, yi), b = at(xi + 1, yi), u = at(xi, yi + 1), v = at(xi + 1, yi + 1);
+        const p = a + (b - a) * sx, q = u + (v - u) * sx;
+        return p + (q - p) * sy;
+      };
+    }
+    // Merged silhouettes for one terrain kind — ONE PER CONNECTED CLUSTER, so
+    // three separate ponds are three tight masks rather than one map-sized
+    // sheet that is mostly empty (cheaper to blit, and per-cluster detail like
+    // the holy sunburst lands on the actual ground instead of in the gap).
+    _tileMasks(m, kind) {
+      this._maskCache = this._maskCache || {};
+      if (kind in this._maskCache) return this._maskCache[kind];
+      const own = new Set();
+      for (let r = 0; r < m.rows; r++) for (let col = 0; col < m.cols; col++)
+        if (m.tileKind(col, r) === kind) own.add(col + ',' + r);
+      if (!own.size) return (this._maskCache[kind] = []);
+      // 8-connected: diagonal neighbours blur into one another anyway
+      const seen = new Set(), groups = [];
+      for (const key of own) {
+        if (seen.has(key)) continue;
+        const stack = [key], g = [];
+        while (stack.length) {
+          const k = stack.pop();
+          if (seen.has(k) || !own.has(k)) continue;
+          seen.add(k);
+          const [cc, rr] = k.split(',').map(Number);
+          g.push([cc * TILE, rr * TILE]);
+          for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (dx || dy) stack.push((cc + dx) + ',' + (rr + dy));
+        }
+        groups.push(g);
+      }
+      return (this._maskCache[kind] = groups.map((cells, gi) => this._buildMask(m, kind, cells, gi)));
+    }
+    _buildMask(m, kind, cells, gi) {
+      const PAD = 20;
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (const [x, y] of cells) {
+        if (x < x0) x0 = x; if (y < y0) y0 = y;
+        if (x + TILE > x1) x1 = x + TILE; if (y + TILE > y1) y1 = y + TILE;
+      }
+      x0 -= PAD; y0 -= PAD; x1 += PAD; y1 += PAD;
+      const w = Math.ceil(x1 - x0), h = Math.ceil(y1 - y0);
+      const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+      const c = cv.getContext('2d');
+      c.save(); c.translate(-x0, -y0); c.filter = 'blur(14px)'; c.fillStyle = '#fff';
+      for (const [x, y] of cells) { this._roundRect(c, x - 7, y - 7, TILE + 14, TILE + 14, 14); c.fill(); }
+      c.restore(); c.filter = 'none';
+      // Threshold at a noise-modulated cut-off. A flat threshold would just hand
+      // back a rounded rectangle; two octaves — coarse lobes plus a fine crinkle
+      // — push the boundary around inside the blur band into a real coastline.
+      const hs = this._hash(m.map.id + kind + '#' + gi);
+      const n1 = this._noise(hs), n2 = this._noise((hs ^ 0x9e3779b9) >>> 0);
+      const img = c.getImageData(0, 0, w, h), d = img.data;
+      for (let py = 0; py < h; py++) for (let px = 0; px < w; px++) {
+        const i = (py * w + px) * 4;
+        const thr = 58 + n1(px / 52, py / 52) * 125 + (n2(px / 17, py / 17) - 0.5) * 46;
+        const on = d[i + 3] >= thr;
+        d[i] = d[i + 1] = d[i + 2] = 255; d[i + 3] = on ? 255 : 0;
+      }
+      c.putImageData(img, 0, 0);
+      return { canvas: cv, x: x0, y: y0, w, h, cells, kind, gi };
+    }
+    // A mask shrunk `px` inward — depth bands, lava crust, plateau tops.
+    _erodeMask(mask, px) {
+      mask._er = mask._er || {};
+      if (mask._er[px]) return mask._er[px];
+      const cv = document.createElement('canvas'); cv.width = mask.w; cv.height = mask.h;
+      const c = cv.getContext('2d');
+      c.filter = 'blur(' + px + 'px)'; c.drawImage(mask.canvas, 0, 0); c.filter = 'none';
+      const img = c.getImageData(0, 0, mask.w, mask.h), d = img.data;
+      for (let i = 0; i < d.length; i += 4) { const on = d[i + 3] > 200; d[i] = d[i + 1] = d[i + 2] = 255; d[i + 3] = on ? 255 : 0; }
+      c.putImageData(img, 0, 0);
+      return (mask._er[px] = { canvas: cv, x: mask.x, y: mask.y, w: mask.w, h: mask.h });
+    }
+    // Just the outer band of a mask — shorelines, cliff lips, glowing edges.
+    _rimMask(mask, px) {
+      mask._rim = mask._rim || {};
+      if (mask._rim[px]) return mask._rim[px];
+      const er = this._erodeMask(mask, px);
+      const cv = document.createElement('canvas'); cv.width = mask.w; cv.height = mask.h;
+      const c = cv.getContext('2d');
+      c.drawImage(mask.canvas, 0, 0);
+      c.globalCompositeOperation = 'destination-out'; c.drawImage(er.canvas, 0, 0);
+      return (mask._rim[px] = { canvas: cv, x: mask.x, y: mask.y, w: mask.w, h: mask.h });
+    }
+    // Draw `paint` (in WORLD coords) clipped to a mask. Returns its scratch
+    // canvas, which lives on the mask so repeat frames never reallocate.
+    _maskPaint(mask, slot, paint) {
+      const k = '_s' + slot;
+      let s = mask[k];
+      if (!s) { s = mask[k] = document.createElement('canvas'); s.width = mask.w; s.height = mask.h; }
+      const c = s.getContext('2d');
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.clearRect(0, 0, mask.w, mask.h);
+      c.save(); c.translate(-mask.x, -mask.y); paint(c); c.restore();
+      c.globalCompositeOperation = 'destination-in';
+      c.drawImage(mask.canvas, 0, 0);
+      c.globalCompositeOperation = 'source-over';
+      return s;
+    }
+    // Region animation is soft, low-frequency ambience — swells, glows, motes.
+    // Painting it at HALF resolution and refreshing at 30Hz is visually
+    // indistinguishable and about 8x cheaper than a full-res repaint every
+    // frame, which is what a naive masked overlay costs (~7ms on Riverford).
+    _animLayer(mask, key, t, paint) {
+      const st = (mask._al = mask._al || {});
+      let L = st[key];
+      if (!L) {
+        const w = Math.max(1, Math.ceil(mask.w / 2)), h = Math.max(1, Math.ceil(mask.h / 2));
+        const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+        const mk = document.createElement('canvas'); mk.width = w; mk.height = h;
+        mk.getContext('2d').drawImage(mask.canvas, 0, 0, w, h);
+        L = st[key] = { cv, mk, w, h, last: -1e9 };
+      }
+      if (t - L.last >= 1 / 30) {
+        L.last = t;
+        const c = L.cv.getContext('2d');
+        c.setTransform(1, 0, 0, 1, 0, 0);
+        c.clearRect(0, 0, L.w, L.h);
+        c.save(); c.scale(0.5, 0.5); c.translate(-mask.x, -mask.y); paint(c); c.restore();
+        c.globalCompositeOperation = 'destination-in';
+        c.drawImage(L.mk, 0, 0);
+        c.globalCompositeOperation = 'source-over';
+      }
+      return L;
+    }
+    _blitLayer(ctx, mask, L, additive) {
+      ctx.save();
+      if (additive) ctx.globalCompositeOperation = 'lighter';
+      ctx.drawImage(L.cv, 0, 0, L.w, L.h, mask.x, mask.y, mask.w, mask.h);
+      ctx.restore();
+    }
+    // A flat-coloured copy of a mask, cached. Effects that only pulse in
+    // opacity blit this with globalAlpha instead of repainting every frame.
+    _tintedMask(mask, key, color) {
+      const st = (mask._tm = mask._tm || {});
+      if (st[key]) return st[key];
+      const cv = document.createElement('canvas'); cv.width = mask.w; cv.height = mask.h;
+      const c = cv.getContext('2d');
+      c.fillStyle = color; c.fillRect(0, 0, mask.w, mask.h);
+      c.globalCompositeOperation = 'destination-in'; c.drawImage(mask.canvas, 0, 0);
+      return (st[key] = cv);
+    }
+    // Wandering fissures that ignore the tile grid — lava veins, void seams.
+    _cracks(mask, key) {
+      if (mask._cr) return mask._cr;
+      const n = this._noise(this._hash(key));
+      const out = [], count = Math.max(4, Math.round(mask.cells.length * 1.7));
+      for (let i = 0; i < count; i++) {
+        const s = this._hash(key + ':' + i), cell = mask.cells[i % mask.cells.length];
+        let x = cell[0] + (s % TILE), y = cell[1] + ((s >>> 8) % TILE);
+        let ang = n(x / 70, y / 70) * TAU;
+        const pts = [[x, y]], segs = 4 + ((s >>> 17) % 5);
+        for (let k = 0; k < segs; k++) {
+          ang += (n(x / 34, y / 34) - 0.5) * 1.6;
+          x += Math.cos(ang) * 9; y += Math.sin(ang) * 9;
+          pts.push([x, y]);
+        }
+        out.push({ pts, ph: (s >>> 5 & 63) / 63 * TAU });
+      }
+      return (mask._cr = out);
+    }
+    _stroke(g, pts) { g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]); g.stroke(); }
+
+    // Bake one terrain kind into the cached terrain canvas.
+    _paintRegion(c, m, kind) {
+      for (const mask of this._tileMasks(m, kind)) this._paintMask(c, m, kind, mask);
+    }
+    _paintMask(c, m, kind, mask) {
+      const raised = kind === 'highground';
+      // contact shadow so the region beds INTO the ground instead of onto it
+      // Offset down-right to match the art bible's upper-left key light; an
+      // evenly-spread shadow made raised ground read as an outlined sticker.
+      const sh = this._maskPaint(mask, 'sh', (g) => { g.fillStyle = raised ? 'rgba(0,0,0,0.38)' : 'rgba(0,0,0,0.26)'; g.fillRect(mask.x, mask.y, mask.w, mask.h); });
+      c.save(); c.filter = 'blur(6px)'; c.drawImage(sh, mask.x + (raised ? 5 : 2), mask.y + (raised ? 9 : 4)); c.restore();
+      // body: painted unmasked into a scratch, masked once, blitted once
+      const body = this._maskPaint(mask, 'bd', (g) => this._regionArt(g, m, kind, mask));
+      c.drawImage(body, mask.x, mask.y);
+      // decorations are drawn UNMASKED so trees and boulders overhang the edge
+      this._regionProps(c, m, kind, mask);
+    }
+
+    _regionArt(g, m, kind, mask) {
+      const X = mask.x, Y = mask.y, W = mask.w, H = mask.h;
+      const R = RS.RAMP;
+      const flat = (style) => { g.fillStyle = style; g.fillRect(X, Y, W, H); };
+      // fill the region shrunk `px` inward — depth bands without any tile edge
+      const inner = (px, style) => {
+        const er = this._erodeMask(mask, px);
+        g.drawImage(this._maskPaint(er, 'in', (h) => { h.fillStyle = style; h.fillRect(X, Y, W, H); }), er.x, er.y);
+      };
+      const speck = (count, colA, colB, rmin, rmax) => {
+        for (let i = 0; i < count; i++) {
+          const s = this._hash(kind + m.map.id + 'sp' + i);
+          const px = X + (s % W), py = Y + ((s >>> 11) % H);
+          g.fillStyle = (s & 1) ? colA : colB;
+          g.beginPath(); g.arc(px, py, rmin + ((s >>> 21) % 100) / 100 * (rmax - rmin), 0, TAU); g.fill();
+        }
+      };
+      switch (kind) {
+        case 'water': {
+          flat(m.map.winter ? '#6d7c86' : '#6b5f42');       // wet silt margin
+          inner(3, R.water.light);                          // bright shallows
+          inner(10, R.water.mid);                           // open water
+          inner(21, A.mul(R.water.mid, 0.62));              // depth
+          inner(34, A.mul(R.water.mid, 0.44));              // deepest channel
+          speck(26, 'rgba(220,240,255,0.10)', 'rgba(0,0,0,0.14)', 2, 7); // silt + stones
+          // baked caustics: continuous squiggles across the whole body
+          const n = this._noise(this._hash(m.map.id + 'caus'));
+          g.lineCap = 'round';
+          for (let i = 0; i < 30; i++) {
+            g.strokeStyle = 'rgba(190,232,250,0.09)'; g.lineWidth = 1.4;
+            const yy = Y + (i / 30) * H;
+            g.beginPath();
+            for (let x = X; x <= X + W; x += 9) g.lineTo(x, yy + Math.sin(x * 0.06 + i) * 4 + n(x / 50, yy / 50) * 6);
+            g.stroke();
+          }
+          break;
+        }
+        case 'hazard': {
+          // A crater of cooling lava: hot scorched lip, cracked basalt crust,
+          // and a molten pool showing through the fissures.
+          flat('#7a3216');                                  // glowing scorched lip
+          inner(3, '#41231a');                              // cooling scree
+          inner(7, '#1d1512');                              // basalt crust
+          speck(30, 'rgba(255,150,60,0.10)', 'rgba(0,0,0,0.35)', 1.5, 5);
+          // molten veins: dark channel, hot fill, bright core
+          const cr = this._cracks(mask, m.map.id + 'lava');
+          g.lineCap = 'round';
+          for (const k of cr) {
+            g.strokeStyle = '#0b0806'; g.lineWidth = 6; this._stroke(g, k.pts);
+            g.strokeStyle = '#a83512'; g.lineWidth = 3.8; this._stroke(g, k.pts);
+            g.strokeStyle = '#f0721e'; g.lineWidth = 2.1; this._stroke(g, k.pts);
+            g.strokeStyle = '#ffcc55'; g.lineWidth = 0.9; this._stroke(g, k.pts);
+          }
+          break;
+        }
+        case 'cursed': {
+          flat('#2b2040');
+          inner(5, R.void.mid);
+          inner(13, A.mul(R.void.shadow, 0.8));
+          speck(26, 'rgba(160,110,230,0.16)', 'rgba(0,0,0,0.30)', 2, 6);
+          const cr = this._cracks(mask, m.map.id + 'void');
+          for (const k of cr) { g.strokeStyle = 'rgba(140,90,210,0.35)'; g.lineWidth = 2; g.lineCap = 'round'; this._stroke(g, k.pts); }
+          break;
+        }
+        case 'holy': {
+          flat('#a89772');                                  // worn kerb
+          inner(3, R.holy.mid);
+          inner(9, R.holy.light);
+          // marble veining — organic, so it never suggests a tile grid
+          for (const k of this._cracks(mask, m.map.id + 'marble')) {
+            g.lineCap = 'round';
+            g.strokeStyle = 'rgba(176,154,98,0.40)'; g.lineWidth = 1.7; this._stroke(g, k.pts);
+            g.strokeStyle = 'rgba(255,252,232,0.55)'; g.lineWidth = 0.7; this._stroke(g, k.pts);
+          }
+          speck(24, 'rgba(186,164,104,0.30)', 'rgba(255,255,255,0.55)', 2, 6);
+          // an inlaid gilt sunburst at the centre of the consecrated ground
+          const cx = X + W / 2, cy = Y + H / 2, rr = Math.min(W, H) * 0.3;
+          g.strokeStyle = 'rgba(168,120,34,0.9)'; g.lineWidth = 2.8;
+          g.beginPath(); g.arc(cx, cy, S.R0(rr) || 1, 0, TAU); g.stroke();
+          g.lineWidth = 1.6; g.beginPath(); g.arc(cx, cy, S.R0(rr * 0.62) || 1, 0, TAU); g.stroke();
+          g.strokeStyle = 'rgba(168,120,34,0.75)'; g.lineWidth = 2.1;
+          for (let i = 0; i < 8; i++) {
+            const a = (i / 8) * TAU;
+            g.beginPath();
+            g.moveTo(cx + Math.cos(a) * rr * 0.62, cy + Math.sin(a) * rr * 0.62);
+            g.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
+            g.stroke();
+          }
+          break;
+        }
+        case 'highground': {
+          flat(A.mul(R.stone.shadow, 0.58));                // deep cliff face
+          inner(4, A.mul(R.stone.shadow, 0.92));            // sunlit face
+          inner(9, R.stone.mid);                            // plateau shoulder
+          inner(13, R.stone.light);                         // lit top
+          // strata running along the rock face
+          for (const k of this._cracks(mask, m.map.id + 'strata')) {
+            g.lineCap = 'round';
+            g.strokeStyle = 'rgba(0,0,0,0.22)'; g.lineWidth = 2; this._stroke(g, k.pts);
+            g.strokeStyle = 'rgba(255,255,255,0.10)'; g.lineWidth = 0.9; this._stroke(g, k.pts);
+          }
+          speck(30, 'rgba(255,255,255,0.16)', 'rgba(0,0,0,0.22)', 2, 7);
+          break;
+        }
+        case 'unbuildable': {
+          const gim = m.map.env.gimmick;
+          if (gim === 'canopy') { flat('#2b3a1c'); inner(5, '#223016'); speck(34, 'rgba(120,160,70,0.14)', 'rgba(0,0,0,0.30)', 2, 8); }
+          else if (gim === 'bog') {
+            flat('#4a4130'); inner(4, '#372f22'); inner(12, '#2a241a');
+            speck(26, 'rgba(90,120,80,0.20)', 'rgba(0,0,0,0.28)', 3, 9);
+            // standing water sheen in the mire
+            for (let i = 0; i < 10; i++) {
+              const s = this._hash(m.map.id + 'pool' + i);
+              const px = X + (s % W), py = Y + ((s >>> 11) % H);
+              g.fillStyle = 'rgba(70,110,110,0.30)';
+              g.beginPath(); g.ellipse(px, py, 9 + (s >>> 3 & 7), 5 + (s >>> 6 & 3), (s >>> 9 & 7) * 0.4, 0, TAU); g.fill();
+            }
+          } else { flat(A.mul(R.stoneDark.mid, 1.05)); inner(5, R.stoneDark.mid); inner(12, R.stoneDark.shadow); speck(30, 'rgba(255,255,255,0.08)', 'rgba(0,0,0,0.28)', 2, 8); }
+          break;
+        }
+      }
+    }
+
+    // Unmasked props sitting ON a region: trees, boulders, reeds, ice shelves.
+    // Drawn per CELL (always inside the silhouette) but jittered off-grid, and
+    // deliberately allowed to overhang the edge so the boundary reads natural.
+    _regionProps(c, m, kind, mask) {
+      const gim = m.map.env.gimmick;
+      const tree = (x, y, s) => {
+        c.fillStyle = 'rgba(0,0,0,0.30)'; c.beginPath(); c.ellipse(x + 2, y + 7 * s, 11 * s, 5 * s, 0, 0, TAU); c.fill();
+        c.fillStyle = '#4a3520'; c.fillRect(x - 1.6 * s, y - 2 * s, 3.2 * s, 9 * s);
+        const lobes = [[0, -12], [-8, -5], [8, -5], [-4, -15], [5, -14]];
+        c.fillStyle = '#2f4a1e';
+        for (const [dx, dy] of lobes) { c.beginPath(); c.arc(x + dx * s, y + dy * s, 7.5 * s, 0, TAU); c.fill(); }
+        c.fillStyle = '#41682a';
+        for (const [dx, dy] of lobes.slice(0, 3)) { c.beginPath(); c.arc(x + dx * s - 1.5 * s, y + dy * s - 2 * s, 5 * s, 0, TAU); c.fill(); }
+        c.fillStyle = 'rgba(140,190,90,0.35)'; c.beginPath(); c.arc(x - 3 * s, y - 15 * s, 3.4 * s, 0, TAU); c.fill();
+      };
+      const boulder = (x, y, s) => {
+        c.fillStyle = 'rgba(0,0,0,0.32)'; c.beginPath(); c.ellipse(x + 2, y + 4 * s, 10 * s, 4.5 * s, 0, 0, TAU); c.fill();
+        c.fillStyle = RS.RAMP.stone.shadow; c.beginPath(); c.moveTo(x - 9 * s, y + 3 * s); c.lineTo(x - 5 * s, y - 7 * s); c.lineTo(x + 4 * s, y - 8 * s); c.lineTo(x + 9 * s, y + 2 * s); c.closePath(); c.fill();
+        c.fillStyle = RS.RAMP.stone.mid; c.beginPath(); c.moveTo(x - 5 * s, y - 7 * s); c.lineTo(x + 4 * s, y - 8 * s); c.lineTo(x + 6 * s, y - 2 * s); c.lineTo(x - 3 * s, y - 1 * s); c.closePath(); c.fill();
+        c.fillStyle = RS.RAMP.stone.light; c.beginPath(); c.moveTo(x - 4 * s, y - 6.5 * s); c.lineTo(x + 1 * s, y - 7.5 * s); c.lineTo(x - 1 * s, y - 3.5 * s); c.closePath(); c.fill();
+      };
+      const reed = (x, y, s) => {
+        c.strokeStyle = '#5d6a34'; c.lineWidth = 1.3 * s; c.lineCap = 'round';
+        for (let i = 0; i < 4; i++) {
+          const lean = (i - 1.5) * 2.2;
+          c.beginPath(); c.moveTo(x + i * 2.4 * s - 3 * s, y); c.quadraticCurveTo(x + i * 2.4 * s - 3 * s + lean, y - 8 * s, x + i * 2.4 * s - 3 * s + lean * 1.6, y - 14 * s); c.stroke();
+        }
+        c.fillStyle = '#6b5230'; c.beginPath(); c.ellipse(x + 1.4 * s, y - 14 * s, 1.4 * s, 3 * s, 0.2, 0, TAU); c.fill();
+      };
+      if (kind === 'unbuildable') {
+        const per = gim === 'canopy' ? 2 : 1;
+        // Jitter is deliberately WIDER than a tile so props straddle tile
+        // boundaries. Confining each to its own cell left a visible lattice of
+        // evenly-spaced trees even though the ground beneath was seamless.
+        const spread = TILE * 1.15;
+        const items = [];
+        mask.cells.forEach(([x, y], i) => {
+          for (let k = 0; k < per; k++) {
+            const s = this._hash(m.map.id + 'prop' + i + '_' + k);
+            const px = x + TILE / 2 + ((s % 1000) / 1000 - 0.5) * spread;
+            const py = y + TILE / 2 + (((s >>> 10) % 1000) / 1000 - 0.5) * spread;
+            items.push({ px, py, sc: 0.7 + ((s >>> 21) % 100) / 100 * 0.6, s });
+          }
+        });
+        items.sort((a, b) => a.py - b.py);   // painter's order: far trees behind near ones
+        for (const it of items) {
+          if (gim === 'canopy') tree(it.px, it.py, it.sc);
+          else if (gim === 'bog') { (it.s & 1) ? reed(it.px, it.py, it.sc) : boulder(it.px, it.py, it.sc * 0.8); }
+          else boulder(it.px, it.py, it.sc);
+        }
+      } else if (kind === 'highground') {
+        // a few rocks along the plateau so the lit top isn't a bare slab
+        mask.cells.forEach(([x, y], i) => {
+          if (i % 2) return;
+          const s = this._hash(m.map.id + 'hg' + i);
+          boulder(x + 12 + (s % (TILE - 24)), y + 16 + ((s >>> 9) % (TILE - 26)), 0.8);
+        });
+      }
     }
     _smoothPath(c, pts) {
       if (pts.length < 2) return;
@@ -366,41 +795,151 @@
     }
     _diamond(ctx, x, y, s, stroke) { ctx.beginPath(); ctx.moveTo(x, y - s); ctx.lineTo(x + s, y); ctx.lineTo(x, y + s); ctx.lineTo(x - s, y); ctx.closePath(); stroke ? ctx.stroke() : ctx.fill(); }
 
-    /* -------------------------- animated tiles ---------------------- */
+    /* -------------------------- animated tiles ----------------------
+     * Every field effect below animates across the WHOLE merged region and is
+     * masked through its silhouette. The old version ran a radial gradient or
+     * a ripple pair per tile, which is what drew the grid of squares onto the
+     * water, lava and holy ground even after the terrain itself was smooth. */
     _animatedTiles(ctx, m) {
       const t = this.clock;
-      const wind = m.weather === 'Storm' ? 3 : 1;
+      this._animWater(ctx, m, t);
+      this._animHazard(ctx, m, t);
+      this._animHoly(ctx, m, t);
+      this._animCursed(ctx, m, t);
+      this._animHighground(ctx, m, t);
+      // Campfires stay per-tile — each marks a free build slot, so they carry
+      // real information. They're jittered off-centre and size-varied, though;
+      // dead-centre fires made a multi-tile ruin read as a row of squares.
       for (let r = 0; r < m.rows; r++) for (let col = 0; col < m.cols; col++) {
-        const k = m.tileKind(col, r); if (k === 'buildable' || k === 'path' || k === 'unbuildable') continue;
-        const x = col * TILE, y = r * TILE, cx = x + TILE / 2, cy = y + TILE / 2;
-        if (k === 'water') {
-          ctx.strokeStyle = A.alpha('#bfe6f5', 0.35 + Math.sin(t * 2 + col) * 0.15); ctx.lineWidth = 1;
-          for (let i = 0; i < 2; i++) { const yy = y + 12 + i * 16 + Math.sin(t * 2 + col + i) * 2; ctx.beginPath(); ctx.moveTo(x + 4, yy); ctx.lineTo(x + TILE - 4, yy); ctx.stroke(); }
-        } else if (k === 'hazard') {
-          const g = ctx.createRadialGradient(cx, cy, 2, cx, cy, 20); const p = 0.4 + Math.sin(t * 4 + col) * 0.2; g.addColorStop(0, A.alpha('#ff6a2a', p)); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(x, y, TILE, TILE);
-          if (Math.random() < 0.2) VFX.embers(cx + (Math.random() - 0.5) * 20, cy, 1);
-        } else if (k === 'holy') {
-          const g = ctx.createRadialGradient(cx, cy - 4, 1, cx, cy, 18); g.addColorStop(0, A.alpha('#fff2b0', 0.3 + Math.sin(t * 2 + r) * 0.12)); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(x, y, TILE, TILE);
-        } else if (k === 'cursed') {
-          ctx.fillStyle = A.alpha('#7b4fb5', 0.12 + Math.sin(t * 1.5 + col) * 0.06); ctx.fillRect(x, y, TILE, TILE);
-          if (Math.random() < 0.1) VFX.smoke(cx, cy, 1, '#7b4fb5');
-        } else if (k === 'highground') {
-          ctx.fillStyle = A.alpha('#fff', 0.05); ctx.fillRect(x + 4, y + 4, TILE - 8, 3);
-        } else if (k === 'house') {
-          // warm campfire light pooling out of the ruined house
-          const fl = 0.7 + Math.sin(t * 7 + col) * 0.25;
-          const g = ctx.createRadialGradient(cx, cy + 4, 1, cx, cy + 4, 26); g.addColorStop(0, A.alpha('#ffb457', 0.5 * fl)); g.addColorStop(0.6, A.alpha('#ff7a2a', 0.2 * fl)); g.addColorStop(1, 'rgba(0,0,0,0)');
-          ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = g; ctx.fillRect(x - 8, y - 8, TILE + 16, TILE + 16); ctx.restore();
-          // the fire itself (logs + flame) — only when no tower occupies the tile
-          const occupied = m._tile(col, r) && m._tile(col, r).occupied;
-          if (!occupied) {
-            ctx.fillStyle = '#3a2018'; ctx.fillRect(cx - 6, cy + 6, 12, 3);
-            const fh = 7 + Math.sin(t * 12 + col) * 2.5;
-            ctx.fillStyle = '#e8722c'; ctx.beginPath(); ctx.moveTo(cx - 5, cy + 6); ctx.quadraticCurveTo(cx, cy + 6 - fh - 4, cx + 5, cy + 6); ctx.fill();
-            ctx.fillStyle = '#ffcf5a'; ctx.beginPath(); ctx.moveTo(cx - 2.5, cy + 6); ctx.quadraticCurveTo(cx, cy + 6 - fh, cx + 2.5, cy + 6); ctx.fill();
-            if (Math.random() < 0.3) VFX.embers(cx + (Math.random() - 0.5) * 8, cy + 2, 1, '#ffb457');
-          }
+        if (m.tileKind(col, r) !== 'house') continue;
+        const x = col * TILE, y = r * TILE;
+        const hs = this._hash('fire' + col + '_' + r);
+        const cx = x + TILE / 2 + ((hs & 15) - 7.5) * 0.8, cy = y + TILE / 2 + (((hs >>> 5) & 15) - 7.5) * 0.6;
+        const sc = 0.82 + ((hs >>> 11) & 7) / 7 * 0.4, ph = (hs >>> 15 & 63) * 0.1;
+        // warm campfire light pooling out of the ruined house
+        const fl = 0.7 + Math.sin(t * 7 + ph) * 0.25;
+        const g = ctx.createRadialGradient(cx, cy + 4, 1, cx, cy + 4, 26 * sc); g.addColorStop(0, A.alpha('#ffb457', 0.5 * fl)); g.addColorStop(0.6, A.alpha('#ff7a2a', 0.2 * fl)); g.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = g; ctx.fillRect(x - 10, y - 10, TILE + 20, TILE + 20); ctx.restore();
+        // the fire itself (logs + flame) — only when no tower occupies the tile
+        const occupied = m._tile(col, r) && m._tile(col, r).occupied;
+        if (!occupied) {
+          ctx.fillStyle = '#3a2018'; ctx.fillRect(cx - 6 * sc, cy + 6, 12 * sc, 3);
+          const fh = (7 + Math.sin(t * 12 + ph) * 2.5) * sc;
+          ctx.fillStyle = '#e8722c'; ctx.beginPath(); ctx.moveTo(cx - 5 * sc, cy + 6); ctx.quadraticCurveTo(cx, cy + 6 - fh - 4, cx + 5 * sc, cy + 6); ctx.fill();
+          ctx.fillStyle = '#ffcf5a'; ctx.beginPath(); ctx.moveTo(cx - 2.5 * sc, cy + 6); ctx.quadraticCurveTo(cx, cy + 6 - fh, cx + 2.5 * sc, cy + 6); ctx.fill();
+          if (Math.random() < 0.3) VFX.embers(cx + (Math.random() - 0.5) * 8, cy + 2, 1, '#ffb457');
         }
+      }
+    }
+
+    // Swells drifting across the whole body + a breathing shoreline.
+    _animWater(ctx, m, t) {
+      for (const mk of this._tileMasks(m, 'water')) {
+      const X = mk.x, Y = mk.y, W = mk.w, H = mk.h;
+      this._blitLayer(ctx, mk, this._animLayer(mk, 'wave', t, (g) => {
+        g.lineCap = 'round';
+        for (let i = 0; i < 13; i++) {
+          const yy = Y - 24 + ((i * 19 + t * 7) % (H + 48));
+          g.strokeStyle = A.alpha('#cdefff', 0.05 + 0.045 * (1 + Math.sin(t * 1.3 + i)));
+          g.lineWidth = 4.4;
+          g.beginPath();
+          for (let x = X; x <= X + W; x += 10) g.lineTo(x, yy + Math.sin(x * 0.045 + t * 1.5 + i) * 3.2);
+          g.stroke();
+        }
+        // sun glints winking on the surface
+        g.fillStyle = 'rgba(232,250,255,0.85)';
+        for (let i = 0; i < 20; i++) {
+          const hs = this._hash('glint' + m.map.id + i);
+          const a = Math.sin(t * 2.1 + ((hs >>> 3) & 63) * 0.1);
+          if (a <= 0.76) continue;
+          g.globalAlpha = (a - 0.76) * 4;
+          g.beginPath(); g.ellipse(X + (hs % W), Y + ((hs >>> 11) % H), 5, 1.8, 0, 0, TAU); g.fill();
+        }
+        g.globalAlpha = 1;
+      }), true);
+      // shoreline foam: pure opacity pulse, so a cached tint costs one blit
+      const rim = this._rimMask(mk, 5);
+      ctx.save(); ctx.globalAlpha = 0.16 + Math.sin(t * 1.1) * 0.07;
+      ctx.drawImage(this._tintedMask(rim, 'foam', '#dff4ff'), rim.x, rim.y); ctx.restore();
+      }
+    }
+    // Molten veins breathing along the SAME fissures the crust was baked with.
+    _animHazard(ctx, m, t) {
+      for (const mk of this._tileMasks(m, 'hazard')) {
+      const X = mk.x, Y = mk.y, W = mk.w, H = mk.h;
+      const cr = this._cracks(mk, m.map.id + 'lava');
+      this._blitLayer(ctx, mk, this._animLayer(mk, 'vein', t, (g) => {
+        g.lineCap = 'round';
+        for (const k of cr) {
+          const p = 0.5 + 0.5 * Math.sin(t * 1.8 + k.ph);
+          g.strokeStyle = A.alpha('#ff7a2a', 0.20 + p * 0.34); g.lineWidth = 10; this._stroke(g, k.pts);
+          g.strokeStyle = A.alpha('#ffd45a', 0.25 + p * 0.5); g.lineWidth = 3; this._stroke(g, k.pts);
+        }
+        // heat haze rolling over the flow
+        for (let i = 0; i < 5; i++) {
+          const yy = Y + ((i * 37 + t * 13) % (H + 30)) - 15;
+          g.fillStyle = A.alpha('#ff8a3a', 0.05); g.fillRect(X, yy, W, 18);
+        }
+      }), true);
+      if (Math.random() < Math.min(0.35, mk.cells.length * 0.06)) {
+        const cell = mk.cells[(Math.random() * mk.cells.length) | 0];
+        VFX.embers(cell[0] + Math.random() * TILE, cell[1] + Math.random() * TILE, 1);
+      }
+      }
+    }
+    // A slow radiant sweep over consecrated ground.
+    _animHoly(ctx, m, t) {
+      for (const mk of this._tileMasks(m, 'holy')) {
+      const X = mk.x, Y = mk.y, W = mk.w, H = mk.h;
+      this._blitLayer(ctx, mk, this._animLayer(mk, 'grace', t, (g) => {
+        const sweep = ((t * 26) % (W + H + 160)) - 80;
+        const gr = g.createLinearGradient(X + sweep - 70, Y, X + sweep + 70, Y + H);
+        gr.addColorStop(0, 'rgba(0,0,0,0)');
+        gr.addColorStop(0.5, A.alpha('#fff2b0', 0.22));
+        gr.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = gr; g.fillRect(X, Y, W, H);
+        g.fillStyle = A.alpha('#fff6cc', 0.10 + Math.sin(t * 1.6) * 0.05); g.fillRect(X, Y, W, H);
+        // motes rising off the stone
+        g.fillStyle = 'rgba(255,244,190,0.55)';
+        for (let i = 0; i < 14; i++) {
+          const hs = this._hash('mote' + m.map.id + i);
+          const mx = X + (hs % W), my = Y + (((hs >>> 11) % H) + H - ((t * 11 + (hs & 63)) % H)) % H;
+          g.beginPath(); g.arc(mx, my, 2.6, 0, TAU); g.fill();
+        }
+      }), true);
+      }
+    }
+    // Void seams pulsing, with smoke drifting off the cursed ground.
+    _animCursed(ctx, m, t) {
+      for (const mk of this._tileMasks(m, 'cursed')) {
+      const X = mk.x, Y = mk.y, W = mk.w, H = mk.h;
+      const cr = this._cracks(mk, m.map.id + 'void');
+      this._blitLayer(ctx, mk, this._animLayer(mk, 'void', t, (g) => {
+        g.fillStyle = A.alpha('#7b4fb5', 0.10 + Math.sin(t * 1.5) * 0.05); g.fillRect(X, Y, W, H);
+        g.lineCap = 'round';
+        for (const k of cr) {
+          const p = 0.5 + 0.5 * Math.sin(t * 1.3 + k.ph);
+          g.strokeStyle = A.alpha('#c79bff', 0.10 + p * 0.28); g.lineWidth = 4.4; this._stroke(g, k.pts);
+        }
+        g.fillStyle = 'rgba(199,155,255,0.5)';
+        for (let i = 0; i < 12; i++) {
+          const hs = this._hash('vm' + m.map.id + i);
+          const mx = X + (hs % W), my = Y + (((hs >>> 11) % H) + H - ((t * 8 + (hs & 63)) % H)) % H;
+          g.beginPath(); g.arc(mx, my, 3, 0, TAU); g.fill();
+        }
+      }), true);
+      if (Math.random() < 0.08) {
+        const cell = mk.cells[(Math.random() * mk.cells.length) | 0];
+        VFX.smoke(cell[0] + TILE / 2, cell[1] + TILE / 2, 1, '#7b4fb5');
+      }
+      }
+    }
+    // A faint lit lip along the plateau edge, so high ground reads as raised.
+    _animHighground(ctx, m, t) {
+      for (const mk of this._tileMasks(m, 'highground')) {
+        const rim = this._rimMask(mk, 4);
+        ctx.save(); ctx.globalAlpha = 0.07 + Math.sin(t * 0.9) * 0.02;
+        ctx.drawImage(this._tintedMask(rim, 'lip', '#ffffff'), rim.x, rim.y); ctx.restore();
       }
     }
 

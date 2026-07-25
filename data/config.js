@@ -17,10 +17,14 @@
 
   // ---- Difficulty tiers (§6) ----
   RS.DIFFICULTY = [
-    { id: 'Easy', order: 0, waves: 20, hpMult: 0.85, speedMult: 1.0, startGold: 800, lives: 30,
+    // goldMult scales IN-MATCH income (kill bounty + wave interest). Upgrade
+    // costs climb 1.6^level while a wave pays ~120g, so on Easy a beginner
+    // could afford roughly one upgrade per wave and their DPS fell hopelessly
+    // behind the wave curve. This lets the early tiers actually keep pace.
+    { id: 'Easy', order: 0, waves: 20, hpMult: 0.85, speedMult: 1.0, startGold: 900, lives: 30, goldMult: 1.7,
       boss: 'boss_corvin', copperMult: 1.0, tokenMult: 1.0, modifiers: [],
       addArmor: 0, magicResist: 0, countMult: 1.0, night: false, noSell: false, noLeak: false, siegebreaker: false, adaptive: false },
-    { id: 'Medium', order: 1, waves: 30, hpMult: 2.2, speedMult: 1.1, startGold: 650, lives: 20,
+    { id: 'Medium', order: 1, waves: 30, hpMult: 2.2, speedMult: 1.1, startGold: 650, lives: 20, goldMult: 1.25,
       boss: 'boss_gruumak', copperMult: 1.8, tokenMult: 2.0, modifiers: ['Hardened', 'Rally'],
       addArmor: 15, magicResist: 0, countMult: 1.0, rally: 5, night: false, noSell: false, noLeak: false, siegebreaker: false, adaptive: false },
     { id: 'Hard', order: 2, waves: 40, hpMult: 5.5, speedMult: 1.25, startGold: 500, lives: 10,
@@ -54,12 +58,20 @@
       Endurance: { familyBias: null,        sizeBias: 0.7,  spacing: 0.35 },
       Boss:      { familyBias: null,        sizeBias: 1.0,  spacing: 1.0, boss: true },
     },
-    noAirBeforeWave: 3,     // waves 1-3 stay ground-only (see _archetypeFor)
-    // New players were getting chewed up before they'd learned the ropes —
-    // waves 1-6 ramp enemy HP up from 60% to 100% instead of hitting full
-    // strength immediately (see _earlyHpRamp). Every difficulty gets this;
-    // it's an onboarding curve, not a difficulty-tier setting.
+    noAirBeforeWave: 4,     // waves 1-4 stay ground-only (see _archetypeFor)
+    // Elite waves carry 2.64x a Standard wave's budget. Rolling one at wave 8
+    // put ~8000 HP in front of a starter build worth ~100 DPS and cost 21 of
+    // 24 remaining lives in a single wave — the "down to 3 hearts" spike. They
+    // now start at the first mini-boss, once the player has a real defence.
+    noEliteBeforeWave: 10,
+    // New players were getting chewed up before they'd learned the ropes.
+    // Two onboarding curves, both independent of difficulty tier:
+    //   earlyRamp*  — enemy HP climbs 60% -> 100% over waves 1-6
+    //   earlyEase*  — wave SIZE starts at 55% and reaches full by wave 8
+    // The size curve multiplies the normal budget, so wave 8 onward (and the
+    // whole mid/late game) is left exactly as it was.
     earlyRampWaves: 6, earlyRampFloor: 0.6,
+    earlyEaseWaves: 8, earlyEaseFloor: 0.55,
     miniBossEvery: 10,       // every 10th wave = mini-boss (elite-heavy)
     callEarlyBonusPerSec: 2, // in-match gold per remaining second when calling early
   };

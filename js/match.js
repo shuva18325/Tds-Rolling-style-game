@@ -188,7 +188,19 @@
       // first thing a player ever saw was their starter tower unable to act,
       // which reads as "melee is broken" rather than "bring anti-air".
       if (n <= RS.WAVE.noAirBeforeWave) return seed.pick(['Standard', 'Standard', 'Swarm', 'Endurance']);
+      // Elite is a 2.64x budget spike; before the player has a real defence it
+      // is a wall, not a challenge. Held back until the first mini-boss wave.
+      if (n < RS.WAVE.noEliteBeforeWave) return seed.pick(options.filter((o) => o !== 'Elite'));
       return seed.pick(options);
+    }
+
+    // Wave SIZE onboarding curve: waves 1..earlyEaseWaves scale from
+    // earlyEaseFloor up to full. Multiplies the normal budget, so nothing from
+    // wave `earlyEaseWaves` onward changes.
+    _earlyEase(n) {
+      const R = RS.WAVE;
+      if (!n || n >= R.earlyEaseWaves) return 1;
+      return R.earlyEaseFloor + (1 - R.earlyEaseFloor) * ((n - 1) / (R.earlyEaseWaves - 1));
     }
 
     generateWave(n) {
@@ -202,7 +214,7 @@
           budget: 0, name: 'Boss' };
       }
 
-      let budget = RS.WAVE.baseBudget * Math.pow(RS.WAVE.growth, n - 1) * this.diff.countMult;
+      let budget = RS.WAVE.baseBudget * Math.pow(RS.WAVE.growth, n - 1) * this.diff.countMult * this._earlyEase(n);
       budget *= info.sizeBias;
       if (arch === 'Elite') budget *= 1.2;
 
@@ -756,7 +768,7 @@
       if (!e.alive) return;
       e.alive = false;
       // bounty
-      const goldGain = e.def.bounty * (this._globalGoldMult || 1);
+      const goldGain = e.def.bounty * (this._globalGoldMult || 1) * (this.diff.goldMult || 1);
       this.gold += goldGain;
       this.totalKills++;
       this.killsByFamily[e.def.family] = (this.killsByFamily[e.def.family] || 0) + 1;
@@ -1333,7 +1345,7 @@
     _completeWave() {
       this.waveActive = false;
       // interest
-      const interest = Math.min(RS.ECON.interestCap, Math.floor(this.gold * RS.ECON.interestRate));
+      const interest = Math.round(Math.min(RS.ECON.interestCap, Math.floor(this.gold * RS.ECON.interestRate)) * (this.diff.goldMult || 1));
       this.gold += interest;
       // wave clear copper
       const copper = Math.round((RS.ECON.copperPerWaveMin + Math.random() * (RS.ECON.copperPerWaveMax - RS.ECON.copperPerWaveMin)) * this.diff.copperMult);
