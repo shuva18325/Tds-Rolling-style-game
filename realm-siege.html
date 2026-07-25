@@ -6,7 +6,7 @@
   --text:#e8dcc0; --dim:#a49b86; --gold:#d9a441; --blood:#a02c2c;
   --good:#5fa855; --bad:#e04b4b; --warn:#f0a92e;
   --c-common:#9a9a9a; --c-uncommon:#5fa855; --c-rare:#4a90d9; --c-epic:#9b59b6;
-  --c-legendary:#f0a92e; --c-mythic:#e04b4b; --c-mythicplus:#ffffff;
+  --c-legendary:#f0a92e; --c-ancient:#17b8a6; --c-mythic:#e04b4b; --c-mythicplus:#ffffff;
   --d-easy:#5fa855; --d-medium:#4a90d9; --d-hard:#9b59b6; --d-hardcore:#e04b4b;
 }
 * { box-sizing:border-box; margin:0; padding:0; }
@@ -305,6 +305,11 @@ button:hover::after { transform: translateX(120%); }
 /* Legendary shimmer */
 .rescard[style*="f0a92e"], .collcard[style*="f0a92e"] { animation: rarShimmer 2.4s ease-in-out infinite; }
 @keyframes rarShimmer { 50% { box-shadow: 0 0 18px -3px #f0a92e, 0 0 0 1px #f0a92e; } }
+/* Ancient verdigris pulse — patina bronze, distinct from Legendary gold */
+.rescard[style*="17b8a6"], .collcard[style*="17b8a6"] { animation: rarPatina 2.1s ease-in-out infinite; }
+@keyframes rarPatina { 0%,100% { box-shadow: 0 0 11px -3px #17b8a6, 0 0 0 1px #17b8a6; }
+  50% { box-shadow: 0 0 20px -1px #3fe0cc, 0 0 0 1px #3fe0cc; } }
+.tchip.rc-patina { animation: rarPatina 2.1s ease-in-out infinite; }
 /* Mythic ember flicker */
 .rescard[style*="e04b4b"], .collcard[style*="e04b4b"] { animation: rarEmber 1.3s ease-in-out infinite; }
 @keyframes rarEmber { 0%,100% { box-shadow: 0 0 10px -3px #e04b4b, 0 0 0 1px #e04b4b; } 50% { box-shadow: 0 0 22px 0 #ff6a4a, 0 0 0 1px #ff8a4a; } }
@@ -820,8 +825,9 @@ button:hover::after { transform: translateX(120%); }
     { id: 'Rare',     color: '#4a90d9', rank: 2 },
     { id: 'Epic',     color: '#9b59b6', rank: 3 },
     { id: 'Legendary',color: '#f0a92e', rank: 4 },
-    { id: 'Mythic',   color: '#e04b4b', rank: 5 },
-    { id: 'Mythic+',  color: '#ffffff', rank: 6, prismatic: true },
+    { id: 'Ancient',  color: '#17b8a6', rank: 5 },
+    { id: 'Mythic',   color: '#e04b4b', rank: 6 },
+    { id: 'Mythic+',  color: '#ffffff', rank: 7, prismatic: true },
   ];
   RS.rarityColor = (id) => (RS.RARITY.find((r) => r.id === id) || RS.RARITY[0]).color;
   RS.rarityRank = (id) => (RS.RARITY.find((r) => r.id === id) || RS.RARITY[0]).rank;
@@ -891,6 +897,7 @@ button:hover::after { transform: translateX(120%); }
       Endurance: { familyBias: null,        sizeBias: 0.7,  spacing: 0.35 },
       Boss:      { familyBias: null,        sizeBias: 1.0,  spacing: 1.0, boss: true },
     },
+    noAirBeforeWave: 3,     // waves 1-3 stay ground-only (see _archetypeFor)
     miniBossEvery: 10,       // every 10th wave = mini-boss (elite-heavy)
     callEarlyBonusPerSec: 2, // in-match gold per remaining second when calling early
   };
@@ -898,14 +905,14 @@ button:hover::after { transform: translateX(120%); }
   // ---- Gacha roll tables (§4.1) ----
   // Basic weights are the §3.1 table. Other tiers transform them.
   RS.ROLL_BASE_WEIGHTS = {
-    Common: 60.0, Uncommon: 25.0, Rare: 10.0, Epic: 3.8, Legendary: 1.0, Mythic: 0.19, 'Mythic+': 0.01,
+    Common: 60.0, Uncommon: 25.0, Rare: 10.0, Epic: 3.8, Legendary: 0.75, Ancient: 0.25, Mythic: 0.19, 'Mythic+': 0.01,
   };
   RS.ROLLS = {
     Basic:  { id: 'Basic',  costToken: 'copper',  cost: 100, floor: 'Common',   label: '100 Copper' },
     Lucky:  { id: 'Lucky',  costToken: 'silver',  cost: 50,  floor: 'Uncommon', label: '50 Silver'  },
     Super:  { id: 'Super',  costToken: 'gold',    cost: 25,  floor: 'Rare',     label: '25 Gold'    },
     Divine: { id: 'Divine', costToken: 'relic',   cost: 5,   floor: 'Epic',     label: '5 Relics',
-      fixed: { Epic: 70.8, Legendary: 22, Mythic: 6, 'Mythic+': 1.2 } },
+      fixed: { Epic: 64.8, Legendary: 22, Ancient: 6, Mythic: 6, 'Mythic+': 1.2 } },
   };
 
   // ---- Pity (§4.2) ----
@@ -934,6 +941,7 @@ button:hover::after { transform: translateX(120%); }
       Rare:      { dismantle: 8,    craft: 80 },
       Epic:      { dismantle: 25,   craft: 250 },
       Legendary: { dismantle: 80,   craft: 800 },
+      Ancient:   { dismantle: 150,  craft: 1500 },
       Mythic:    { dismantle: 300,  craft: 3000 },
       'Mythic+': { dismantle: 1200, craft: 12000 },
     },
@@ -1103,6 +1111,7 @@ button:hover::after { transform: translateX(120%); }
     Rare:      { base: '#4a90d9', accent: '#c9d4e0', glow: '#6fb0f5', particle: '#a8d0ff', dais: '#3a5a7a', glowStr: 0.22 },
     Epic:      { base: '#9b59b6', accent: '#d9a441', glow: '#c07fe0', particle: '#e0b0ff', dais: '#4a3a5a', glowStr: 0.30 },
     Legendary: { base: '#f0a92e', accent: '#fff2c0', glow: '#ffcb5a', particle: '#ffe08a', dais: '#6a4a1a', glowStr: 0.42, shimmer: true },
+    Ancient:   { base: '#17b8a6', accent: '#d8c9a0', glow: '#3fe0cc', particle: '#9ff0e4', dais: '#1a4a48', glowStr: 0.48, patina: true },
     Mythic:    { base: '#e04b4b', accent: '#ffb060', glow: '#ff6a4a', particle: '#ff9a5a', dais: '#5a2020', glowStr: 0.55, ember: true },
     'Mythic+': { base: '#ffffff', accent: '#ffffff', glow: '#ffffff', particle: '#ffffff', dais: '#3a3a44', glowStr: 0.7, prismatic: true },
   };
@@ -1145,6 +1154,8 @@ button:hover::after { transform: translateX(120%); }
     engineer:   { sil: 'engineer',   anim: 'siege' },
     wyvernrider:{ sil: 'wyvernrider',anim: 'flyer', scale: 1.05 },
     basilisk:   { sil: 'basilisk',   anim: 'siege', scale: 1.55 },
+    spartan:    { sil: 'spartan',    anim: 'blocker', scale: 1.08 },
+    greekfire:  { sil: 'greekfire',  anim: 'siege' },
     marshal:    { sil: 'marshal',    anim: 'banner' },
     wyrm:       { sil: 'wyrm',       anim: 'static', scale: 1.25 },
     lich:       { sil: 'lich',       anim: 'mage' },
@@ -1180,7 +1191,7 @@ button:hover::after { transform: translateX(120%); }
   // A distinct symbol per rarity — used by the roll reveal and odds panel.
   const RARITY_ICON = {
     Common: '🪨', Uncommon: '🍀', Rare: '💎', Epic: '🔮',
-    Legendary: '👑', Mythic: '🔥', 'Mythic+': '✨',
+    Legendary: '👑', Ancient: '🏛️', Mythic: '🔥', 'Mythic+': '✨',
   };
   RS.rarityIcon = (id) => RARITY_ICON[id] || '✨';
 
@@ -1453,6 +1464,33 @@ button:hover::after { transform: translateX(120%); }
       ascend: { desc: 'Reload halved; the barrel glows white-hot between shots.' },
       lore: 'Cast in a single mould over forty days, drawn by sixty oxen. It does not besiege a wall — it ends the argument.' }),
 
+    /* ----------------------------- ANCIENT ----------------------------- */
+    /* A tier above Legendary, below Mythic — relics of a older, classical age.
+     * Costs and output sit deliberately between Paladin/Archmage (~3-3.5k) and
+     * Grand Marshal/Wyrm (~8-9.5k).                                         */
+    T({ id: 'spartan', name: 'Spartan Phalanx', rarity: 'Ancient', cost: 5200,
+      damage: 175, fireRate: 1.15, rangeT: 2.2, targeting: 'First', damageType: 'Melee',
+      splashT: 0, status: [], placement: 'Path-adjacent-only',
+      traits: { blocker: { capacity: 5, respawn: 4 }, melee: true,
+        meleeSlash: { radiusT: 2.3, arc: 3.4 }, // widest sweep of any melee unit
+        aura: { radiusT: 3, dmg: 0.15, immune: ['Fear'] } },
+      upgrades: { branch: [
+        { name: 'Hoplite Wall', desc: 'holds 7, much tougher', mods: { blockCap: 2, hp: 1.2 } },
+        { name: 'Dory Thrust', desc: 'longer reach, +dmg', mods: { damage: 0.5, rangeT: 0.6 } } ] },
+      ascend: { desc: 'The phalanx never breaks: instant respawn and a 360° sweep.' },
+      lore: 'Three hundred held a pass. These thirty hold a road.' }),
+
+    T({ id: 'greekfire', name: 'Greek Fire Thrower', rarity: 'Ancient', cost: 5800,
+      damage: 95, fireRate: 2.6, rangeT: 3.1, targeting: 'Most-Clustered', damageType: 'Fire',
+      splashT: 0, status: ['Burn'], placement: 'Ground',
+      traits: { cone: { angle: 0.85, lengthT: 3.3 }, burn: { dps: 55, dur: 4 },
+        siphonProof: true },
+      upgrades: { branch: [
+        { name: 'Naphtha Blend', desc: 'far fiercer burn', mods: { burnDps: 45, damage: 0.25 } },
+        { name: 'Siphon Array', desc: 'wider, longer cone', mods: { coneAngle: 0.5, coneLength: 1.2 } } ] },
+      ascend: { desc: 'The stream clings: burning enemies ignite everything they touch.' },
+      lore: 'The formula died with the empire. The fire did not.' }),
+
     /* ------------------------------ MYTHIC ----------------------------- */
     T({ id: 'marshal', name: 'Grand Marshal of the Realm', rarity: 'Mythic', cost: 8000,
       damage: 20, fireRate: 1.0, rangeT: 2.0, targeting: 'First', damageType: 'Holy',
@@ -1552,6 +1590,8 @@ button:hover::after { transform: translateX(120%); }
     engineer:  { l2: std('Reinforced Turrets', 'Sturdier builds. +22% dmg, +12% range, +8% attack speed.'), l3: std('Assembly Line', 'Faster works. +22% dmg, +12% range, +8% attack speed.'), ascend: 'War Foundry' },
     wyvernrider:{ l2: std('Firebreath Tonic', 'Hotter breath. +22% dmg, +12% range, +8% attack speed.'), l3: std('Ace Flight', 'Swifter strafe. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Trail of Cinders' },
     basilisk:  { l2: std('Reinforced Bands', 'Thicker iron rings. +22% dmg, +12% range, +8% attack speed.'), l3: std('Master Founders', 'A truer bore. +22% dmg, +12% range, +8% attack speed.'), ascend: 'The Conqueror\'s Voice' },
+    spartan:   { l2: std('Agoge Training', 'Lifelong discipline. +22% dmg, +12% range, +8% attack speed.'), l3: std('Bronze Aspis', 'A wall of shields. +22% dmg, +12% range, +8% attack speed.'), ascend: 'The Unbroken Line' },
+    greekfire: { l2: std('Pressurised Siphon', 'A fiercer jet. +22% dmg, +12% range, +8% attack speed.'), l3: std('Sea-Fire Doctrine', 'Imperial secrets. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Fire of Byzantium' },
     marshal:   { l2: std('War Council', 'Stronger command. +22% dmg, +12% range, +8% attack speed.'), l3: std('Grand Strategy', 'Wider reach. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Banner of the Realm' },
     wyrm:      { l2: std('Molten Gullet', 'Fiercer breath. +22% dmg, +12% range, +8% attack speed.'), l3: std('Ancient Fury', 'Wider cone. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Elder Cataclysm' },
     lich:      { l2: std('Grave Bind', 'Stronger raise. +22% dmg, +12% range, +8% attack speed.'), l3: std('Death Dominion', 'Wider grasp. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Undying Legion' },
@@ -1829,15 +1869,23 @@ button:hover::after { transform: translateX(120%); }
   // petals radiating from a centre point, instead of a crown emoji. Inline SVG
   // so it's fully self-contained (no external image, CSP-safe). Used wherever
   // Claude's row/badge is drawn; `size` is the rendered box in px.
+  // Eight bold, clean petals with real gaps between them — the previous
+  // ten-petal version read as a cluttered blob at small sizes because the
+  // petals touched. Each petal is a straight tapered wedge (crisp silhouette,
+  // no soft curves) meeting at a small hub.
   RS.claudeSigil = (size) => {
     size = size || 22;
-    const N = 10, R = 9, W = 3.1;
+    const N = 8, TIP = 10.5, HALF = 1.55, HUB = 2.2;
     let petals = '';
     for (let i = 0; i < N; i++) {
       const rot = (360 / N) * i;
-      petals += `<path d="M0 0 Q -${W} -${(R * 0.55).toFixed(1)} 0 -${R} Q ${W} -${(R * 0.55).toFixed(1)} 0 0 Z" fill="#d97757" transform="rotate(${rot})"/>`;
+      // wedge: wide at the hub, tapering to a blunt point at the tip
+      petals += `<path d="M -${HALF} -${HUB} L -0.75 -${TIP} L 0.75 -${TIP} L ${HALF} -${HUB} Z" `
+             + `fill="#d97757" transform="rotate(${rot})"/>`;
     }
-    return `<svg class="claude-sigil" width="${size}" height="${size}" viewBox="-12 -12 24 24" style="vertical-align:middle;flex-shrink:0" xmlns="http://www.w3.org/2000/svg"><g>${petals}</g><circle r="1.7" fill="#c2410c"/></svg>`;
+    return `<svg class="claude-sigil" width="${size}" height="${size}" viewBox="-12 -12 24 24" `
+      + `style="vertical-align:middle;flex-shrink:0" xmlns="http://www.w3.org/2000/svg">`
+      + `${petals}<circle r="${HUB}" fill="#d97757"/></svg>`;
   };
 
   // Weighting used for BOTH rivals and the player — see Meta.powerScore().
@@ -2275,6 +2323,12 @@ button:hover::after { transform: translateX(120%); }
       if (n % RS.WAVE.miniBossEvery === 0) return 'Elite';
       const seed = new RS.RNG((this._hashSeed(this.map.id) + n * 97 + this.diff.order * 13) >>> 0);
       const options = ['Standard', 'Standard', 'Swarm', 'Aerial', 'Stealth', 'Split', 'Endurance', 'Elite'];
+      // No pure-Aerial or Stealth waves in the opening stretch. Both are
+      // untouchable by the cheap ground/melee towers a new player can afford,
+      // and Farmstead Easy was rolling Aerial for waves 1 AND 2 — so the very
+      // first thing a player ever saw was their starter tower unable to act,
+      // which reads as "melee is broken" rather than "bring anti-air".
+      if (n <= RS.WAVE.noAirBeforeWave) return seed.pick(['Standard', 'Standard', 'Swarm', 'Endurance']);
       return seed.pick(options);
     }
 
@@ -2320,6 +2374,18 @@ button:hover::after { transform: translateX(120%); }
       if (groups.length === 0) {
         const pick = seed.weighted(this._candidatePool());
         groups.push({ enemyId: pick.def.id, count: 1, spacing: 1, lane: 0 });
+      }
+      // Guarantee a ground escort. A wave with zero walkers leaves every melee
+      // and blocker tower on the field with nothing it is allowed to attack —
+      // the tower looks broken through no fault of the player's build. Aerial
+      // waves stay air-HEAVY (that's their identity); they just aren't air-ONLY.
+      if (groups.every((g) => RS.ENEMY_BY_ID[g.enemyId].traits.includes('Flying'))) {
+        const ground = this._candidatePool().filter((p) => !p.def.traits.includes('Flying'));
+        if (ground.length) {
+          const esc = seed.weighted(ground).def;
+          const n2 = Math.max(2, Math.round(budget * 0.22 / Math.max(1, esc.cost)));
+          groups.push({ enemyId: esc.id, count: n2 * (esc.abilities.packSize || 1), spacing: info.spacing, lane: 0 });
+        }
       }
       return { arch, groups, budget: Math.round(budget), name: arch };
     }
@@ -3088,7 +3154,10 @@ button:hover::after { transform: translateX(120%); }
     _coneAttack(t, target, cands) {
       const dInfo = this._computeShotDamage(t, target);
       const dx = target.x - t.x, dy = target.y - t.y; const ang = Math.atan2(dy, dx);
-      const cone = t.def.traits.cone; const half = cone.angle / 2; const reach = cone.lengthT * TILE;
+      const cone = t.def.traits.cone;
+      // branch upgrades may widen/lengthen the cone (e.g. Greek Fire "Siphon Array")
+      const half = (cone.angle + ((t._mods && t._mods.coneAngle) || 0)) / 2;
+      const reach = (cone.lengthT + ((t._mods && t._mods.coneLength) || 0)) * TILE * t.buff.range;
       for (const e of this.enemies) {
         if (!e.alive) continue;
         const d = dist(t.x, t.y, e.x, e.y); if (d > reach) continue;
@@ -3468,7 +3537,7 @@ button:hover::after { transform: translateX(120%); }
   }
 
   // Placement caps & star cap (referenced by match).
-  RS.PLACE_CAP = { Common: 8, Uncommon: 6, Rare: 5, Epic: 4, Legendary: 3, Mythic: 2, 'Mythic+': 1 };
+  RS.PLACE_CAP = { Common: 8, Uncommon: 6, Rare: 5, Epic: 4, Legendary: 3, Ancient: 2, Mythic: 2, 'Mythic+': 1 };
   RS.STAR3_TOWER_CAP = 14;
   RS.Match = Match;
 })();
@@ -3493,7 +3562,7 @@ button:hover::after { transform: translateX(120%); }
       tokens: { copper: 500, silver: 20, gold: 5, relic: 0 },
       rolls: { Basic: 0, Lucky: 0, Super: 0, Divine: 0 }, // roll tickets
       roster: { peasant: 1, archer: 1, torch: 1, scout: 1 }, // starter towers
-      shards: { Common: 0, Uncommon: 0, Rare: 0, Epic: 0, Legendary: 0, Mythic: 0, 'Mythic+': 0 },
+      shards: { Common: 0, Uncommon: 0, Rare: 0, Epic: 0, Legendary: 0, Ancient: 0, Mythic: 0, 'Mythic+': 0 },
       pity: { epic: 0, legend: 0, mythic: 0, plus: 0 },
       legendPityArmed: false,
       rollCount: 0,
@@ -3617,10 +3686,10 @@ button:hover::after { transform: translateX(120%); }
         weights = Object.assign({}, RS.ROLL_BASE_WEIGHTS);
         if (tier === 'Lucky') {
           weights.Common = 0;
-          for (const k of ['Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Mythic+']) weights[k] *= 3;
+          for (const k of ['Uncommon', 'Rare', 'Epic', 'Legendary', 'Ancient', 'Mythic', 'Mythic+']) weights[k] *= 3;
         } else if (tier === 'Super') {
           weights.Common = 0; weights.Uncommon = 0;
-          for (const k of ['Epic', 'Legendary', 'Mythic', 'Mythic+']) weights[k] *= 6;
+          for (const k of ['Epic', 'Legendary', 'Ancient', 'Mythic', 'Mythic+']) weights[k] *= 6;
           weights.Rare *= 1;
         }
       }
@@ -3629,7 +3698,7 @@ button:hover::after { transform: translateX(120%); }
       if (pity.legend + 1 >= RS.PITY.legend.softStart) weights.Legendary += (pity.legend + 1 - RS.PITY.legend.softStart) * RS.PITY.legend.softStep * 100;
       // roll luck (account bonus) nudges rare+ up slightly
       const luck = this.rollLuck || 1;
-      for (const k of ['Epic', 'Legendary', 'Mythic', 'Mythic+']) weights[k] *= luck;
+      for (const k of ['Epic', 'Legendary', 'Ancient', 'Mythic', 'Mythic+']) weights[k] *= luck;
 
       // hard pity overrides — force a floor rarity.
       let forcedFloor = null;
@@ -3721,10 +3790,10 @@ button:hover::after { transform: translateX(120%); }
         weights = Object.assign({}, RS.ROLL_BASE_WEIGHTS);
         if (tier === 'Lucky') {
           weights.Common = 0;
-          for (const k of ['Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Mythic+']) weights[k] *= 3;
+          for (const k of ['Uncommon', 'Rare', 'Epic', 'Legendary', 'Ancient', 'Mythic', 'Mythic+']) weights[k] *= 3;
         } else if (tier === 'Super') {
           weights.Common = 0; weights.Uncommon = 0;
-          for (const k of ['Epic', 'Legendary', 'Mythic', 'Mythic+']) weights[k] *= 6;
+          for (const k of ['Epic', 'Legendary', 'Ancient', 'Mythic', 'Mythic+']) weights[k] *= 6;
         }
       }
       const floorRank = RS.rarityRank(cfg.floor);
@@ -3995,10 +4064,10 @@ button:hover::after { transform: translateX(120%); }
     coin() { this.tone({ freq: 880, type: 'square', dur: 0.06, vol: 0.1 }); this.tone({ freq: 1320, type: 'square', dur: 0.08, vol: 0.08, delay: 0.05 }); },
     forge() { this.tone({ freq: 260, freqEnd: 120, type: 'square', dur: 0.12, vol: 0.2 }); this.noise({ freq: 3500, q: 2, dur: 0.12, vol: 0.16, filter: 'highpass' }); },
     reveal(rank) { // roll result — escalates with rarity rank (0..6)
-      const base = [392, 440, 523, 587, 659, 784, 880][Math.min(rank, 6)];
+      const base = [392, 440, 523, 587, 659, 740, 784, 880][Math.min(rank, 7)];
       const steps = 3 + rank;
       for (let i = 0; i < steps; i++) this.tone({ freq: base * Math.pow(1.12, i), type: 'triangle', dur: 0.16, vol: 0.14, delay: i * 0.05 });
-      if (rank >= 5) this.tone({ freq: base * 2, type: 'sine', dur: 0.5, vol: 0.2, delay: steps * 0.05 });
+      if (rank >= RS.rarityRank('Mythic')) this.tone({ freq: base * 2, type: 'sine', dur: 0.5, vol: 0.2, delay: steps * 0.05 });
     },
     win() { [523, 659, 784, 1046].forEach((f, i) => this.tone({ freq: f, type: 'triangle', dur: 0.3, vol: 0.18, delay: i * 0.12 })); },
     lose() { [440, 349, 262].forEach((f, i) => this.tone({ freq: f, type: 'sawtooth', dur: 0.4, vol: 0.18, delay: i * 0.16 })); },
@@ -4262,9 +4331,9 @@ button:hover::after { transform: translateX(120%); }
       const n = 20 + rank * 14;
       for (let i = 0; i < n; i++) { const a = rnd(0, TAU), sp = rnd(120, 320 + rank * 60); this._p({ x: cx, y: cy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, g: 120, life: rnd(0.5, 1), max: 1, s: rnd(2, 4), color: pal.particle, rot: a, shape: i % 3 ? 'dot' : 'shard', spin: rnd(-8, 8) });
       }
-      if (rank >= 4) this.column(cx, cy, pal.glow);
-      if (rank >= 5) this.shockwave(cx, cy, pal.glow);
-      if (rank >= 6) this.prismShatter();
+      if (rank >= RS.rarityRank('Legendary')) this.column(cx, cy, pal.glow);
+      if (rank >= RS.rarityRank('Mythic')) this.shockwave(cx, cy, pal.glow);
+      if (rank >= RS.rarityRank('Mythic+')) this.prismShatter();
       this.kick();
     },
     column(cx, cy, color) {
@@ -4508,6 +4577,42 @@ button:hover::after { transform: translateX(120%); }
     facet(ctx, [[-9, -4], [9, -4], [6, -9], [-6, -9]], RS.RAMP.iron.shadow);
     const g = p.t * 1.5; ctx.save(); ctx.translate(2, 2); ctx.rotate(g); for (let i = 0; i < 6; i++) { const ang = i / 6 * TAU; facet(ctx, [[Math.cos(ang) * 4, Math.sin(ang) * 4], [Math.cos(ang + 0.3) * 7, Math.sin(ang + 0.3) * 7], [Math.cos(ang + 0.6) * 4, Math.sin(ang + 0.6) * 4]], RS.RAMP.iron.mid); } ctx.restore();
     circ(ctx, 2, 2, 3, RS.RAMP.iron.light); };
+  // --- ANCIENT ---
+  Sil.spartan = (ctx, r, a, p) => { // hoplite: crested helm, round aspis, long dory
+    const bronze = RS.RAMP.gold, patina = r; // r == Ancient verdigris ramp
+    // round bronze shield presented forward (the silhouette's dominant mass)
+    circ(ctx, -5, 2, 9.5, A.mul(bronze.mid, 0.9), bronze.rim);
+    circ(ctx, -5, 2, 6, A.mul(patina.mid, 1.05));
+    circ(ctx, -5, 2, 2.2, bronze.light);
+    // body behind the shield
+    facet(ctx, [[0, 12], [-2, -6], [6, -6], [6, 12]], A.mul(patina.mid, 0.8), patina.rim);
+    // crested Corinthian helm — the instant read
+    circ(ctx, 2, -10, 4.2, bronze.mid, bronze.rim);
+    facet(ctx, [[-1, -14], [2, -19], [6, -19], [4, -13]], '#a02c2c'); // transverse crest
+    // long dory spear, thrusting on the lunge
+    ctx.strokeStyle = woodM(); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(6, 10); ctx.lineTo(13 + p.lunge * 2, -13); ctx.stroke();
+    facet(ctx, [[13 + p.lunge * 2, -16], [15.5 + p.lunge * 2, -11], [10.5 + p.lunge * 2, -11]], bronze.light); };
+
+  Sil.greekfire = (ctx, r, a, p) => { // bronze siphon on a swivel + pressure cauldron
+    // cauldron base
+    facet(ctx, [[-9, 12], [-7, 2], [7, 2], [9, 12]], RS.RAMP.iron.shadow);
+    facet(ctx, [[-7, 2], [7, 2], [5, -3], [-5, -3]], A.mul(r.mid, 0.85), r.rim);
+    // pressure gauge glow that pulses as it charges
+    circ(ctx, 0, 5, 2.6 + (p.recoil || 0) * 1.6, A.alpha('#ff8a3a', 0.85));
+    ctx.save(); ctx.rotate(a * 0.35);
+    // bronze siphon barrel
+    facet(ctx, [[-2, -6], [13, -8], [16, -4], [13, 0], [-2, -2]], RS.RAMP.gold.mid, RS.RAMP.gold.rim);
+    // nozzle flare + jet while firing
+    const jet = (p.recoil || 0);
+    if (jet > 0.15) {
+      ctx.globalCompositeOperation = 'lighter';
+      facet(ctx, [[16, -6], [16 + 14 * jet, -9 * jet - 2], [16 + 18 * jet, -4], [16 + 14 * jet, 5 * jet - 2], [16, -2]], A.alpha('#ff7a2a', 0.75));
+      facet(ctx, [[16, -5], [16 + 9 * jet, -4], [16, -3]], A.alpha('#ffd45a', 0.9));
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    ctx.restore(); };
+
   Sil.wyvernrider = (ctx, r, a, p) => { // small wyvern mount hovering
     const flap = Math.sin(p.t * 6) * 5;
     facet(ctx, [[-16, -2 - flap], [-2, 3], [0, -4], [-4, -6 - flap]], A.mul(r.mid, 0.9), r.rim);
@@ -4656,10 +4761,15 @@ button:hover::after { transform: translateX(120%); }
     const swing = Math.sin(legPhase) * 4, swing2 = Math.sin(legPhase + Math.PI) * 4;
 
     switch (motif) {
-      case 'humanoid': // lean hooded bandit
+      case 'humanoid': // lean hooded bandit — narrow, leaning into a fast stride
         F([[-3, 0], [-4, swing], [-2, swing]], R.shadow); F([[3, 0], [4, swing2], [2, swing2]], R.shadow);
-        F([[-4, -14], [4, -14], [3, 0], [-3, 0]], mat.cloth.mid, mat.cloth.rim);
-        F([[-4, -14], [4, -14], [0, -20]], R.shadow); C(0, -16, 3.4, R.mid, R.rim); break;
+        // slim torso, tapered to the waist, tilted forward at the shoulders
+        F([[-3, -14], [4, -15], [3, 0], [-2, 0]], mat.cloth.mid, mat.cloth.rim);
+        // pointed hood with a shadowed void where the face should be
+        F([[-4, -13], [4, -14], [2, -22], [-1, -21]], mat.cloth.shadow);
+        C(1, -15, 2.6, '#1a1512');
+        // trailing cloak hem streaming behind the run
+        F([[-2, -12], [-7, -1 + swing * 0.4], [-3, -2]], mat.cloth.shadow); break;
       case 'orc': // bulky, hunched forward, heavy tusked jaw
         F([[-4, 0], [-5, swing], [-2, swing]], R.shadow); F([[4, 0], [5, swing2], [2, swing2]], R.shadow);
         // torso leans forward (top edge shifted +x) and is wider than tall — bulk over height
@@ -4667,14 +4777,22 @@ button:hover::after { transform: translateX(120%); }
         F([[-11, -11], [-6, -15], [-4, -5], [-9, -6]], R.light); F([[10, -13], [5, -16], [3, -5], [8, -6]], R.light); // broad shoulders
         C(4, -17, 4, R.light, R.rim); // head pushed forward of the spine — the hunch
         F([[1, -15], [5, -14], [2, -11]], '#e8e0c0'); F([[6, -14], [9, -13], [5, -11]], '#e8e0c0'); break; // two visible tusks
-      case 'ogre': // huge
-        F([[-6, 0], [-8, swing], [-3, swing]], R.shadow); F([[6, 0], [8, swing2], [3, swing2]], R.shadow);
-        F([[-11, -18], [11, -18], [8, 0], [-8, 0]], R.mid, R.rim);
-        F([[-14, -16], [-7, -20], [-5, -8], [-12, -9]], R.light); C(3, -22, 5, R.light, R.rim); break;
-      case 'goblin': // small scurrying
+      case 'ogre': // immense and sloped — head sunk between mountainous shoulders
+        F([[-6, 0], [-9, swing], [-3, swing]], R.shadow); F([[6, 0], [9, swing2], [3, swing2]], R.shadow);
+        // gut-heavy torso, widest at the belly
+        F([[-10, -16], [11, -18], [9, 1], [-8, 1]], R.mid, R.rim);
+        // one shoulder hunched far higher than the other
+        F([[-15, -15], [-8, -21], [-5, -8], [-13, -8]], R.light);
+        F([[14, -13], [8, -18], [6, -7], [12, -7]], A.mul(R.mid, 1.1));
+        C(2, -19, 4.2, R.light, R.rim); // small head, low and forward
+        F([[-1, -18], [4, -17], [1, -14]], '#e8e0c0'); break;
+      case 'goblin': // tiny and crouched — head and ears dominate the silhouette
         F([[-2, 0], [-3, swing], [-1, swing]], R.shadow); F([[2, 0], [3, swing2], [1, swing2]], R.shadow);
-        F([[-4, -9], [4, -9], [3, 0], [-3, 0]], R.mid, R.rim); C(0, -11, 3, R.light, R.rim);
-        F([[-4, -12], [-2, -9], [-5, -9]], R.mid); F([[4, -12], [2, -9], [5, -9]], R.mid); break; // ears
+        F([[-3, -8], [4, -8], [3, 0], [-2, 0]], R.mid, R.rim);
+        C(0.5, -11, 3.4, R.light, R.rim); // oversized head on a small body
+        F([[-3, -15], [-1, -10], [-6, -11]], R.mid); F([[4, -15], [2, -10], [7, -11]], R.mid); // long ears
+        ctx.strokeStyle = white ? '#fff' : '#9aa0a6'; ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.moveTo(4, -4); ctx.lineTo(8, -9); ctx.stroke(); break; // crude knife
       case 'skeleton': // thin, angular, all hard edges — the opposite of an orc's bulk
         ctx.strokeStyle = white ? '#fff' : R.shadow; ctx.lineWidth = 1.6;
         ctx.beginPath(); ctx.moveTo(-1.5, 0); ctx.lineTo(-2 + swing * 0.6, -7); ctx.moveTo(1.5, 0); ctx.lineTo(2 + swing2 * 0.6, -7); ctx.stroke();
@@ -4685,22 +4803,44 @@ button:hover::after { transform: translateX(120%); }
         ctx.beginPath(); ctx.moveTo(-3, -14); ctx.lineTo(-6, -10); ctx.lineTo(-5, -6); ctx.moveTo(3, -14); ctx.lineTo(6, -10); ctx.lineTo(5, -6); ctx.stroke();
         for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(-2.5, -13 + i * 2); ctx.lineTo(2.5, -13 + i * 2); ctx.stroke(); }
         C(0, -18, 2.6, R.light, R.rim); break; // small skull, narrow relative to the shoulders
-      case 'zombie': // shambling
+      case 'zombie': // lopsided lurch — head lolled, one arm reaching out ahead
         F([[-3, 0], [-4, swing * 0.5], [-1, swing * 0.5]], R.shadow); F([[3, 0], [4, swing2 * 0.5], [1, swing2 * 0.5]], R.shadow);
-        F([[-4, -13], [4, -13], [4, 0], [-4, 0]], mat.cloth.mid, mat.cloth.rim);
-        F([[-5, -12], [-7, -6], [-4, -6]], R.mid); C(0.5, -15, 3.2, R.mid, R.rim); break;
-      case 'wraith': // floating tattered (no legs)
-        ctx.globalAlpha *= white ? 1 : 0.82;
-        F([[-7, 6 + swing * 0.5], [-4, -12], [4, -12], [7, 6 + swing2 * 0.5], [0, 2]], mat.cloth.mid, mat.glow || '#9fe0b8');
-        C(0, -13, 3, R.light); C(-1.2, -13, 0.8, '#7bff9f'); C(1.2, -13, 0.8, '#7bff9f');
-        ctx.globalAlpha = white ? 1 : ctx.globalAlpha / 0.82; break;
-      case 'imp': // small flying demon
-        C(0, -8, 4, R.mid, R.rim); F([[0, -10], [-2, -14], [1, -12]], R.mid); F([[0, -10], [2, -14], [-1, -12]], R.mid);
-        F([[-4, -8], [-9, -12], [-3, -5]], mat.cloth.mid); F([[4, -8], [9, -12], [3, -5]], mat.cloth.mid); break;
-      case 'hound': // quadruped
-        F([[-8, 0], [-9, swing], [-6, swing]], R.shadow); F([[6, 0], [8, swing2], [5, swing2]], R.shadow);
-        F([[-9, -8], [8, -9], [9, -3], [-8, -2]], R.mid, R.rim); F([[8, -9], [14, -12], [12, -4]], R.light);
-        C(13, -10, 1.2, '#ff6a2a'); break;
+        // torso visibly tilted, ribs exposed through rotted cloth
+        F([[-5, -12], [3, -14], [4, 0], [-4, 0]], mat.cloth.mid, mat.cloth.rim);
+        ctx.strokeStyle = white ? '#fff' : R.shadow; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(-3, -9); ctx.lineTo(1, -10); ctx.moveTo(-3, -6); ctx.lineTo(1, -7); ctx.stroke();
+        // dragging outstretched arm — reads instantly as undead
+        F([[2, -11], [11, -8 + swing * 0.3], [10, -5], [2, -8]], R.mid);
+        C(-2, -15, 3.2, R.mid, R.rim); break; // head lolled off-axis
+      case 'wraith': // legless shroud dissolving into ragged tails
+        ctx.globalAlpha *= white ? 1 : 0.8;
+        // three tattered tails instead of a solid hem — no ground contact
+        F([[-7, 4 + swing * 0.6], [-5, -11], [-1, -11], [-2, 7 + swing * 0.5]], mat.cloth.mid, mat.glow || '#9fe0b8');
+        F([[-2, 8 + swing2 * 0.4], [-1, -12], [2, -12], [1, 9 + swing2 * 0.4]], mat.cloth.shadow);
+        F([[2, 7 + swing * 0.5], [1, -11], [5, -11], [7, 5 + swing2 * 0.6]], mat.cloth.mid);
+        // hollow cowl: dark void with two cold points of light
+        F([[-5, -11], [5, -11], [3, -18], [-3, -18]], '#14181a');
+        C(-1.6, -14, 1, '#7bff9f'); C(1.6, -14, 1, '#7bff9f');
+        ctx.globalAlpha = white ? 1 : ctx.globalAlpha / 0.8; break;
+      case 'imp': // scrappy batwing flyer — wings and horns on a tiny body
+        const iw = Math.sin(legPhase) * 4;
+        F([[-3, -9], [-12, -14 - iw], [-9, -6], [-2, -5]], mat.cloth.mid, mat.cloth.rim);
+        F([[3, -9], [12, -14 - iw], [9, -6], [2, -5]], mat.cloth.mid, mat.cloth.rim);
+        C(0, -9, 3.6, R.mid, R.rim);
+        F([[-2, -12], [-4, -17], [0, -13]], R.shadow); F([[2, -12], [4, -17], [0, -13]], R.shadow); // horns
+        C(-1.2, -9, 0.7, '#ffdd00'); C(1.2, -9, 0.7, '#ffdd00');
+        ctx.strokeStyle = white ? '#fff' : R.shadow; ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.moveTo(0, -5); ctx.quadraticCurveTo(3, 0, -1 + iw * 0.5, 4); ctx.stroke(); break; // tail
+      case 'hound': // low, lunging quadruped — long snout, hackles, whipping tail
+        F([[-8, 0], [-10, swing], [-6, swing]], R.shadow); F([[6, 0], [9, swing2], [5, swing2]], R.shadow);
+        F([[-7, 0], [-8, swing2 * 0.8], [-5, swing2 * 0.8]], A.mul(R.shadow, 0.9)); // 3rd leg for depth
+        F([[-9, -7], [8, -9], [9, -2], [-8, -1]], R.mid, R.rim);
+        // raised hackles along the spine
+        F([[-5, -8], [-3, -12], [-1, -8]], R.shadow); F([[0, -9], [2, -13], [4, -9]], R.shadow);
+        F([[8, -9], [16, -11], [15, -5], [8, -3]], R.light); // long muzzle
+        C(13, -9, 1.3, '#ff6a2a');
+        ctx.strokeStyle = white ? '#fff' : R.shadow; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.moveTo(-9, -6); ctx.quadraticCurveTo(-15, -10, -13, -3 + swing * 0.4); ctx.stroke(); break;
       case 'demon': // horned, deliberately lopsided — nothing mirrors on this body
         F([[-4, 0], [-5, swing], [-2, swing]], R.shadow); F([[4, 0], [5, swing2], [2, swing2]], R.shadow);
         // torso itself is skewed, not just the horns — one shoulder higher, one hip wider
@@ -4710,13 +4850,27 @@ button:hover::after { transform: translateX(120%); }
         F([[4, -15], [7, -19], [5, -16]], R.shadow);
         C(-1, -16, 3.4, R.mid, mat.glow); C(-2.2, -16, 0.8, '#ffdd00'); C(0.2, -16, 0.8, '#ffdd00');
         ctx.strokeStyle = white ? '#fff' : mat.glow || '#ff5a2a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-4, -9); ctx.lineTo(2, -3); ctx.stroke(); break;
-      case 'golem': // blocky construct
-        F([[-8, 0], [8, 0], [7, -16], [-7, -16]], R.mid, R.rim);
-        F([[-8, 0], [-7, -16], [-9, -14], [-10, 0]], R.shadow);
-        C(0, -8, 3, mat.glow || '#7fb0ff'); C(0, -8, 5.5, null, mat.glow); break;
-      case 'wisp': // floating orb
-        ctx.globalAlpha *= white ? 1 : 0.9; C(0, -8, 5, R.mid, mat.glow); C(0, -8, 2.5, '#ffffff');
-        C(0, -8, 8 + Math.sin(legPhase) * 1, null, mat.glow); ctx.globalAlpha = white ? 1 : ctx.globalAlpha / 0.9; break;
+      case 'golem': // rigid stacked slabs with a floating core — perfectly geometric
+        F([[-7, 0], [7, 0], [7, -6], [-7, -6]], A.mul(R.mid, 0.9), R.rim);   // base slab
+        F([[-8, -6], [8, -6], [8, -14], [-8, -14]], R.mid, R.rim);            // torso slab
+        F([[-5, -14], [5, -14], [4, -19], [-4, -19]], A.mul(R.mid, 1.1), R.rim); // head slab
+        // detached floating shoulder blocks — construct, not creature
+        F([[-12, -13], [-9, -13], [-9, -6], [-12, -6]], R.shadow);
+        F([[9, -13], [12, -13], [12, -6], [9, -6]], R.shadow);
+        ctx.strokeStyle = white ? '#fff' : A.alpha(mat.glow || '#7fb0ff', 0.7); ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(-8, -10); ctx.lineTo(8, -10); ctx.stroke(); // glowing seam
+        C(0, -10, 2.6, mat.glow || '#7fb0ff'); C(0, -10, 5, null, mat.glow); break;
+      case 'wisp': // a bright core ringed by orbiting shards, not a plain ball
+        ctx.globalAlpha *= white ? 1 : 0.92;
+        C(0, -8, 4.2, R.mid, mat.glow);
+        C(0, -8, 2, '#ffffff');
+        for (let k = 0; k < 3; k++) {
+          const oa = legPhase * 1.4 + k * 2.09;
+          F([[Math.cos(oa) * 8, -8 + Math.sin(oa) * 8 - 1.8],
+             [Math.cos(oa) * 8 + 1.6, -8 + Math.sin(oa) * 8 + 1.4],
+             [Math.cos(oa) * 8 - 1.6, -8 + Math.sin(oa) * 8 + 1.4]], mat.glow || '#7fb0ff');
+        }
+        ctx.globalAlpha = white ? 1 : ctx.globalAlpha / 0.92; break;
       case 'harpy': // winged humanoid — wings read wider than the whole body is tall
         const wf = Math.sin(legPhase) * 7;
         F([[-4, -12], [-19, -15 - wf], [-3, -6]], R.shadow); F([[4, -12], [19, -15 - wf], [3, -6]], R.shadow);
@@ -4969,12 +5123,39 @@ button:hover::after { transform: translateX(120%); }
       if (winter) { gg.addColorStop(0, '#e9f1f7'); gg.addColorStop(0.55, '#cdd9e6'); gg.addColorStop(1, '#aab8ca'); }
       else { gg.addColorStop(0, RS.RAMP.grass.light); gg.addColorStop(0.55, RS.RAMP.grass.mid); gg.addColorStop(1, RS.RAMP.grass.shadow); }
       c.fillStyle = gg; c.fillRect(0, 0, W, H);
+      // Broad tonal patches first — breaks the flat single-colour field into
+      // meadow/shade variation before any detail goes on top.
+      for (let i = 0; i < 26; i++) {
+        const s = ((i * 2654435761) ^ 0x5bf03635) >>> 0;
+        // NOTE: unsigned shifts (>>>) are required here. A signed >> on a hash
+        // above 2^31 yields a negative value, and `% 78` then produces a
+        // negative radius, which makes createRadialGradient throw and kills
+        // the whole frame.
+        const px = (s % W), py = ((s >>> 9) % H), pr = 46 + ((s >>> 17) % 78);
+        const g2 = c.createRadialGradient(px, py, 0, px, py, S.R0(pr) || 1);
+        const tone = winter
+          ? ((s & 1) ? 'rgba(255,255,255,0.10)' : 'rgba(120,145,175,0.10)')
+          : ((s & 1) ? 'rgba(126,168,74,0.16)' : 'rgba(48,74,34,0.16)');
+        g2.addColorStop(0, tone); g2.addColorStop(1, 'rgba(0,0,0,0)');
+        c.fillStyle = g2; c.beginPath(); c.arc(px, py, pr, 0, TAU); c.fill();
+      }
       // scattered deterministic detail across the whole field (no per-tile grid)
-      for (let gy = 8; gy < H; gy += 11) for (let gx = 6; gx < W; gx += 13) {
+      for (let gy = 7; gy < H; gy += 13) for (let gx = 6; gx < W; gx += 15) {
         const s = ((gx * 73856093) ^ (gy * 19349663)) >>> 0;
         const jx = gx + (s & 7) - 3, jy = gy + ((s >> 3) & 7) - 3;
-        if (winter) { c.fillStyle = (s & 1) ? A.alpha('#ffffff', 0.6) : A.alpha('#9fb0c4', 0.5); c.beginPath(); c.arc(jx, jy, 1 + (s & 1), 0, TAU); c.fill(); }
-        else { c.fillStyle = (s & 1) ? RS.RAMP.grass.shadow : A.alpha(RS.RAMP.grass.light, 0.5); c.fillRect(jx, jy, 1, 2 + (s & 1)); }
+        if (winter) {
+          c.fillStyle = (s & 1) ? A.alpha('#ffffff', 0.65) : A.alpha('#9fb0c4', 0.45);
+          c.beginPath(); c.arc(jx, jy, 0.8 + (s & 1) * 0.7, 0, TAU); c.fill();
+        } else {
+          // three-blade clumps of varying height, leaning with the prevailing wind
+          const blades = 2 + (s & 1), lean = ((s >> 5) & 1) ? 1 : -1;
+          for (let b = 0; b < blades; b++) {
+            const bx = jx + b * 2 - 1, h = 2 + ((s >> (b * 2 + 6)) & 3);
+            c.strokeStyle = ((s >> b) & 1) ? A.alpha(RS.RAMP.grass.shadow, 0.55) : A.alpha(RS.RAMP.grass.light, 0.35);
+            c.lineWidth = 1;
+            c.beginPath(); c.moveTo(bx, jy + 1); c.lineTo(bx + lean * 0.8, jy + 1 - h); c.stroke();
+          }
+        }
       }
       // 2) special terrain as soft, slightly-overlapping rounded blobs (merge)
       // Two-pass patch so neighbouring tiles of a kind merge into one smooth
@@ -5085,8 +5266,24 @@ button:hover::after { transform: translateX(120%); }
       c.strokeStyle = RS.RAMP.road.shadow; c.lineWidth = TILE * 0.86; trace(); c.stroke();
       // road surface
       c.strokeStyle = RS.RAMP.road.mid; c.lineWidth = TILE * 0.64; trace(); c.stroke();
-      // subtle worn center highlight
-      c.strokeStyle = A.alpha(RS.RAMP.road.light, 0.35); c.lineWidth = TILE * 0.22; trace(); c.stroke();
+      // twin rutted wheel tracks + a worn crown, so the road looks used
+      c.strokeStyle = A.alpha(RS.RAMP.road.light, 0.30); c.lineWidth = TILE * 0.20; trace(); c.stroke();
+      c.strokeStyle = A.alpha(RS.RAMP.road.shadow, 0.55); c.lineWidth = TILE * 0.045;
+      c.save(); c.translate(0, -TILE * 0.15); trace(); c.stroke(); c.restore();
+      c.save(); c.translate(0, TILE * 0.15); trace(); c.stroke(); c.restore();
+      // cobble grit scattered along the surface
+      c.save(); c.lineWidth = TILE * 0.62; trace();
+      c.strokeStyle = 'rgba(0,0,0,0)'; c.stroke();
+      c.clip();
+      for (const pt of pts) {
+        for (let g = 0; g < 22; g++) {
+          const sd = ((pt.x * 73856093) ^ (pt.y * 19349663) ^ (g * 83492791)) >>> 0;
+          const gx = pt.x + ((sd % 120) - 60), gy = pt.y + (((sd >>> 9) % 120) - 60);
+          c.fillStyle = (sd & 1) ? 'rgba(255,240,210,0.055)' : 'rgba(0,0,0,0.10)';
+          c.fillRect(gx, gy, 2, 1.6);
+        }
+      }
+      c.restore();
     }
     _terrainLayer(ctx, m) {
       const sig = this._terrainSignature(m);
@@ -5597,7 +5794,7 @@ button:hover::after { transform: translateX(120%); }
           <div class="menu-grid">
             <button class="mbtn play" data-go="mapselect"><b>⚔ Play</b><span>12 maps · 4 difficulties</span></button>
             <button class="mbtn" data-go="roll"><b>🎲 Roll</b><span>Summon towers</span></button>
-            <button class="mbtn" data-go="collection"><b>🏰 Collection</b><span>${Meta.ownedTowerDefs().length}/26 towers</span></button>
+            <button class="mbtn" data-go="collection"><b>🏰 Collection</b><span>${Meta.ownedTowerDefs().length}/${RS.TOWERS.length} towers</span></button>
             <button class="mbtn" data-go="forge"><b>🔨 Forge</b><span>${Meta.forgeUnlocked ? 'Convert & craft' : 'Unlocks Lv 2'}</span></button>
             <button class="mbtn" data-go="codex"><b>📖 Codex</b><span>${Math.round(Meta.codexPct() * 100)}% complete</span></button>
             <button class="mbtn" data-go="leaderboard"><b>🏆 Champions' Ladder</b><span>Rank #${Meta.myRank()} · climb to Claude</span></button>
@@ -5741,7 +5938,8 @@ button:hover::after { transform: translateX(120%); }
       const c = RS.rarityColor(t.rarity);
       const owned = Meta.ownedCount(t.id);
       const rk = RS.rarityRank(t.rarity);
-      const anim = rk >= 6 ? 'rc-prism' : rk >= 5 ? 'rc-ember' : rk >= 4 ? 'rc-shimmer' : '';
+      const anim = t.rarity === 'Mythic+' ? 'rc-prism' : t.rarity === 'Mythic' ? 'rc-ember'
+        : t.rarity === 'Ancient' ? 'rc-patina' : t.rarity === 'Legendary' ? 'rc-shimmer' : '';
       return `<div class="tchip ${anim}" style="--rc:${c}">
         <div class="tchip-icon"><canvas class="glyph" data-glyph="${t.id}" width="44" height="44"></canvas>
           <span class="dmgicon di-${t.damageType.toLowerCase()}" title="${t.damageType}">${RS.dmgIcon(t.damageType)}</span></div>
@@ -5859,14 +6057,14 @@ button:hover::after { transform: translateX(120%); }
         const core = $('.shine-core', stage), sym = $('.shine-sym', stage);
         core.animate([{ transform: 'scale(.4)', opacity: .5 }, { transform: `scale(${1.4 + bestRank * 0.25})`, opacity: 1 }], { duration: dur, easing: 'cubic-bezier(.4,0,.6,1)', fill: 'forwards' });
         sym.animate([{ opacity: 0, transform: 'scale(.2) rotate(-40deg)' }, { opacity: 0, offset: 0.55 }, { opacity: 1, transform: 'scale(1) rotate(0deg)' }], { duration: dur, fill: 'forwards' });
-        if (bestRank >= 6) { document.body.classList.add('shatter'); setTimeout(() => document.body.classList.remove('shatter'), 900); }
-        if (bestRank >= 5) this.match && (this.match.freeze = 0.4);
+        if (bestRank >= RS.rarityRank('Mythic+')) { document.body.classList.add('shatter'); setTimeout(() => document.body.classList.remove('shatter'), 900); }
+        if (bestRank >= RS.rarityRank('Mythic')) this.match && (this.match.freeze = 0.4);
       }
       setTimeout(() => {
         stage.innerHTML = `<div class="results">${results.map((r) => {
           if (r.converted) return `<div class="rescard" style="--rc:${RS.rarityColor('Mythic')}"><div class="resrar">50/50 → Relics</div><b>+${r.converted.relic} 🔮</b></div>`;
           const t = r.tower; const dup = Meta.ownedCount(t.id) > 1;
-          return `<div class="rescard ${RS.rarityRank(r.rarity) >= 5 ? 'gleam' : ''}" style="--rc:${RS.rarityColor(r.rarity)}">
+          return `<div class="rescard ${RS.rarityRank(r.rarity) >= RS.rarityRank('Mythic') ? 'gleam' : ''}" style="--rc:${RS.rarityColor(r.rarity)}">
             <div class="resrar">${RS.rarityIcon(r.rarity)} ${r.rarity}</div>
             <canvas class="glyph rg" data-glyph="${t.id}" width="48" height="48"></canvas>
             <b>${t.name}</b>${dup ? '<span class="dupflag">DUPLICATE</span>' : '<span class="newflag">NEW</span>'}
@@ -5933,7 +6131,7 @@ button:hover::after { transform: translateX(120%); }
     renderCollection() {
       this.root.innerHTML = this._topbar() + `
         <div class="page">
-          <div class="page-head"><button class="back" data-go="menu">← Menu</button><h2>Collection <small>${Meta.ownedTowerDefs().length}/26</small></h2></div>
+          <div class="page-head"><button class="back" data-go="menu">← Menu</button><h2>Collection <small>${Meta.ownedTowerDefs().length}/${RS.TOWERS.length}</small></h2></div>
           <div class="collgrid">
           ${RS.TOWERS.map((t) => {
             const owned = Meta.ownedCount(t.id);

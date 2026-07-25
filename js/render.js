@@ -192,12 +192,39 @@
       if (winter) { gg.addColorStop(0, '#e9f1f7'); gg.addColorStop(0.55, '#cdd9e6'); gg.addColorStop(1, '#aab8ca'); }
       else { gg.addColorStop(0, RS.RAMP.grass.light); gg.addColorStop(0.55, RS.RAMP.grass.mid); gg.addColorStop(1, RS.RAMP.grass.shadow); }
       c.fillStyle = gg; c.fillRect(0, 0, W, H);
+      // Broad tonal patches first — breaks the flat single-colour field into
+      // meadow/shade variation before any detail goes on top.
+      for (let i = 0; i < 26; i++) {
+        const s = ((i * 2654435761) ^ 0x5bf03635) >>> 0;
+        // NOTE: unsigned shifts (>>>) are required here. A signed >> on a hash
+        // above 2^31 yields a negative value, and `% 78` then produces a
+        // negative radius, which makes createRadialGradient throw and kills
+        // the whole frame.
+        const px = (s % W), py = ((s >>> 9) % H), pr = 46 + ((s >>> 17) % 78);
+        const g2 = c.createRadialGradient(px, py, 0, px, py, S.R0(pr) || 1);
+        const tone = winter
+          ? ((s & 1) ? 'rgba(255,255,255,0.10)' : 'rgba(120,145,175,0.10)')
+          : ((s & 1) ? 'rgba(126,168,74,0.16)' : 'rgba(48,74,34,0.16)');
+        g2.addColorStop(0, tone); g2.addColorStop(1, 'rgba(0,0,0,0)');
+        c.fillStyle = g2; c.beginPath(); c.arc(px, py, pr, 0, TAU); c.fill();
+      }
       // scattered deterministic detail across the whole field (no per-tile grid)
-      for (let gy = 8; gy < H; gy += 11) for (let gx = 6; gx < W; gx += 13) {
+      for (let gy = 7; gy < H; gy += 13) for (let gx = 6; gx < W; gx += 15) {
         const s = ((gx * 73856093) ^ (gy * 19349663)) >>> 0;
         const jx = gx + (s & 7) - 3, jy = gy + ((s >> 3) & 7) - 3;
-        if (winter) { c.fillStyle = (s & 1) ? A.alpha('#ffffff', 0.6) : A.alpha('#9fb0c4', 0.5); c.beginPath(); c.arc(jx, jy, 1 + (s & 1), 0, TAU); c.fill(); }
-        else { c.fillStyle = (s & 1) ? RS.RAMP.grass.shadow : A.alpha(RS.RAMP.grass.light, 0.5); c.fillRect(jx, jy, 1, 2 + (s & 1)); }
+        if (winter) {
+          c.fillStyle = (s & 1) ? A.alpha('#ffffff', 0.65) : A.alpha('#9fb0c4', 0.45);
+          c.beginPath(); c.arc(jx, jy, 0.8 + (s & 1) * 0.7, 0, TAU); c.fill();
+        } else {
+          // three-blade clumps of varying height, leaning with the prevailing wind
+          const blades = 2 + (s & 1), lean = ((s >> 5) & 1) ? 1 : -1;
+          for (let b = 0; b < blades; b++) {
+            const bx = jx + b * 2 - 1, h = 2 + ((s >> (b * 2 + 6)) & 3);
+            c.strokeStyle = ((s >> b) & 1) ? A.alpha(RS.RAMP.grass.shadow, 0.55) : A.alpha(RS.RAMP.grass.light, 0.35);
+            c.lineWidth = 1;
+            c.beginPath(); c.moveTo(bx, jy + 1); c.lineTo(bx + lean * 0.8, jy + 1 - h); c.stroke();
+          }
+        }
       }
       // 2) special terrain as soft, slightly-overlapping rounded blobs (merge)
       // Two-pass patch so neighbouring tiles of a kind merge into one smooth
@@ -308,8 +335,24 @@
       c.strokeStyle = RS.RAMP.road.shadow; c.lineWidth = TILE * 0.86; trace(); c.stroke();
       // road surface
       c.strokeStyle = RS.RAMP.road.mid; c.lineWidth = TILE * 0.64; trace(); c.stroke();
-      // subtle worn center highlight
-      c.strokeStyle = A.alpha(RS.RAMP.road.light, 0.35); c.lineWidth = TILE * 0.22; trace(); c.stroke();
+      // twin rutted wheel tracks + a worn crown, so the road looks used
+      c.strokeStyle = A.alpha(RS.RAMP.road.light, 0.30); c.lineWidth = TILE * 0.20; trace(); c.stroke();
+      c.strokeStyle = A.alpha(RS.RAMP.road.shadow, 0.55); c.lineWidth = TILE * 0.045;
+      c.save(); c.translate(0, -TILE * 0.15); trace(); c.stroke(); c.restore();
+      c.save(); c.translate(0, TILE * 0.15); trace(); c.stroke(); c.restore();
+      // cobble grit scattered along the surface
+      c.save(); c.lineWidth = TILE * 0.62; trace();
+      c.strokeStyle = 'rgba(0,0,0,0)'; c.stroke();
+      c.clip();
+      for (const pt of pts) {
+        for (let g = 0; g < 22; g++) {
+          const sd = ((pt.x * 73856093) ^ (pt.y * 19349663) ^ (g * 83492791)) >>> 0;
+          const gx = pt.x + ((sd % 120) - 60), gy = pt.y + (((sd >>> 9) % 120) - 60);
+          c.fillStyle = (sd & 1) ? 'rgba(255,240,210,0.055)' : 'rgba(0,0,0,0.10)';
+          c.fillRect(gx, gy, 2, 1.6);
+        }
+      }
+      c.restore();
     }
     _terrainLayer(ctx, m) {
       const sig = this._terrainSignature(m);

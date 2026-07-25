@@ -16,7 +16,7 @@
       tokens: { copper: 500, silver: 20, gold: 5, relic: 0 },
       rolls: { Basic: 0, Lucky: 0, Super: 0, Divine: 0 }, // roll tickets
       roster: { peasant: 1, archer: 1, torch: 1, scout: 1 }, // starter towers
-      shards: { Common: 0, Uncommon: 0, Rare: 0, Epic: 0, Legendary: 0, Mythic: 0, 'Mythic+': 0 },
+      shards: { Common: 0, Uncommon: 0, Rare: 0, Epic: 0, Legendary: 0, Ancient: 0, Mythic: 0, 'Mythic+': 0 },
       pity: { epic: 0, legend: 0, mythic: 0, plus: 0 },
       legendPityArmed: false,
       rollCount: 0,
@@ -140,10 +140,10 @@
         weights = Object.assign({}, RS.ROLL_BASE_WEIGHTS);
         if (tier === 'Lucky') {
           weights.Common = 0;
-          for (const k of ['Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Mythic+']) weights[k] *= 3;
+          for (const k of ['Uncommon', 'Rare', 'Epic', 'Legendary', 'Ancient', 'Mythic', 'Mythic+']) weights[k] *= 3;
         } else if (tier === 'Super') {
           weights.Common = 0; weights.Uncommon = 0;
-          for (const k of ['Epic', 'Legendary', 'Mythic', 'Mythic+']) weights[k] *= 6;
+          for (const k of ['Epic', 'Legendary', 'Ancient', 'Mythic', 'Mythic+']) weights[k] *= 6;
           weights.Rare *= 1;
         }
       }
@@ -152,7 +152,7 @@
       if (pity.legend + 1 >= RS.PITY.legend.softStart) weights.Legendary += (pity.legend + 1 - RS.PITY.legend.softStart) * RS.PITY.legend.softStep * 100;
       // roll luck (account bonus) nudges rare+ up slightly
       const luck = this.rollLuck || 1;
-      for (const k of ['Epic', 'Legendary', 'Mythic', 'Mythic+']) weights[k] *= luck;
+      for (const k of ['Epic', 'Legendary', 'Ancient', 'Mythic', 'Mythic+']) weights[k] *= luck;
 
       // hard pity overrides — force a floor rarity.
       let forcedFloor = null;
@@ -244,10 +244,10 @@
         weights = Object.assign({}, RS.ROLL_BASE_WEIGHTS);
         if (tier === 'Lucky') {
           weights.Common = 0;
-          for (const k of ['Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Mythic+']) weights[k] *= 3;
+          for (const k of ['Uncommon', 'Rare', 'Epic', 'Legendary', 'Ancient', 'Mythic', 'Mythic+']) weights[k] *= 3;
         } else if (tier === 'Super') {
           weights.Common = 0; weights.Uncommon = 0;
-          for (const k of ['Epic', 'Legendary', 'Mythic', 'Mythic+']) weights[k] *= 6;
+          for (const k of ['Epic', 'Legendary', 'Ancient', 'Mythic', 'Mythic+']) weights[k] *= 6;
         }
       }
       const floorRank = RS.rarityRank(cfg.floor);

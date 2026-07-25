@@ -182,6 +182,12 @@
       if (n % RS.WAVE.miniBossEvery === 0) return 'Elite';
       const seed = new RS.RNG((this._hashSeed(this.map.id) + n * 97 + this.diff.order * 13) >>> 0);
       const options = ['Standard', 'Standard', 'Swarm', 'Aerial', 'Stealth', 'Split', 'Endurance', 'Elite'];
+      // No pure-Aerial or Stealth waves in the opening stretch. Both are
+      // untouchable by the cheap ground/melee towers a new player can afford,
+      // and Farmstead Easy was rolling Aerial for waves 1 AND 2 — so the very
+      // first thing a player ever saw was their starter tower unable to act,
+      // which reads as "melee is broken" rather than "bring anti-air".
+      if (n <= RS.WAVE.noAirBeforeWave) return seed.pick(['Standard', 'Standard', 'Swarm', 'Endurance']);
       return seed.pick(options);
     }
 
@@ -227,6 +233,18 @@
       if (groups.length === 0) {
         const pick = seed.weighted(this._candidatePool());
         groups.push({ enemyId: pick.def.id, count: 1, spacing: 1, lane: 0 });
+      }
+      // Guarantee a ground escort. A wave with zero walkers leaves every melee
+      // and blocker tower on the field with nothing it is allowed to attack —
+      // the tower looks broken through no fault of the player's build. Aerial
+      // waves stay air-HEAVY (that's their identity); they just aren't air-ONLY.
+      if (groups.every((g) => RS.ENEMY_BY_ID[g.enemyId].traits.includes('Flying'))) {
+        const ground = this._candidatePool().filter((p) => !p.def.traits.includes('Flying'));
+        if (ground.length) {
+          const esc = seed.weighted(ground).def;
+          const n2 = Math.max(2, Math.round(budget * 0.22 / Math.max(1, esc.cost)));
+          groups.push({ enemyId: esc.id, count: n2 * (esc.abilities.packSize || 1), spacing: info.spacing, lane: 0 });
+        }
       }
       return { arch, groups, budget: Math.round(budget), name: arch };
     }
@@ -995,7 +1013,10 @@
     _coneAttack(t, target, cands) {
       const dInfo = this._computeShotDamage(t, target);
       const dx = target.x - t.x, dy = target.y - t.y; const ang = Math.atan2(dy, dx);
-      const cone = t.def.traits.cone; const half = cone.angle / 2; const reach = cone.lengthT * TILE;
+      const cone = t.def.traits.cone;
+      // branch upgrades may widen/lengthen the cone (e.g. Greek Fire "Siphon Array")
+      const half = (cone.angle + ((t._mods && t._mods.coneAngle) || 0)) / 2;
+      const reach = (cone.lengthT + ((t._mods && t._mods.coneLength) || 0)) * TILE * t.buff.range;
       for (const e of this.enemies) {
         if (!e.alive) continue;
         const d = dist(t.x, t.y, e.x, e.y); if (d > reach) continue;
@@ -1375,7 +1396,7 @@
   }
 
   // Placement caps & star cap (referenced by match).
-  RS.PLACE_CAP = { Common: 8, Uncommon: 6, Rare: 5, Epic: 4, Legendary: 3, Mythic: 2, 'Mythic+': 1 };
+  RS.PLACE_CAP = { Common: 8, Uncommon: 6, Rare: 5, Epic: 4, Legendary: 3, Ancient: 2, Mythic: 2, 'Mythic+': 1 };
   RS.STAR3_TOWER_CAP = 14;
   RS.Match = Match;
 })();

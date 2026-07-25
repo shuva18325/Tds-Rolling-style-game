@@ -252,6 +252,33 @@
       ascend: { desc: 'Reload halved; the barrel glows white-hot between shots.' },
       lore: 'Cast in a single mould over forty days, drawn by sixty oxen. It does not besiege a wall — it ends the argument.' }),
 
+    /* ----------------------------- ANCIENT ----------------------------- */
+    /* A tier above Legendary, below Mythic — relics of a older, classical age.
+     * Costs and output sit deliberately between Paladin/Archmage (~3-3.5k) and
+     * Grand Marshal/Wyrm (~8-9.5k).                                         */
+    T({ id: 'spartan', name: 'Spartan Phalanx', rarity: 'Ancient', cost: 5200,
+      damage: 175, fireRate: 1.15, rangeT: 2.2, targeting: 'First', damageType: 'Melee',
+      splashT: 0, status: [], placement: 'Path-adjacent-only',
+      traits: { blocker: { capacity: 5, respawn: 4 }, melee: true,
+        meleeSlash: { radiusT: 2.3, arc: 3.4 }, // widest sweep of any melee unit
+        aura: { radiusT: 3, dmg: 0.15, immune: ['Fear'] } },
+      upgrades: { branch: [
+        { name: 'Hoplite Wall', desc: 'holds 7, much tougher', mods: { blockCap: 2, hp: 1.2 } },
+        { name: 'Dory Thrust', desc: 'longer reach, +dmg', mods: { damage: 0.5, rangeT: 0.6 } } ] },
+      ascend: { desc: 'The phalanx never breaks: instant respawn and a 360° sweep.' },
+      lore: 'Three hundred held a pass. These thirty hold a road.' }),
+
+    T({ id: 'greekfire', name: 'Greek Fire Thrower', rarity: 'Ancient', cost: 5800,
+      damage: 95, fireRate: 2.6, rangeT: 3.1, targeting: 'Most-Clustered', damageType: 'Fire',
+      splashT: 0, status: ['Burn'], placement: 'Ground',
+      traits: { cone: { angle: 0.85, lengthT: 3.3 }, burn: { dps: 55, dur: 4 },
+        siphonProof: true },
+      upgrades: { branch: [
+        { name: 'Naphtha Blend', desc: 'far fiercer burn', mods: { burnDps: 45, damage: 0.25 } },
+        { name: 'Siphon Array', desc: 'wider, longer cone', mods: { coneAngle: 0.5, coneLength: 1.2 } } ] },
+      ascend: { desc: 'The stream clings: burning enemies ignite everything they touch.' },
+      lore: 'The formula died with the empire. The fire did not.' }),
+
     /* ------------------------------ MYTHIC ----------------------------- */
     T({ id: 'marshal', name: 'Grand Marshal of the Realm', rarity: 'Mythic', cost: 8000,
       damage: 20, fireRate: 1.0, rangeT: 2.0, targeting: 'First', damageType: 'Holy',
@@ -351,6 +378,8 @@
     engineer:  { l2: std('Reinforced Turrets', 'Sturdier builds. +22% dmg, +12% range, +8% attack speed.'), l3: std('Assembly Line', 'Faster works. +22% dmg, +12% range, +8% attack speed.'), ascend: 'War Foundry' },
     wyvernrider:{ l2: std('Firebreath Tonic', 'Hotter breath. +22% dmg, +12% range, +8% attack speed.'), l3: std('Ace Flight', 'Swifter strafe. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Trail of Cinders' },
     basilisk:  { l2: std('Reinforced Bands', 'Thicker iron rings. +22% dmg, +12% range, +8% attack speed.'), l3: std('Master Founders', 'A truer bore. +22% dmg, +12% range, +8% attack speed.'), ascend: 'The Conqueror\'s Voice' },
+    spartan:   { l2: std('Agoge Training', 'Lifelong discipline. +22% dmg, +12% range, +8% attack speed.'), l3: std('Bronze Aspis', 'A wall of shields. +22% dmg, +12% range, +8% attack speed.'), ascend: 'The Unbroken Line' },
+    greekfire: { l2: std('Pressurised Siphon', 'A fiercer jet. +22% dmg, +12% range, +8% attack speed.'), l3: std('Sea-Fire Doctrine', 'Imperial secrets. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Fire of Byzantium' },
     marshal:   { l2: std('War Council', 'Stronger command. +22% dmg, +12% range, +8% attack speed.'), l3: std('Grand Strategy', 'Wider reach. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Banner of the Realm' },
     wyrm:      { l2: std('Molten Gullet', 'Fiercer breath. +22% dmg, +12% range, +8% attack speed.'), l3: std('Ancient Fury', 'Wider cone. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Elder Cataclysm' },
     lich:      { l2: std('Grave Bind', 'Stronger raise. +22% dmg, +12% range, +8% attack speed.'), l3: std('Death Dominion', 'Wider grasp. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Undying Legion' },

@@ -32,8 +32,9 @@
     { id: 'Rare',     color: '#4a90d9', rank: 2 },
     { id: 'Epic',     color: '#9b59b6', rank: 3 },
     { id: 'Legendary',color: '#f0a92e', rank: 4 },
-    { id: 'Mythic',   color: '#e04b4b', rank: 5 },
-    { id: 'Mythic+',  color: '#ffffff', rank: 6, prismatic: true },
+    { id: 'Ancient',  color: '#17b8a6', rank: 5 },
+    { id: 'Mythic',   color: '#e04b4b', rank: 6 },
+    { id: 'Mythic+',  color: '#ffffff', rank: 7, prismatic: true },
   ];
   RS.rarityColor = (id) => (RS.RARITY.find((r) => r.id === id) || RS.RARITY[0]).color;
   RS.rarityRank = (id) => (RS.RARITY.find((r) => r.id === id) || RS.RARITY[0]).rank;

@@ -16,15 +16,23 @@
   // petals radiating from a centre point, instead of a crown emoji. Inline SVG
   // so it's fully self-contained (no external image, CSP-safe). Used wherever
   // Claude's row/badge is drawn; `size` is the rendered box in px.
+  // Eight bold, clean petals with real gaps between them — the previous
+  // ten-petal version read as a cluttered blob at small sizes because the
+  // petals touched. Each petal is a straight tapered wedge (crisp silhouette,
+  // no soft curves) meeting at a small hub.
   RS.claudeSigil = (size) => {
     size = size || 22;
-    const N = 10, R = 9, W = 3.1;
+    const N = 8, TIP = 10.5, HALF = 1.55, HUB = 2.2;
     let petals = '';
     for (let i = 0; i < N; i++) {
       const rot = (360 / N) * i;
-      petals += `<path d="M0 0 Q -${W} -${(R * 0.55).toFixed(1)} 0 -${R} Q ${W} -${(R * 0.55).toFixed(1)} 0 0 Z" fill="#d97757" transform="rotate(${rot})"/>`;
+      // wedge: wide at the hub, tapering to a blunt point at the tip
+      petals += `<path d="M -${HALF} -${HUB} L -0.75 -${TIP} L 0.75 -${TIP} L ${HALF} -${HUB} Z" `
+             + `fill="#d97757" transform="rotate(${rot})"/>`;
     }
-    return `<svg class="claude-sigil" width="${size}" height="${size}" viewBox="-12 -12 24 24" style="vertical-align:middle;flex-shrink:0" xmlns="http://www.w3.org/2000/svg"><g>${petals}</g><circle r="1.7" fill="#c2410c"/></svg>`;
+    return `<svg class="claude-sigil" width="${size}" height="${size}" viewBox="-12 -12 24 24" `
+      + `style="vertical-align:middle;flex-shrink:0" xmlns="http://www.w3.org/2000/svg">`
+      + `${petals}<circle r="${HUB}" fill="#d97757"/></svg>`;
   };
 
   // Weighting used for BOTH rivals and the player — see Meta.powerScore().

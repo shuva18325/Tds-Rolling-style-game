@@ -54,6 +54,7 @@
       Endurance: { familyBias: null,        sizeBias: 0.7,  spacing: 0.35 },
       Boss:      { familyBias: null,        sizeBias: 1.0,  spacing: 1.0, boss: true },
     },
+    noAirBeforeWave: 3,     // waves 1-3 stay ground-only (see _archetypeFor)
     miniBossEvery: 10,       // every 10th wave = mini-boss (elite-heavy)
     callEarlyBonusPerSec: 2, // in-match gold per remaining second when calling early
   };
@@ -61,14 +62,14 @@
   // ---- Gacha roll tables (§4.1) ----
   // Basic weights are the §3.1 table. Other tiers transform them.
   RS.ROLL_BASE_WEIGHTS = {
-    Common: 60.0, Uncommon: 25.0, Rare: 10.0, Epic: 3.8, Legendary: 1.0, Mythic: 0.19, 'Mythic+': 0.01,
+    Common: 60.0, Uncommon: 25.0, Rare: 10.0, Epic: 3.8, Legendary: 0.75, Ancient: 0.25, Mythic: 0.19, 'Mythic+': 0.01,
   };
   RS.ROLLS = {
     Basic:  { id: 'Basic',  costToken: 'copper',  cost: 100, floor: 'Common',   label: '100 Copper' },
     Lucky:  { id: 'Lucky',  costToken: 'silver',  cost: 50,  floor: 'Uncommon', label: '50 Silver'  },
     Super:  { id: 'Super',  costToken: 'gold',    cost: 25,  floor: 'Rare',     label: '25 Gold'    },
     Divine: { id: 'Divine', costToken: 'relic',   cost: 5,   floor: 'Epic',     label: '5 Relics',
-      fixed: { Epic: 70.8, Legendary: 22, Mythic: 6, 'Mythic+': 1.2 } },
+      fixed: { Epic: 64.8, Legendary: 22, Ancient: 6, Mythic: 6, 'Mythic+': 1.2 } },
   };
 
   // ---- Pity (§4.2) ----
@@ -97,6 +98,7 @@
       Rare:      { dismantle: 8,    craft: 80 },
       Epic:      { dismantle: 25,   craft: 250 },
       Legendary: { dismantle: 80,   craft: 800 },
+      Ancient:   { dismantle: 150,  craft: 1500 },
       Mythic:    { dismantle: 300,  craft: 3000 },
       'Mythic+': { dismantle: 1200, craft: 12000 },
     },

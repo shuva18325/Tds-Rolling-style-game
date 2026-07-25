@@ -93,6 +93,7 @@
     Rare:      { base: '#4a90d9', accent: '#c9d4e0', glow: '#6fb0f5', particle: '#a8d0ff', dais: '#3a5a7a', glowStr: 0.22 },
     Epic:      { base: '#9b59b6', accent: '#d9a441', glow: '#c07fe0', particle: '#e0b0ff', dais: '#4a3a5a', glowStr: 0.30 },
     Legendary: { base: '#f0a92e', accent: '#fff2c0', glow: '#ffcb5a', particle: '#ffe08a', dais: '#6a4a1a', glowStr: 0.42, shimmer: true },
+    Ancient:   { base: '#17b8a6', accent: '#d8c9a0', glow: '#3fe0cc', particle: '#9ff0e4', dais: '#1a4a48', glowStr: 0.48, patina: true },
     Mythic:    { base: '#e04b4b', accent: '#ffb060', glow: '#ff6a4a', particle: '#ff9a5a', dais: '#5a2020', glowStr: 0.55, ember: true },
     'Mythic+': { base: '#ffffff', accent: '#ffffff', glow: '#ffffff', particle: '#ffffff', dais: '#3a3a44', glowStr: 0.7, prismatic: true },
   };
@@ -135,6 +136,8 @@
     engineer:   { sil: 'engineer',   anim: 'siege' },
     wyvernrider:{ sil: 'wyvernrider',anim: 'flyer', scale: 1.05 },
     basilisk:   { sil: 'basilisk',   anim: 'siege', scale: 1.55 },
+    spartan:    { sil: 'spartan',    anim: 'blocker', scale: 1.08 },
+    greekfire:  { sil: 'greekfire',  anim: 'siege' },
     marshal:    { sil: 'marshal',    anim: 'banner' },
     wyrm:       { sil: 'wyrm',       anim: 'static', scale: 1.25 },
     lich:       { sil: 'lich',       anim: 'mage' },
@@ -170,7 +173,7 @@
   // A distinct symbol per rarity — used by the roll reveal and odds panel.
   const RARITY_ICON = {
     Common: '🪨', Uncommon: '🍀', Rare: '💎', Epic: '🔮',
-    Legendary: '👑', Mythic: '🔥', 'Mythic+': '✨',
+    Legendary: '👑', Ancient: '🏛️', Mythic: '🔥', 'Mythic+': '✨',
   };
   RS.rarityIcon = (id) => RARITY_ICON[id] || '✨';
 

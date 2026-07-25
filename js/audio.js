@@ -86,10 +86,10 @@
     coin() { this.tone({ freq: 880, type: 'square', dur: 0.06, vol: 0.1 }); this.tone({ freq: 1320, type: 'square', dur: 0.08, vol: 0.08, delay: 0.05 }); },
     forge() { this.tone({ freq: 260, freqEnd: 120, type: 'square', dur: 0.12, vol: 0.2 }); this.noise({ freq: 3500, q: 2, dur: 0.12, vol: 0.16, filter: 'highpass' }); },
     reveal(rank) { // roll result — escalates with rarity rank (0..6)
-      const base = [392, 440, 523, 587, 659, 784, 880][Math.min(rank, 6)];
+      const base = [392, 440, 523, 587, 659, 740, 784, 880][Math.min(rank, 7)];
       const steps = 3 + rank;
       for (let i = 0; i < steps; i++) this.tone({ freq: base * Math.pow(1.12, i), type: 'triangle', dur: 0.16, vol: 0.14, delay: i * 0.05 });
-      if (rank >= 5) this.tone({ freq: base * 2, type: 'sine', dur: 0.5, vol: 0.2, delay: steps * 0.05 });
+      if (rank >= RS.rarityRank('Mythic')) this.tone({ freq: base * 2, type: 'sine', dur: 0.5, vol: 0.2, delay: steps * 0.05 });
     },
     win() { [523, 659, 784, 1046].forEach((f, i) => this.tone({ freq: f, type: 'triangle', dur: 0.3, vol: 0.18, delay: i * 0.12 })); },
     lose() { [440, 349, 262].forEach((f, i) => this.tone({ freq: f, type: 'sawtooth', dur: 0.4, vol: 0.18, delay: i * 0.16 })); },

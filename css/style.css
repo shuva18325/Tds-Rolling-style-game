@@ -4,7 +4,7 @@
   --text:#e8dcc0; --dim:#a49b86; --gold:#d9a441; --blood:#a02c2c;
   --good:#5fa855; --bad:#e04b4b; --warn:#f0a92e;
   --c-common:#9a9a9a; --c-uncommon:#5fa855; --c-rare:#4a90d9; --c-epic:#9b59b6;
-  --c-legendary:#f0a92e; --c-mythic:#e04b4b; --c-mythicplus:#ffffff;
+  --c-legendary:#f0a92e; --c-ancient:#17b8a6; --c-mythic:#e04b4b; --c-mythicplus:#ffffff;
   --d-easy:#5fa855; --d-medium:#4a90d9; --d-hard:#9b59b6; --d-hardcore:#e04b4b;
 }
 * { box-sizing:border-box; margin:0; padding:0; }

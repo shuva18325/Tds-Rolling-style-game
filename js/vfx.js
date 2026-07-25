@@ -246,9 +246,9 @@
       const n = 20 + rank * 14;
       for (let i = 0; i < n; i++) { const a = rnd(0, TAU), sp = rnd(120, 320 + rank * 60); this._p({ x: cx, y: cy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, g: 120, life: rnd(0.5, 1), max: 1, s: rnd(2, 4), color: pal.particle, rot: a, shape: i % 3 ? 'dot' : 'shard', spin: rnd(-8, 8) });
       }
-      if (rank >= 4) this.column(cx, cy, pal.glow);
-      if (rank >= 5) this.shockwave(cx, cy, pal.glow);
-      if (rank >= 6) this.prismShatter();
+      if (rank >= RS.rarityRank('Legendary')) this.column(cx, cy, pal.glow);
+      if (rank >= RS.rarityRank('Mythic')) this.shockwave(cx, cy, pal.glow);
+      if (rank >= RS.rarityRank('Mythic+')) this.prismShatter();
       this.kick();
     },
     column(cx, cy, color) {

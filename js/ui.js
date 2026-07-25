@@ -171,7 +171,7 @@
           <div class="menu-grid">
             <button class="mbtn play" data-go="mapselect"><b>⚔ Play</b><span>12 maps · 4 difficulties</span></button>
             <button class="mbtn" data-go="roll"><b>🎲 Roll</b><span>Summon towers</span></button>
-            <button class="mbtn" data-go="collection"><b>🏰 Collection</b><span>${Meta.ownedTowerDefs().length}/26 towers</span></button>
+            <button class="mbtn" data-go="collection"><b>🏰 Collection</b><span>${Meta.ownedTowerDefs().length}/${RS.TOWERS.length} towers</span></button>
             <button class="mbtn" data-go="forge"><b>🔨 Forge</b><span>${Meta.forgeUnlocked ? 'Convert & craft' : 'Unlocks Lv 2'}</span></button>
             <button class="mbtn" data-go="codex"><b>📖 Codex</b><span>${Math.round(Meta.codexPct() * 100)}% complete</span></button>
             <button class="mbtn" data-go="leaderboard"><b>🏆 Champions' Ladder</b><span>Rank #${Meta.myRank()} · climb to Claude</span></button>
@@ -315,7 +315,8 @@
       const c = RS.rarityColor(t.rarity);
       const owned = Meta.ownedCount(t.id);
       const rk = RS.rarityRank(t.rarity);
-      const anim = rk >= 6 ? 'rc-prism' : rk >= 5 ? 'rc-ember' : rk >= 4 ? 'rc-shimmer' : '';
+      const anim = t.rarity === 'Mythic+' ? 'rc-prism' : t.rarity === 'Mythic' ? 'rc-ember'
+        : t.rarity === 'Ancient' ? 'rc-patina' : t.rarity === 'Legendary' ? 'rc-shimmer' : '';
       return `<div class="tchip ${anim}" style="--rc:${c}">
         <div class="tchip-icon"><canvas class="glyph" data-glyph="${t.id}" width="44" height="44"></canvas>
           <span class="dmgicon di-${t.damageType.toLowerCase()}" title="${t.damageType}">${RS.dmgIcon(t.damageType)}</span></div>
@@ -433,14 +434,14 @@
         const core = $('.shine-core', stage), sym = $('.shine-sym', stage);
         core.animate([{ transform: 'scale(.4)', opacity: .5 }, { transform: `scale(${1.4 + bestRank * 0.25})`, opacity: 1 }], { duration: dur, easing: 'cubic-bezier(.4,0,.6,1)', fill: 'forwards' });
         sym.animate([{ opacity: 0, transform: 'scale(.2) rotate(-40deg)' }, { opacity: 0, offset: 0.55 }, { opacity: 1, transform: 'scale(1) rotate(0deg)' }], { duration: dur, fill: 'forwards' });
-        if (bestRank >= 6) { document.body.classList.add('shatter'); setTimeout(() => document.body.classList.remove('shatter'), 900); }
-        if (bestRank >= 5) this.match && (this.match.freeze = 0.4);
+        if (bestRank >= RS.rarityRank('Mythic+')) { document.body.classList.add('shatter'); setTimeout(() => document.body.classList.remove('shatter'), 900); }
+        if (bestRank >= RS.rarityRank('Mythic')) this.match && (this.match.freeze = 0.4);
       }
       setTimeout(() => {
         stage.innerHTML = `<div class="results">${results.map((r) => {
           if (r.converted) return `<div class="rescard" style="--rc:${RS.rarityColor('Mythic')}"><div class="resrar">50/50 → Relics</div><b>+${r.converted.relic} 🔮</b></div>`;
           const t = r.tower; const dup = Meta.ownedCount(t.id) > 1;
-          return `<div class="rescard ${RS.rarityRank(r.rarity) >= 5 ? 'gleam' : ''}" style="--rc:${RS.rarityColor(r.rarity)}">
+          return `<div class="rescard ${RS.rarityRank(r.rarity) >= RS.rarityRank('Mythic') ? 'gleam' : ''}" style="--rc:${RS.rarityColor(r.rarity)}">
             <div class="resrar">${RS.rarityIcon(r.rarity)} ${r.rarity}</div>
             <canvas class="glyph rg" data-glyph="${t.id}" width="48" height="48"></canvas>
             <b>${t.name}</b>${dup ? '<span class="dupflag">DUPLICATE</span>' : '<span class="newflag">NEW</span>'}
@@ -507,7 +508,7 @@
     renderCollection() {
       this.root.innerHTML = this._topbar() + `
         <div class="page">
-          <div class="page-head"><button class="back" data-go="menu">← Menu</button><h2>Collection <small>${Meta.ownedTowerDefs().length}/26</small></h2></div>
+          <div class="page-head"><button class="back" data-go="menu">← Menu</button><h2>Collection <small>${Meta.ownedTowerDefs().length}/${RS.TOWERS.length}</small></h2></div>
           <div class="collgrid">
           ${RS.TOWERS.map((t) => {
             const owned = Meta.ownedCount(t.id);

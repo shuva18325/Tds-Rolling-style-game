@@ -75,6 +75,11 @@ button:hover::after { transform: translateX(120%); }
 /* Legendary shimmer */
 .rescard[style*="f0a92e"], .collcard[style*="f0a92e"] { animation: rarShimmer 2.4s ease-in-out infinite; }
 @keyframes rarShimmer { 50% { box-shadow: 0 0 18px -3px #f0a92e, 0 0 0 1px #f0a92e; } }
+/* Ancient verdigris pulse — patina bronze, distinct from Legendary gold */
+.rescard[style*="17b8a6"], .collcard[style*="17b8a6"] { animation: rarPatina 2.1s ease-in-out infinite; }
+@keyframes rarPatina { 0%,100% { box-shadow: 0 0 11px -3px #17b8a6, 0 0 0 1px #17b8a6; }
+  50% { box-shadow: 0 0 20px -1px #3fe0cc, 0 0 0 1px #3fe0cc; } }
+.tchip.rc-patina { animation: rarPatina 2.1s ease-in-out infinite; }
 /* Mythic ember flicker */
 .rescard[style*="e04b4b"], .collcard[style*="e04b4b"] { animation: rarEmber 1.3s ease-in-out infinite; }
 @keyframes rarEmber { 0%,100% { box-shadow: 0 0 10px -3px #e04b4b, 0 0 0 1px #e04b4b; } 50% { box-shadow: 0 0 22px 0 #ff6a4a, 0 0 0 1px #ff8a4a; } }
