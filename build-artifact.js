@@ -10,7 +10,7 @@ const read = (f) => fs.readFileSync(path.join(base, f), 'utf8');
 const cssFiles = ['css/style.css', 'css/art.css'];
 const jsFiles = [
   'js/core.js', 'data/palette.js', 'data/config.js', 'data/artstyle.js',
-  'data/towers.js', 'data/enemies.js', 'data/maps.js',
+  'data/towers.js', 'data/enemies.js', 'data/maps.js', 'data/rivals.js',
   'js/combat.js', 'js/match.js', 'js/meta.js',
   'js/audio.js', 'js/vfx.js', 'js/sprites.js', 'js/render.js', 'js/ui.js', 'js/main.js',
 ];

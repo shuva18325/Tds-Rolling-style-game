@@ -30,25 +30,18 @@
       codex: { towers: [], enemies: [] },
       stats: { rolls: 0, kills: 0, mapsCleared: 0, mythicPlus: 0 },
       rollHistory: [],
-      // Local profile — a display identity for this device. No password: this
-      // is a static page with no server, so there's nothing to protect and
-      // nothing worth pretending to. See RS.Meta.CLAUDE_RECORDS for why.
       profile: { name: '', avatar: '⚔️', createdAt: 0 },
-      // Hall of Champions personal-best records (all derivable at match end).
+      // Champions' Ladder personal-best records (all derived at match end).
       records: { highestWave: 0, kills: 0, fastestVictory: 0, goldBanked: 0, topTowerDamage: 0, totalRolls: 0 },
+      badges: {},        // badge id -> true
+      defeated: {},      // rival id -> true
+      bestRank: 10,      // lower is better; 10 = unranked
     };
     RS.MAPS.forEach((m) => { p.unlocked[m.id] = 0; });
     RS.OBJECTIVES.forEach((o) => { p.objectives[o.id] = 0; });
     return p;
   }
 
-  // The permanent benchmark row shown at the top of every Hall of Champions
-  // category — a built-in target, not a real player. Framed and styled as
-  // such everywhere it's displayed (crown icon, distinct gold treatment).
-  const CLAUDE_RECORDS = {
-    name: 'Claude', avatar: '👑',
-    highestWave: 62, kills: 8500, fastestVictory: 421, goldBanked: 48000, topTowerDamage: 210000, totalRolls: 1800,
-  };
   const RECORD_META = {
     highestWave:    { label: 'Highest Wave Reached', icon: '🏆', fmt: (v) => v, better: 'higher' },
     kills:          { label: 'Total Enemies Slain',  icon: '⚔️', fmt: (v) => v.toLocaleString(), better: 'higher' },
@@ -88,6 +81,9 @@
       out.rollHistory = s.rollHistory || [];
       out.profile = Object.assign({}, base.profile, s.profile);
       out.records = Object.assign({}, base.records, s.records);
+      out.badges = Object.assign({}, base.badges, s.badges);
+      out.defeated = Object.assign({}, base.defeated, s.defeated);
+      out.bestRank = s.bestRank != null ? s.bestRank : base.bestRank;
       return out;
     },
     exportSave() { return RS.Save.export(this.p); },
@@ -237,6 +233,32 @@
       return { tower, rarity, converted, pityHit };
     },
 
+    // Effective per-rarity odds for a roll tier, as displayed in the odds
+    // panel. Mirrors _rollRarity's weight construction (tier multipliers +
+    // rarity floor), excluding pity/luck so the board shows the base table.
+    rollOdds(tier) {
+      const cfg = RS.ROLLS[tier];
+      let weights;
+      if (cfg.fixed) weights = Object.assign({}, cfg.fixed);
+      else {
+        weights = Object.assign({}, RS.ROLL_BASE_WEIGHTS);
+        if (tier === 'Lucky') {
+          weights.Common = 0;
+          for (const k of ['Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Mythic+']) weights[k] *= 3;
+        } else if (tier === 'Super') {
+          weights.Common = 0; weights.Uncommon = 0;
+          for (const k of ['Epic', 'Legendary', 'Mythic', 'Mythic+']) weights[k] *= 6;
+        }
+      }
+      const floorRank = RS.rarityRank(cfg.floor);
+      const out = []; let total = 0;
+      for (const r of RS.RARITY) {
+        const w = (r.rank < floorRank) ? 0 : (weights[r.id] || 0);
+        if (w > 0) { out.push({ id: r.id, w }); total += w; }
+      }
+      return out.map((e) => ({ id: e.id, pct: (e.w / total) * 100 }));
+    },
+
     canRoll(tier) {
       const cfg = RS.ROLLS[tier];
       return this.p.rolls[tier] > 0 || this.p.tokens[cfg.costToken] >= cfg.cost;
@@ -322,10 +344,51 @@
       this.p.profile = { name, avatar: avatar || '⚔️', createdAt: this.p.profile.createdAt || Date.now() };
       this.save();
     },
+    // Ladder power score — the single number the Champions' Ladder ranks on.
+    // Identical formula for the player and every rival, so the table is fair.
+    powerScore(rec) {
+      const W = RS.SCORE_WEIGHTS;
+      let s = 0;
+      s += (rec.highestWave || 0) * W.wave;
+      s += (rec.kills || 0) * W.kill;
+      s += (rec.topTowerDamage || 0) * W.towerDmg;
+      s += (rec.totalRolls || 0) * W.roll;
+      s += (rec.goldBanked || 0) * W.gold;
+      if (rec.fastestVictory) s += Math.max(0, W.speedBase - rec.fastestVictory);
+      return Math.round(s);
+    },
+    myScore() { return this.powerScore(this.p.records); },
+    // Current ladder rank: 1 is the top seat. You hold a rank once your score
+    // exceeds the rival occupying it.
+    myRank() {
+      const score = this.myScore();
+      let rank = RS.RIVALS.length + 1;
+      for (const rv of RS.RIVALS) if (score > rv.score) rank = Math.min(rank, rv.rank);
+      return rank;
+    },
+    rankTitle(rank) {
+      if (rank <= 1) return 'Champion of the Realm';
+      if (rank === 2) return 'Challenger';
+      if (rank <= 5) return 'Contender';
+      if (rank <= 8) return 'Rising Blade';
+      return 'Unranked Squire';
+    },
+    // The next rival standing directly above the player (null once #1).
+    nextRival() {
+      const score = this.myScore();
+      let best = null;
+      for (const rv of RS.RIVALS) if (rv.score >= score && (!best || rv.score < best.score)) best = rv;
+      return best;
+    },
+    awardBadge(id) { if (!this.p.badges[id]) { this.p.badges[id] = true; return true; } return false; },
+    earnedBadges() { return Object.keys(this.p.badges).filter((k) => RS.BADGES[k]).map((k) => Object.assign({ id: k }, RS.BADGES[k])); },
+
     // Called once at match end (win or lose) with the finished Match. Reads
-    // final state only — never mutates the sim. Returns the record ids beaten.
+    // final state only — never mutates the sim. Returns what changed so the
+    // summary screen can celebrate it.
     updateRecords(m) {
       const r = this.p.records; const beat = [];
+      const rankBefore = this.myRank();
       const maybe = (key, val, better) => {
         if (val == null) return;
         const cur = r[key];
@@ -341,11 +404,25 @@
       }
       let topDmg = 0; for (const uid in m.dmgByTower) topDmg = Math.max(topDmg, m.dmgByTower[uid]);
       maybe('topTowerDamage', Math.round(topDmg), 'higher');
+
+      // ---- ladder progression ----
+      const score = this.myScore();
+      const newlyDefeated = [];
+      for (const rv of RS.RIVALS) {
+        if (!this.p.defeated[rv.id] && score > rv.score) { this.p.defeated[rv.id] = true; newlyDefeated.push(rv); }
+      }
+      const rankAfter = this.myRank();
+      if (rankAfter < this.p.bestRank) this.p.bestRank = rankAfter;
+      const newBadges = [];
+      if (newlyDefeated.length && this.awardBadge('firstblood')) newBadges.push('firstblood');
+      if (rankAfter <= 5 && this.awardBadge('ladder5')) newBadges.push('ladder5');
+      if (rankAfter <= 2 && this.awardBadge('ladder2')) newBadges.push('ladder2');
+      if (this.p.defeated.claude && this.awardBadge('sigil')) newBadges.push('sigil');
+
       this.save();
-      return beat;
+      return { beat, newlyDefeated, rankBefore, rankAfter, newBadges };
     },
   };
-  Meta.CLAUDE_RECORDS = CLAUDE_RECORDS;
   Meta.RECORD_META = RECORD_META;
 
   RS.Meta = Meta;

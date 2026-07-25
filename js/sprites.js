@@ -15,10 +15,15 @@
   function poly(ctx, pts) { ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]); ctx.closePath(); }
   function facet(ctx, pts, color, rim) {
     poly(ctx, pts); ctx.fillStyle = color; ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,0.30)'; ctx.lineWidth = 1; ctx.stroke();
-    if (rim) { ctx.strokeStyle = rim; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); ctx.lineTo(pts[1][0], pts[1][1]); ctx.stroke(); }
+    // Heavier contour than a hairline — silhouettes need to hold up against
+    // busy terrain at small scale, so every facet carries a real outline.
+    ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.lineWidth = 1.2; ctx.lineJoin = 'round'; ctx.stroke();
+    if (rim) { ctx.strokeStyle = rim; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); ctx.lineTo(pts[1][0], pts[1][1]); ctx.stroke(); }
   }
-  function circ(ctx, x, y, r, color, rim) { ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fillStyle = color; ctx.fill(); if (rim) { ctx.strokeStyle = rim; ctx.lineWidth = 1; ctx.stroke(); } }
+  // Canvas throws on a negative/NaN radius, which would kill the whole frame.
+  // Every computed radius in the render path goes through this guard.
+  const R0 = (v) => (isFinite(v) && v > 0 ? v : 0);
+  function circ(ctx, x, y, r, color, rim) { ctx.beginPath(); ctx.arc(x, y, R0(r), 0, TAU); ctx.fillStyle = color; ctx.fill(); if (rim) { ctx.strokeStyle = rim; ctx.lineWidth = 1; ctx.stroke(); } }
 
   /* ============================ TOWERS =============================== */
   const Sil = {};
@@ -34,14 +39,31 @@
       gr.addColorStop(0, A.alpha(gc, pal.glowStr)); gr.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, 22 * s, 0, TAU); ctx.fill();
     }
-    // platform
+    // Carved octagonal plinth: shadowed skirt, lit top face, inlaid rim and a
+    // ring of rarity studs. Reads as cut stone rather than a flat hexagon.
     const r = 14 * s;
-    facet(ctx, [[x - r, y], [x - r * 0.6, y - 5 * s], [x + r * 0.6, y - 5 * s], [x + r, y], [x + r * 0.6, y + 4 * s], [x - r * 0.6, y + 4 * s]], A.mul(pal.dais, 1.1));
-    facet(ctx, [[x - r, y], [x - r * 0.6, y + 4 * s], [x + r * 0.6, y + 4 * s], [x + r, y], [x + r * 0.7, y + 7 * s], [x - r * 0.7, y + 7 * s]], A.mul(pal.dais, 0.7));
-    // rarity ring
-    ctx.lineWidth = def._asc ? 2.5 : 1.6;
-    ctx.strokeStyle = pal.prismatic ? A.prismatic(o.t, 1) : pal.base;
-    ctx.beginPath(); ctx.ellipse(x, y, r, 5 * s, 0, 0, TAU); ctx.stroke();
+    const oct = (rr, dy, sq) => {
+      const pts = []; const k = 0.62;
+      pts.push([x - rr, y + dy], [x - rr * k, y - 5 * s * sq + dy], [x + rr * k, y - 5 * s * sq + dy],
+               [x + rr, y + dy], [x + rr * k, y + 4 * s * sq + dy], [x - rr * k, y + 4 * s * sq + dy]);
+      return pts;
+    };
+    // skirt (side face, in shadow)
+    facet(ctx, oct(r, 4 * s, 1), A.mul(pal.dais, 0.55));
+    // top face, lit
+    facet(ctx, oct(r, 0, 1), A.mul(pal.dais, 1.18), A.mul(pal.dais, 1.6));
+    // inner inlay
+    facet(ctx, oct(r * 0.66, -0.5 * s, 0.9), A.mul(pal.dais, 0.92));
+    // rarity ring + studs
+    ctx.lineWidth = def._asc ? 2.5 : 1.5;
+    const ringCol = pal.prismatic ? A.prismatic(o.t, 1) : pal.base;
+    ctx.strokeStyle = ringCol;
+    ctx.beginPath(); ctx.ellipse(x, y, r * 0.98, 5.2 * s, 0, 0, TAU); ctx.stroke();
+    ctx.fillStyle = ringCol;
+    for (let i = 0; i < 6; i++) {
+      const ang = (i / 6) * TAU + (o.t || 0) * 0.15;
+      ctx.beginPath(); ctx.arc(x + Math.cos(ang) * r * 0.98, y + Math.sin(ang) * 5.2 * s, 1.3 * s, 0, TAU); ctx.fill();
+    }
     ctx.restore();
   }
 
@@ -416,5 +438,5 @@
     if (e.shieldHits > 0) { ctx.strokeStyle = A.alpha('#8fd4e8', 0.5 + Math.sin(time * 4) * 0.2); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(e.x, e.y - 8, S * 0.28, 0, TAU); ctx.stroke(); }
   }
 
-  RS.Sprites = { facet, poly, circ, drawTower, drawTowerIcon, drawEnemy, drawBody, getSheet, Sil };
+  RS.Sprites = { facet, poly, circ, drawTower, drawTowerIcon, drawEnemy, drawBody, getSheet, Sil, R0 };
 })();

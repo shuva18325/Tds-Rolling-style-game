@@ -13,6 +13,8 @@
   const A = RS.art, TAU = Math.PI * 2;
   const rnd = (a, b) => a + Math.random() * (b - a);
 
+  // Canvas throws on negative/NaN radii; guard every computed one.
+  const R0 = (v) => (isFinite(v) && v > 0 ? v : 0);
   const MAX = 1400;
   const pool = [];
   const free = [];
@@ -174,12 +176,12 @@
           if (p.color2) col = A.mix(p.color, p.color2, t);
           ctx.fillStyle = col; ctx.strokeStyle = col;
           switch (p.shape) {
-            case 'dot': ctx.beginPath(); ctx.arc(p.x, p.y, s, 0, TAU); ctx.fill(); break;
+            case 'dot': ctx.beginPath(); ctx.arc(p.x, p.y, R0(s), 0, TAU); ctx.fill(); break;
             case 'square': ctx.fillRect(p.x - s / 2, p.y - s / 2, s, s); break;
-            case 'flame': { const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, s); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, s, 0, TAU); ctx.fill(); break; }
+            case 'flame': { const fr = R0(s) || 0.01; const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, fr); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, fr, 0, TAU); ctx.fill(); break; }
             case 'spark': { const vx = Math.cos(p.rot), vy = Math.sin(p.rot); ctx.lineWidth = s * 0.6; ctx.beginPath(); ctx.moveTo(p.x - vx * s, p.y - vy * s); ctx.lineTo(p.x + vx * s, p.y + vy * s); ctx.stroke(); break; }
             case 'shard': { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.beginPath(); ctx.moveTo(0, -s); ctx.lineTo(s * 0.6, s); ctx.lineTo(-s * 0.6, s); ctx.closePath(); ctx.fill(); ctx.restore(); break; }
-            case 'ring': ctx.lineWidth = p.width || 3; ctx.beginPath(); ctx.arc(p.x, p.y, s, 0, TAU); ctx.stroke(); break;
+            case 'ring': ctx.lineWidth = p.width || 3; ctx.beginPath(); ctx.arc(p.x, p.y, R0(s), 0, TAU); ctx.stroke(); break;
             case 'column': { const g = ctx.createLinearGradient(p.x, p.y - p.h, p.x, p.y + 10); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(0.5, col); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(p.x - s, p.y - p.h, s * 2, p.h + 10); break; }
           }
         }
@@ -223,7 +225,7 @@
         ctx.globalAlpha = A.clamp(p.life / p.max, 0, 1);
         ctx.fillStyle = p.color;
         if (p.shape === 'shard') { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot || 0); ctx.beginPath(); ctx.moveTo(0, -p.s); ctx.lineTo(p.s * 0.6, p.s); ctx.lineTo(-p.s * 0.6, p.s); ctx.closePath(); ctx.fill(); ctx.restore(); }
-        else { ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, TAU); ctx.fill(); }
+        else { ctx.beginPath(); ctx.arc(p.x, p.y, R0(p.s), 0, TAU); ctx.fill(); }
       }
       ctx.restore(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
       if (this.fx.length || this.parts.length) requestAnimationFrame((tt) => this._loop(tt));
@@ -235,7 +237,7 @@
       this.ensure();
       const pal = RS.rarityPal(rarity); const rank = RS.rarityRank(rarity);
       this.fx.push({ t: 0, dur: 0.7 + rank * 0.12, draw: (ctx, f) => {
-        const k = f.t / f.dur; const R = 40 + k * (120 + rank * 60);
+        const k = f.t / f.dur; const R = R0(40 + k * (120 + rank * 60)) || 1;
         const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
         g.addColorStop(0, A.alpha(pal.glow, 0.5 * (1 - k)));
         g.addColorStop(1, 'rgba(0,0,0,0)');
@@ -260,7 +262,7 @@
     shockwave(cx, cy, color) {
       this.fx.push({ t: 0, dur: 0.5, draw: (ctx, f) => {
         const k = f.t / f.dur; ctx.globalAlpha = 1 - k; ctx.strokeStyle = color; ctx.lineWidth = 6 * (1 - k) + 1;
-        ctx.beginPath(); ctx.arc(cx, cy, k * 400, 0, TAU); ctx.stroke(); ctx.globalAlpha = 1;
+        ctx.beginPath(); ctx.arc(cx, cy, R0(k * 400), 0, TAU); ctx.stroke(); ctx.globalAlpha = 1;
       } });
     },
     prismShatter() {
@@ -284,7 +286,7 @@
     // forge anvil spark shower at screen coords
     forgeStrike(cx, cy, color) {
       this.ensure();
-      this.fx.push({ t: 0, dur: 0.35, draw: (ctx, f) => { const k = f.t / f.dur; ctx.globalAlpha = (1 - k) * 0.8; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(cx, cy, 30 * (1 - k) + 5, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; } });
+      this.fx.push({ t: 0, dur: 0.35, draw: (ctx, f) => { const k = f.t / f.dur; ctx.globalAlpha = (1 - k) * 0.8; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(cx, cy, R0(30 * (1 - k) + 5), 0, TAU); ctx.fill(); ctx.globalAlpha = 1; } });
       for (let i = 0; i < 36; i++) { const a = -Math.PI / 2 + rnd(-1.1, 1.1), sp = rnd(150, 420); this._p({ x: cx, y: cy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, g: 700, life: rnd(0.3, 0.6), max: 0.6, s: rnd(1.5, 3), color: i % 4 ? '#ffd98a' : (color || '#fff'), shape: 'dot' }); }
       this.shockwave(cx, cy, color || '#ffd98a');
       this.kick();

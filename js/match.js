@@ -806,6 +806,8 @@
     _effectiveRange(t) { return t.range * t.buff.range * this._envRangeMult(t); }
 
     _towerFire(t) {
+      // Melee gladiators sweep a blade arc over the road instead of shooting.
+      if (t.def.traits.meleeSlash) return this._meleeSlash(t);
       // support/aura-only towers don't fire projectiles unless they have damage role
       const range = this._effectiveRange(t);
       // gather candidates in range
@@ -838,6 +840,42 @@
         const tgt = shots > 1 ? cands[Math.min(s, cands.length - 1)] : target;
         this._fireProjectile(t, tgt);
       }
+      return true;
+    }
+
+    /* Gladiator slash: sweep a blade arc across the road, striking every
+     * ground enemy inside it. The arc is aimed at whoever is nearest (so it
+     * naturally tracks the path passing the tower) and is wide enough to catch
+     * a cluster — this is the melee answer to a projectile volley. */
+    _meleeSlash(t) {
+      const ms = t.def.traits.meleeSlash;
+      const reach = ms.radiusT * TILE * t.buff.range;
+      this.grid.query(t.x, t.y, reach, this._tmp);
+      let best = null, bd = reach * reach;
+      const inReach = [];
+      for (const e of this._tmp) {
+        if (!e.alive || e.isFlying) continue; // blades don't reach flyers
+        if (e.def.traits.includes('Stealth') && !this._revealed(e)) continue;
+        const d = dist2(t.x, t.y, e.x, e.y);
+        if (d > reach * reach) continue;
+        inReach.push(e);
+        if (d < bd) { bd = d; best = e; }
+      }
+      if (!best) return false;
+      const ang = Math.atan2(best.y - t.y, best.x - t.x);
+      const half = ms.arc / 2;
+      const dInfo = this._computeShotDamage(t, best);
+      let hits = 0;
+      for (const e of inReach) {
+        let da = Math.abs(Math.atan2(e.y - t.y, e.x - t.x) - ang);
+        if (da > Math.PI) da = Math.abs(da - RS.util.TAU);
+        if (da > half) continue;
+        this._applyHit(t, e, dInfo);
+        hits++;
+      }
+      if (!hits) return false;
+      // visual: crescent sweep consumed by the renderer's _fx layer
+      (this._fx = this._fx || []).push({ kind: 'slash', x: t.x, y: t.y, ang, half, reach, color: RS.DMG_COLOR.Melee, t: 0.18 });
       return true;
     }
 
@@ -1022,12 +1060,16 @@
           e.engagedByUid = t.uid; if (!e.uid) e.uid = uid(); b.engaged.push(e.uid);
         }
       }
-      // deal melee damage to engaged, take contact damage
+      // Take contact damage from whoever we're holding. Towers with a
+      // meleeSlash trait deal their damage as discrete gladiator slashes in
+      // _meleeSlash (driven by fireRate) rather than as a per-tick trickle,
+      // so the damage is visible, sweeps an arc, and can catch several foes.
+      const slashes = !!t.def.traits.meleeSlash;
       const dInfo = { dmg: t.damage * t.buff.dmg * dt * t.fireRate, crit: false, critMultBonus: 1 };
       for (const eu of b.engaged) {
         const e = this.enemies.find((x) => x.uid === eu && x.alive);
         if (!e) continue;
-        this._applyHit(t, e, dInfo);
+        if (!slashes) this._applyHit(t, e, dInfo);
         // contact damage to blocker
         let contact = 4 + e.def.bounty * 0.15;
         if (e.def.abilities.destroyBlockers) contact = b.maxHp; // siege beast / broodling
@@ -1079,7 +1121,7 @@
         kind, ownerUid: owner.uid, x, y, hx: x, hy: y, dps: dps || 30,
         range: range || 3 * TILE, cooldown: 0, target: null, life: kind === 'wraith' ? 30 : Infinity,
         seek: owner.def.traits.summon ? owner.def.traits.summon.seek : null,
-        speed: kind === 'falcon' ? 160 : (kind === 'wraith' ? 70 : 0), type: kind === 'wraith' ? 'Necrotic' : 'Physical',
+        speed: kind === 'falcon' ? 160 : (kind === 'wraith' ? 70 : 0), type: kind === 'wraith' ? 'Necrotic' : 'Siege',
         owner,
       });
     }

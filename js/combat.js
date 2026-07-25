@@ -9,7 +9,10 @@
   const RS = (window.RS = window.RS || {});
   const { clamp } = RS.util;
 
-  const PHYSICAL = { Physical: 1, Piercing: 1 };
+  // Armour-facing damage family. "Physical" is retired as a player-visible
+  // label — Melee (blades) and Siege (stone/powder) replace it — but all three
+  // resolve against armour identically, and legacy saves may still carry it.
+  const PHYSICAL = { Physical: 1, Piercing: 1, Melee: 1, Siege: 1 };
   const MAGICAL = { Magic: 1, Fire: 1, Frost: 1, Holy: 1, Necrotic: 1 };
 
   // armorReduction = armor/(armor+100); diminishing, never 100%.

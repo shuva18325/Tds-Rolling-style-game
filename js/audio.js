@@ -53,8 +53,13 @@
     /* ------------------------------ effects --------------------------- */
     shoot(type) {
       if (!this._throttle('shoot', 55)) return;
-      const map = { Fire: 340, Frost: 520, Magic: 660, Holy: 720, Necrotic: 300, Physical: 260, Piercing: 480, True: 800 };
+      const map = { Fire: 340, Frost: 520, Magic: 660, Holy: 720, Necrotic: 300, Physical: 260, Melee: 220, Siege: 190, Piercing: 480, True: 800 };
       this.tone({ freq: map[type] || 320, freqEnd: (map[type] || 320) * 0.5, type: 'triangle', dur: 0.08, vol: 0.12 });
+    },
+    slash() { // blade sweep — airy whoosh with a steel edge
+      if (!this._throttle('slash', 50)) return;
+      this.noise({ freq: 2600, q: 0.9, dur: 0.13, vol: 0.14, filter: 'bandpass' });
+      this.tone({ freq: 900, freqEnd: 260, type: 'triangle', dur: 0.11, vol: 0.09 });
     },
     clang() { // metallic shield block — the requested "clang"
       if (!this._throttle('clang', 45)) return;

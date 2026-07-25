@@ -74,7 +74,7 @@
           <span class="tk gold" title="Gold">🟡 ${fmt(t.gold)}</span>
           <span class="tk relic" title="Mythic Relics">🔮 ${fmt(t.relic)}</span>
           <span class="tk lvl" title="Account level">Lv ${a.level} <span class="xpbar"><i style="width:${Math.min(100, a.xp / need * 100)}%"></i></span></span>
-          <button class="profchip" id="topProfile" title="Edit your local profile"><span class="pav">${p.avatar || '⚔️'}</span>${p.name || 'Set Name'}</button>
+          <button class="profchip" id="topProfile" title="Edit your champion"><span class="pav">${p.avatar || '⚔️'}</span>${p.name || 'Set Name'}${Meta.earnedBadges().length ? `<span class="pbadges">${Meta.earnedBadges().map((b) => b.icon).join('')}</span>` : ''}</button>
         </div>
       </div>`;
     },
@@ -86,8 +86,8 @@
       let picked = cur.avatar || this._AVATARS[0];
       const modal = h(`<div class="modal-bg"><div class="modal profile-modal">
         ${dismissible ? '<button class="modal-x">✕</button>' : ''}
-        <h3>${dismissible ? 'Edit Your Champion' : 'Create Your Champion'}</h3>
-        <p class="lore" style="margin-top:0">A local profile for this device — no password, nothing to protect, nothing to type but a name. New champions who open this game each get their own.</p>
+        <h3>${dismissible ? 'Edit Your Champion' : 'Enter the Lists'}</h3>
+        <p class="lore" style="margin-top:0">${dismissible ? 'Change the name and sigil you fight under.' : 'Nine champions stand on the ladder above you. Claim a name, take a sigil, and start climbing.'}</p>
         <input id="profName" maxlength="18" placeholder="Champion name" value="${(cur.name || '').replace(/"/g, '')}">
         <div class="avatar-grid">${this._AVATARS.map((av) => `<button class="avbtn ${av === picked ? 'on' : ''}" data-av="${av}">${av}</button>`).join('')}</div>
         <button class="bigbtn" id="profSave">${dismissible ? 'Save' : 'Begin Your Legend'}</button>
@@ -106,27 +106,58 @@
     },
 
     renderLeaderboard() {
-      const RM = Meta.RECORD_META, CR = Meta.CLAUDE_RECORDS, mine = Meta.p.records, prof = Meta.p.profile;
-      const rows = Object.keys(RM).map((key) => {
-        const meta = RM[key], claudeVal = CR[key], mineVal = mine[key];
-        const beat = mineVal > 0 && (meta.better === 'lower' ? mineVal <= claudeVal : mineVal >= claudeVal);
-        return `<div class="lbrow ${beat ? 'beat' : ''}">
-          <div class="lbcat">${meta.icon} ${meta.label}</div>
-          <div class="lbval lbclaude"><span class="lbav">👑</span><b>${meta.fmt(claudeVal)}</b></div>
-          <div class="lbval lbmine"><span class="lbav">${prof.avatar || '⚔️'}</span><b>${mineVal ? meta.fmt(mineVal) : '—'}</b>${beat ? ' <em>🏅 beaten!</em>' : ''}</div>
+      const prof = Meta.p.profile, RM = Meta.RECORD_META;
+      const myScore = Meta.myScore(), myRank = Meta.myRank();
+      const next = Meta.nextRival();
+      const badges = Meta.earnedBadges();
+      // Build the ladder top-down: rank 1 (Claude) first, player inserted at
+      // their current standing.
+      const entries = RS.RIVALS.map((rv) => ({ kind: 'rival', rv, score: rv.score, rank: rv.rank }));
+      entries.push({ kind: 'me', score: myScore, rank: myRank });
+      entries.sort((a, b) => b.score - a.score);
+
+      const rows = entries.map((en, i) => {
+        const pos = i + 1;
+        if (en.kind === 'me') {
+          return `<div class="ladrow me ${this._rankJump ? 'climbed' : ''}">
+            <div class="ladpos">#${pos}</div>
+            <div class="ladwho"><span class="ladav">${prof.avatar || '⚔️'}</span>
+              <div><b>${prof.name || 'You'}</b><span class="ladtitle">${Meta.rankTitle(myRank)}${badges.length ? ' · ' + badges.map((b) => b.icon).join('') : ''}</span></div></div>
+            <div class="ladscore">${myScore.toLocaleString()}</div>
+          </div>`;
+        }
+        const rv = en.rv, beaten = !!Meta.p.defeated[rv.id];
+        const isNext = next && next.id === rv.id;
+        return `<div class="ladrow ${rv.claude ? 'claude' : ''} ${beaten ? 'beaten' : ''} ${isNext ? 'target' : ''}">
+          <div class="ladpos">#${pos}</div>
+          <div class="ladwho"><span class="ladav">${rv.avatar}</span>
+            <div><b>${rv.name}${beaten ? ' <em class="dfl">defeated</em>' : ''}</b><span class="ladtitle">${rv.taunt}</span></div></div>
+          <div class="ladscore">${rv.score.toLocaleString()}</div>
         </div>`;
       }).join('');
-      const beatCount = Object.keys(RM).filter((key) => { const meta = RM[key]; const v = mine[key]; return v > 0 && (meta.better === 'lower' ? v <= CR[key] : v >= CR[key]); }).length;
+
+      const gap = next ? (next.score - myScore) : 0;
       this.root.innerHTML = this._topbar() + `
         <div class="page">
-          <div class="page-head"><button class="back" data-go="menu">← Menu</button><h2>🏆 Hall of Champions</h2></div>
-          <p class="lb-note">Local records for this device — there's no shared server behind this page, so these are yours alone. Claude's benchmark row is a permanent target, not a live player: every new champion who opens the game starts the same chase.</p>
-          <div class="lbheader"><div></div><div class="lbclaude">👑 Claude · The Realm's Champion</div><div class="lbmine">${prof.avatar || '⚔️'} ${prof.name || 'You'} <button class="editlink" id="lbEdit">edit</button></div></div>
-          <div class="lbtable">${rows}</div>
-          <div class="lbfoot">${beatCount}/${Object.keys(RM).length} records beaten</div>
+          <div class="page-head"><button class="back" data-go="menu">← Menu</button><h2>🏆 Champions' Ladder</h2></div>
+          <div class="ladbanner">
+            <div><span class="ladrank">#${myRank}</span><span class="ladrankttl">${Meta.rankTitle(myRank)}</span></div>
+            ${next ? `<div class="ladnext">Next: <b>${next.avatar} ${next.name}</b> — <span>${gap.toLocaleString()} power to overtake</span></div>`
+                   : `<div class="ladnext crowned">👑 You hold the top seat. The realm answers to you.</div>`}
+          </div>
+          <div class="ladder">${rows}</div>
+          <h3 class="special-h">Your Record Sheet <small>power ${myScore.toLocaleString()}</small></h3>
+          <div class="recgrid">
+            ${Object.keys(RM).map((k) => `<div class="reccard"><span class="recicon">${RM[k].icon}</span><b>${Meta.p.records[k] ? RM[k].fmt(Meta.p.records[k]) : '—'}</b><span>${RM[k].label}</span></div>`).join('')}
+          </div>
+          <h3 class="special-h">Trophy Case</h3>
+          <div class="badgegrid">
+            ${Object.keys(RS.BADGES).map((id) => { const b = RS.BADGES[id], got = !!Meta.p.badges[id];
+              return `<div class="badgecard ${got ? '' : 'locked'}" title="${b.desc}"><span class="bicon">${got ? b.icon : '🔒'}</span><b>${got ? b.name : '???'}</b><span>${got ? b.desc : 'Locked'}</span></div>`; }).join('')}
+          </div>
         </div>`;
       this._wireGo();
-      $('#lbEdit').onclick = () => this._showProfileModal(true);
+      this._rankJump = false;
     },
 
     /* ------------------------------- menu ----------------------------- */
@@ -143,7 +174,7 @@
             <button class="mbtn" data-go="collection"><b>🏰 Collection</b><span>${Meta.ownedTowerDefs().length}/26 towers</span></button>
             <button class="mbtn" data-go="forge"><b>🔨 Forge</b><span>${Meta.forgeUnlocked ? 'Convert & craft' : 'Unlocks Lv 2'}</span></button>
             <button class="mbtn" data-go="codex"><b>📖 Codex</b><span>${Math.round(Meta.codexPct() * 100)}% complete</span></button>
-            <button class="mbtn" data-go="leaderboard"><b>🏆 Hall of Champions</b><span>Beat Claude's records</span></button>
+            <button class="mbtn" data-go="leaderboard"><b>🏆 Champions' Ladder</b><span>Rank #${Meta.myRank()} · climb to Claude</span></button>
             <button class="mbtn" data-go="settings"><b>⚙ Settings</b><span>Save & options</span></button>
           </div>
           <div class="objectives">
@@ -273,7 +304,7 @@
       const w = [];
       const hasAir = defs.some((t) => t.traits.bonusVs && (t.traits.bonusVs.trait === 'Flying') || t.traits.summon || t.traits.flying || t.def === undefined && false || ['longbow', 'falconer', 'archmage', 'wyvernrider', 'ballista', 'archer', 'crossbow', 'longbowman'].includes(t.id) || t.rangeT >= 3.4);
       const antiArmor = defs.some((t) => (t.traits.bonusVs && t.traits.bonusVs.trait === 'Armored') || t.traits.armorPen || t.damageType === 'True' || t.damageType === 'Magic' || t.traits.breakShield);
-      const antiMagic = defs.some((t) => ['Physical', 'Piercing', 'True', 'Holy'].includes(t.damageType));
+      const antiMagic = defs.some((t) => ['Melee', 'Siege', 'Piercing', 'True', 'Holy'].includes(t.damageType));
       if (!hasAir) w.push('No reliable anti-air');
       if (!antiArmor) w.push('Weak vs Armored');
       if (defs.length < Meta.loadoutSlots) w.push(`${Meta.loadoutSlots - defs.length} empty slot(s)`);
@@ -309,17 +340,26 @@
       this.root.innerHTML = this._topbar() + `
         <div class="page rollpage">
           <div class="page-head"><button class="back" data-go="menu">← Menu</button><h2>The Rolling Banner</h2></div>
-          <div class="rollstage" id="rollStage"><div class="banner-idle">Roll to summon a champion</div></div>
-          <div class="rollbtns">
-            ${Object.values(RS.ROLLS).map((r) => `<button class="rollbtn ${Meta.canRoll(r.id) ? '' : 'disabled'}" data-roll="${r.id}">
-              <b>${r.id} Roll</b><span>${r.label}</span><em>floor: ${r.floor}</em>
-              ${Meta.p.rolls[r.id] > 0 ? `<span class="tickets">🎟 ${Meta.p.rolls[r.id]}</span>` : ''}</button>`).join('')}
-          </div>
-          <div class="multirow"><button class="multibtn" data-multi="Basic">Basic ×10</button><button class="multibtn" data-multi="Lucky">Lucky ×10</button><button class="multibtn" data-multi="Super">Super ×10</button></div>
-          <div class="quickroll">
-            ${Meta.p.settings.quickRollUnlocked
-              ? `<label class="toggle"><input type="checkbox" id="quickRollToggle" ${Meta.p.settings.quickRoll ? 'checked' : ''}> ⚡ Quick Roll <small>— skip the suspense animation</small></label>`
-              : `<button class="qrbuy ${Meta.p.tokens.gold >= 15 ? '' : 'disabled'}" id="buyQuickRoll">⚡ Unlock Quick Roll — 15 🟡 Gold <small>skip the roll animation forever</small></button>`}
+          <div class="rollcols">
+            <div class="rollmain">
+              <div class="rollstage" id="rollStage"><div class="banner-idle">✨ Roll to summon a champion</div></div>
+              <div class="rollbtns">
+                ${Object.values(RS.ROLLS).map((r) => `<button class="rollbtn ${Meta.canRoll(r.id) ? '' : 'disabled'} ${this._oddsTier === r.id ? 'showing' : ''}" data-roll="${r.id}">
+                  <b>${r.id} Roll</b><span>${r.label}</span><em>floor: ${r.floor}</em>
+                  ${Meta.p.rolls[r.id] > 0 ? `<span class="tickets">🎟 ${Meta.p.rolls[r.id]}</span>` : ''}</button>`).join('')}
+              </div>
+              <div class="multirow"><button class="multibtn" data-multi="Basic">Basic ×10</button><button class="multibtn" data-multi="Lucky">Lucky ×10</button><button class="multibtn" data-multi="Super">Super ×10</button></div>
+              <div class="quickroll">
+                ${Meta.p.settings.quickRollUnlocked
+                  ? `<label class="toggle"><input type="checkbox" id="quickRollToggle" ${Meta.p.settings.quickRoll ? 'checked' : ''}> ⚡ Quick Roll <small>— skip the suspense animation</small></label>`
+                  : `<button class="qrbuy ${Meta.p.tokens.gold >= 15 ? '' : 'disabled'}" id="buyQuickRoll">⚡ Unlock Quick Roll — 15 🟡 Gold <small>skip the roll animation forever</small></button>`}
+              </div>
+            </div>
+            <div class="oddspanel">
+              <h3>Drop Chances</h3>
+              <div class="oddstabs">${Object.values(RS.ROLLS).map((r) => `<button class="oddstab ${(this._oddsTier || 'Basic') === r.id ? 'on' : ''}" data-odds="${r.id}">${r.id}</button>`).join('')}</div>
+              <div class="oddslist" id="oddsList">${this._oddsHtml(this._oddsTier || 'Basic')}</div>
+            </div>
           </div>
           <div class="pity">
             <h3>Pity Counters</h3>
@@ -335,6 +375,24 @@
       $$('[data-multi]', this.root).forEach((b) => b.onclick = () => this.doRoll(b.dataset.multi, 10));
       const qrb = $('#buyQuickRoll'); if (qrb) qrb.onclick = () => { if (Meta.spend('gold', 15)) { Meta.p.settings.quickRollUnlocked = true; Meta.p.settings.quickRoll = true; Meta.save(); this.toast('Quick Roll unlocked!', RS.PALETTE.good); this.renderRoll(); } };
       const qrt = $('#quickRollToggle'); if (qrt) qrt.onchange = (e) => { Meta.p.settings.quickRoll = e.target.checked; Meta.save(); };
+      $$('[data-odds]', this.root).forEach((b) => b.onclick = () => {
+        this._oddsTier = b.dataset.odds;
+        $$('.oddstab', this.root).forEach((x) => x.classList.toggle('on', x === b));
+        $('#oddsList', this.root).innerHTML = this._oddsHtml(this._oddsTier);
+      });
+    },
+    // Per-rarity chance bars for a roll tier (the "rarity bar" board).
+    _oddsHtml(tier) {
+      return Meta.rollOdds(tier).map((o) => {
+        const c = RS.rarityColor(o.id);
+        const pct = o.pct >= 10 ? o.pct.toFixed(0) : o.pct >= 1 ? o.pct.toFixed(1) : o.pct.toFixed(2);
+        return `<div class="oddsrow" style="--rc:${c}">
+          <span class="oi">${RS.rarityIcon(o.id)}</span>
+          <span class="on">${o.id}</span>
+          <div class="ob"><i style="width:${Math.max(1.5, o.pct)}%"></i></div>
+          <em>${pct}%</em>
+        </div>`;
+      }).join('');
     },
     _rollHistoryHtml() {
       return Meta.p.rollHistory.slice(0, 18).map((e) => {
@@ -365,9 +423,16 @@
       const quick = Meta.p.settings.quickRoll;
       const dur = quick ? 0 : 700 + bestRank * 300;
       if (!quick) {
-        stage.innerHTML = `<div class="banner-spin" style="--flare:${bestColor}"></div>`;
-        const spin = stage.firstElementChild;
-        spin.animate([{ filter: 'brightness(1)' }, { filter: `brightness(${1.5 + bestRank * 0.4})` }, { filter: 'brightness(1)' }], { duration: dur, iterations: 1 });
+        // Shine reveal: a starburst that swells and brightens toward the pull,
+        // wearing the rarity's own symbol. (Replaces the old spinning bar.)
+        const icon = RS.rarityIcon(RS.RARITY[bestRank].id);
+        stage.innerHTML = `<div class="shine" style="--flare:${bestColor}">
+            <div class="shine-rays"></div><div class="shine-core">✨</div>
+            <div class="shine-sym">${icon}</div>
+          </div>`;
+        const core = $('.shine-core', stage), sym = $('.shine-sym', stage);
+        core.animate([{ transform: 'scale(.4)', opacity: .5 }, { transform: `scale(${1.4 + bestRank * 0.25})`, opacity: 1 }], { duration: dur, easing: 'cubic-bezier(.4,0,.6,1)', fill: 'forwards' });
+        sym.animate([{ opacity: 0, transform: 'scale(.2) rotate(-40deg)' }, { opacity: 0, offset: 0.55 }, { opacity: 1, transform: 'scale(1) rotate(0deg)' }], { duration: dur, fill: 'forwards' });
         if (bestRank >= 6) { document.body.classList.add('shatter'); setTimeout(() => document.body.classList.remove('shatter'), 900); }
         if (bestRank >= 5) this.match && (this.match.freeze = 0.4);
       }
@@ -375,8 +440,8 @@
         stage.innerHTML = `<div class="results">${results.map((r) => {
           if (r.converted) return `<div class="rescard" style="--rc:${RS.rarityColor('Mythic')}"><div class="resrar">50/50 → Relics</div><b>+${r.converted.relic} 🔮</b></div>`;
           const t = r.tower; const dup = Meta.ownedCount(t.id) > 1;
-          return `<div class="rescard ${RS.rarityRank(r.rarity) >= 5 ? 'shine' : ''}" style="--rc:${RS.rarityColor(r.rarity)}">
-            <div class="resrar">${r.rarity}</div>
+          return `<div class="rescard ${RS.rarityRank(r.rarity) >= 5 ? 'gleam' : ''}" style="--rc:${RS.rarityColor(r.rarity)}">
+            <div class="resrar">${RS.rarityIcon(r.rarity)} ${r.rarity}</div>
             <canvas class="glyph rg" data-glyph="${t.id}" width="48" height="48"></canvas>
             <b>${t.name}</b>${dup ? '<span class="dupflag">DUPLICATE</span>' : '<span class="newflag">NEW</span>'}
           </div>`;
@@ -793,7 +858,7 @@
         // Hard clear grants a Super roll ticket
         if (m.diff.id === 'Hard') Meta.p.rolls.Super += 1;
         // Purple Nightmare grants a Divine ticket + the Frostcrown cosmetic
-        if (m.diff.purple) { Meta.p.rolls.Divine = (Meta.p.rolls.Divine || 0) + 1; Meta.p.cosmetics = Meta.p.cosmetics || {}; if (!Meta.p.cosmetics[m.diff.cosmetic]) { Meta.p.cosmetics[m.diff.cosmetic] = true; this._newCosmetic = m.diff.cosmetic; } }
+        if (m.diff.purple) { Meta.p.rolls.Divine = (Meta.p.rolls.Divine || 0) + 1; if (Meta.awardBadge('frostcrown')) this._newCosmetic = RS.BADGES.frostcrown.name; }
         Meta.recordClear(m.map.id, m.diff.id, m.stars, true);
       }
       Meta.grant('copper', rewards.copper); Meta.grant('silver', rewards.silver);
@@ -803,7 +868,9 @@
       for (const fam in m.killsByFamily) Meta.updateObjective('killFamily', m.killsByFamily[fam], fam);
       Meta.updateObjective('kill', m.totalKills);
       Meta.p.stats.kills += m.totalKills;
-      this._newRecords = Meta.updateRecords(m); // Hall of Champions personal bests
+      this._ladder = Meta.updateRecords(m); // records + Champions' Ladder progression
+      this._newRecords = this._ladder.beat;
+      if (this._ladder.rankAfter < this._ladder.rankBefore) this._rankJump = true; // triggers climb animation
       Meta.save();
       this._lastRewards = rewards; this._lastLeveled = leveled;
       setTimeout(() => { this._ended = false; this.show('summary'); }, 400);
@@ -830,6 +897,9 @@
           ${this._lastLeveled ? `<div class="levelup">⬆ Account Level ${Meta.p.account.level}! ${RS.ACCOUNT.unlocks[Meta.p.account.level] || ''}</div>` : ''}
           ${this._newCosmetic ? `<div class="levelup" style="border-color:#9b59b6;color:#c79bff">👑 Cosmetic unlocked: ${this._newCosmetic}!</div>` : ''}
           ${this._newRecords && this._newRecords.length ? `<div class="levelup" style="border-color:#f0a92e;color:#f0a92e">🏆 New personal best: ${this._newRecords.map((k) => Meta.RECORD_META[k].label).join(', ')}!</div>` : ''}
+          ${this._ladder && this._ladder.newlyDefeated.length ? this._ladder.newlyDefeated.map((rv) => `<div class="defeat-card ${rv.claude ? 'claude' : ''}"><span class="dav">${rv.avatar}</span><div><b>${rv.claude ? '👑 YOU HAVE DETHRONED CLAUDE' : 'Rival defeated: ' + rv.name}</b><span>${rv.claude ? "The top seat of the Champions' Ladder is yours." : 'You climbed past them on the ladder.'}</span></div></div>`).join('') : ''}
+          ${this._ladder && this._ladder.rankAfter < this._ladder.rankBefore ? `<div class="rankclimb">📈 Ladder rank <s>#${this._ladder.rankBefore}</s> → <b>#${this._ladder.rankAfter}</b> · ${Meta.rankTitle(this._ladder.rankAfter)}</div>` : ''}
+          ${this._ladder && this._ladder.newBadges.length ? `<div class="levelup" style="border-color:#c79bff;color:#c79bff">🎖️ Badge earned: ${this._ladder.newBadges.map((b) => RS.BADGES[b].icon + ' ' + RS.BADGES[b].name).join(', ')}</div>` : ''}
           <h3>Damage by Tower</h3>
           <div class="dmgchart">
             ${rows.length ? rows.map((row) => `<div class="dmgrow"><span>${row.name}</span><div class="bar"><i style="width:${row.dmg / maxDmg * 100}%"></i></div><em>${fmt(row.dmg)} · ${Math.round(row.dmg / total * 100)}%</em></div>`).join('') : '<em>No damage recorded.</em>'}
@@ -844,7 +914,7 @@
       this._wireGo();
       const nb = $('#nextTier'); if (nb) nb.onclick = () => { this.selectedDiff = RS.DIFF_BY_ID[this._nextDiffId(m.diff)]; this.workingLoadout = this.workingLoadout.slice(); this.show('loadout'); };
       $('#replayBtn').onclick = () => { this.show('loadout'); };
-      this._newCosmetic = null; this._newRecords = null;
+      this._newCosmetic = null; this._newRecords = null; this._ladder = null;
       this.match = null;
     },
     _nextDiffId(diff) { const order = Math.min(3, diff.order + 1); return RS.DIFFICULTY[order].id; },

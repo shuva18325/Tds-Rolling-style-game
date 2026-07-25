@@ -95,7 +95,7 @@ h1,h2,h3,h4 { font-family:'Trajan Pro','Palatino Linotype',Georgia,serif; letter
 @keyframes spin { to { transform:rotate(360deg); } }
 .results { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; padding:10px; max-height:190px; overflow:auto; }
 .rescard { width:110px; background:var(--panel); border:2px solid var(--rc); border-radius:8px; padding:8px; text-align:center; }
-.rescard.shine { animation:shine 1s ease-out; box-shadow:0 0 20px var(--rc); }
+.rescard.gleam { animation:shine 1s ease-out; box-shadow:0 0 20px var(--rc); }
 @keyframes shine { 0%{transform:scale(.6);opacity:0;} 60%{transform:scale(1.1);} 100%{transform:scale(1);opacity:1;} }
 .rescard .resrar { font-size:11px; color:var(--rc); text-transform:uppercase; letter-spacing:1px; }
 .rescard b { display:block; font-size:12px; margin-top:4px; }

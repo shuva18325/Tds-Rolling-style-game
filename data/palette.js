@@ -40,7 +40,7 @@
 
   // Damage-type tint for projectiles / numbers.
   RS.DMG_COLOR = {
-    Physical: '#d8d2c4', Piercing: '#cfd8e0', Magic: '#9b6fd0', Fire: '#e8722c',
+    Physical: '#d8d2c4', Melee: '#e24b4b', Siege: '#c99a5a', Piercing: '#cfd8e0', Magic: '#9b6fd0', Fire: '#e8722c',
     Frost: '#8fd4e8', Holy: '#f5e6a8', Necrotic: '#7d5fa0', True: '#ffffff',
   };
 })();

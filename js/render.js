@@ -62,7 +62,7 @@
         // attack trigger via muzzle rising edge (+ sound: heavy cannons boom)
         if (t.muzzle > v.lastMuzzle + 0.001) {
           v.atkT = v.atkDur;
-          if (RS.Audio) { if (t.def.traits.heavyReload) RS.Audio.greatCannon(); else if (t.splash > TILE) RS.Audio.boom(); else RS.Audio.shoot(t.def.damageType); }
+          if (RS.Audio) { if (t.def.traits.meleeSlash) RS.Audio.slash(); else if (t.def.traits.heavyReload) RS.Audio.greatCannon(); else if (t.splash > TILE) RS.Audio.boom(); else RS.Audio.shoot(t.def.damageType); }
           if (t.def.traits.heavyReload) { m.shake = Math.max(m.shake, 10); VFX.smoke(t.x, t.y - 4, 12, '#8a8578'); VFX.embers(t.x + Math.cos(v.aim) * 20, t.y - 6 + Math.sin(v.aim) * 20, 8, '#ffb457'); }
         }
         v.lastMuzzle = t.muzzle;
@@ -382,6 +382,7 @@
       }
     }
     _revealRing(ctx, x, y, r) {
+      r = S.R0(r); if (!r) return;
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
       const g = ctx.createRadialGradient(x, y, r * 0.4, x, y, r); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(120,200,255,0.10)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
       ctx.setLineDash([2, 6]); ctx.lineDashOffset = this.clock * 16; ctx.strokeStyle = 'rgba(150,210,255,0.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
@@ -389,6 +390,7 @@
       ctx.restore();
     }
     _rangeRing(ctx, x, y, r, color, str) {
+      r = S.R0(r); if (!r) return;
       ctx.save();
       const g = ctx.createRadialGradient(x, y, r * 0.5, x, y, r); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, A.alpha(color, str * 0.4)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
       ctx.setLineDash([6, 6]); ctx.lineDashOffset = -this.clock * 20 * RS.ANIM.runeRotate * 4; ctx.strokeStyle = A.alpha(color, str + 0.25); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.stroke();
@@ -508,11 +510,31 @@
     _fx(ctx, m) {
       if (!m._fx) return; ctx.save();
       for (const f of m._fx) {
-        const a = Math.max(0, f.t / 0.16); ctx.globalAlpha = a; ctx.globalCompositeOperation = 'lighter';
+        const a = Math.max(0, Math.min(1, f.t / (f.kind === 'slash' ? 0.18 : 0.16))); ctx.globalAlpha = a; ctx.globalCompositeOperation = 'lighter';
         ctx.strokeStyle = f.color; ctx.lineWidth = f.kind === 'beam' ? 3 : 2;
         if (f.kind === 'arc') { ctx.beginPath(); ctx.moveTo(f.x1, f.y1); const mx = (f.x1 + f.x2) / 2 + (Math.random() - 0.5) * 14, my = (f.y1 + f.y2) / 2 + (Math.random() - 0.5) * 14; ctx.lineTo(mx, my); ctx.lineTo(f.x2, f.y2); ctx.stroke(); }
         else if (f.kind === 'beam') { ctx.beginPath(); ctx.moveTo(f.x1, f.y1); ctx.lineTo(f.x2, f.y2); ctx.stroke(); }
         else if (f.kind === 'cone') { ctx.fillStyle = A.alpha(f.color, 0.4); ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.arc(f.x, f.y, f.reach, f.ang - f.half, f.ang + f.half); ctx.closePath(); ctx.fill(); }
+        else if (f.kind === 'slash') {
+          // crescent blade sweep that travels through the arc as it fades
+          const k = 1 - (f.t / 0.18); // 0 -> 1 across the swing
+          const sweep = f.ang - f.half + f.half * 2 * k;
+          const r0 = f.reach * 0.32, r1 = f.reach;
+          ctx.lineCap = 'round';
+          for (let i = 0; i < 3; i++) {
+            const trail = sweep - i * 0.22 * (f.half / 1.2);
+            ctx.globalAlpha = a * (1 - i * 0.3);
+            ctx.strokeStyle = i === 0 ? '#ffffff' : f.color;
+            ctx.lineWidth = (3 - i) * 1.6;
+            ctx.beginPath();
+            ctx.arc(f.x, f.y, (r0 + r1) / 2, trail - 0.34, trail + 0.34);
+            ctx.stroke();
+          }
+          ctx.globalAlpha = a * 0.5;
+          ctx.strokeStyle = '#fff'; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(f.x + Math.cos(sweep) * r0, f.y + Math.sin(sweep) * r0);
+          ctx.lineTo(f.x + Math.cos(sweep) * r1, f.y + Math.sin(sweep) * r1); ctx.stroke();
+        }
       }
       ctx.restore(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
     }
@@ -525,7 +547,7 @@
         if (tr.support) { radius = (tr.support.radiusT + ((src._mods && src._mods.auraRadiusT) || 0)) * TILE; color = tr.support.attackSpeedAura ? '#8fd4e8' : (tr.support.healBlockers ? '#7bd070' : '#8fd4e8'); }
         else if (tr.aura) { radius = (tr.aura.radiusT + ((src._mods && src._mods.auraRadiusT) || 0)) * TILE; color = '#ffcb5a'; }
         else if (tr.slowField) { radius = tr.slowField.radiusT * TILE; color = '#8fd4e8'; }
-        if (!radius) continue;
+        radius = S.R0(radius); if (!radius) continue;
         ctx.save(); ctx.globalCompositeOperation = 'lighter';
         const pulse = 0.06 + Math.sin(t * 2 + src.x) * 0.03;
         const g = ctx.createRadialGradient(src.x, src.y, radius * 0.3, src.x, src.y, radius); g.addColorStop(0, A.alpha(color, pulse)); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(src.x, src.y, radius, 0, TAU); ctx.fill();
@@ -568,7 +590,7 @@
         const k = m.dayT > 0.5 ? (m.dayT - 0.5) * 2 : 0; const dark = 0.15 + Math.sin(k * Math.PI) * 0.25;
         ctx.fillStyle = A.alpha('#101838', dark); ctx.fillRect(0, 0, W, H);
         ctx.save(); ctx.globalCompositeOperation = 'lighter';
-        for (const t of m.towers) { const lt = t.def.traits.light; if (!lt) continue; const R = lt * TILE; const g = ctx.createRadialGradient(t.x, t.y, 3, t.x, t.y, R); g.addColorStop(0, 'rgba(255,220,150,0.35)'); g.addColorStop(1, 'rgba(255,220,150,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(t.x, t.y, R, 0, TAU); ctx.fill(); }
+        for (const t of m.towers) { const lt = t.def.traits.light; if (!lt) continue; const R = S.R0(lt * TILE); if (!R) continue; const g = ctx.createRadialGradient(t.x, t.y, 3, t.x, t.y, R); g.addColorStop(0, 'rgba(255,220,150,0.35)'); g.addColorStop(1, 'rgba(255,220,150,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(t.x, t.y, R, 0, TAU); ctx.fill(); }
         const gg = ctx.createRadialGradient(m.goalPx.x, m.goalPx.y, 3, m.goalPx.x, m.goalPx.y, 60); gg.addColorStop(0, 'rgba(217,164,65,0.3)'); gg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(m.goalPx.x, m.goalPx.y, 60, 0, TAU); ctx.fill();
         ctx.restore();
       }

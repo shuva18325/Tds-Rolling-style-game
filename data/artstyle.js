@@ -144,13 +144,13 @@
 
   /* -------------------------- damage-type VFX ids ----------------------- */
   const DMG_VFX = {
-    Physical: 'debris', Piercing: 'debris', Magic: 'arcane', Fire: 'fire',
+    Physical: 'debris', Melee: 'slash', Siege: 'debris', Piercing: 'debris', Magic: 'arcane', Fire: 'fire',
     Frost: 'frost', Holy: 'holy', Necrotic: 'necrotic', True: 'prism',
   };
 
   // Damage-type + armour-type glyphs for the UI (emoji, no external assets).
   const DMG_ICON = {
-    Physical: '⚔️', Piercing: '🏹', Magic: '🔮', Fire: '🔥',
+    Physical: '🗡️', Melee: '🗡️', Siege: '🪨', Piercing: '🏹', Magic: '🔮', Fire: '🔥',
     Frost: '❄️', Holy: '✨', Necrotic: '💀', True: '⭐',
   };
   // Armour categories derived from an enemy's traits/family (visual only).
@@ -166,6 +166,13 @@
     return null;
   };
   RS.armorIcon = (cls) => ARMOR_ICON[cls] || '';
+
+  // A distinct symbol per rarity — used by the roll reveal and odds panel.
+  const RARITY_ICON = {
+    Common: '🪨', Uncommon: '🍀', Rare: '💎', Epic: '🔮',
+    Legendary: '👑', Mythic: '🔥', 'Mythic+': '✨',
+  };
+  RS.rarityIcon = (id) => RARITY_ICON[id] || '✨';
 
   RS.art = { hexToRgb, rgbToStr, mul, mix, toward, alpha, prismatic, makeRamp, shade, clamp };
   RS.LIGHT = LIGHT;

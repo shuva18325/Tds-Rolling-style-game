@@ -21,9 +21,9 @@
   RS.TOWERS = [
     /* ------------------------------ COMMON ----------------------------- */
     T({ id: 'peasant', name: 'Peasant Militia', rarity: 'Common', cost: 50,
-      damage: 6, fireRate: 0.9, rangeT: 0.9, targeting: 'First', damageType: 'Physical',
+      damage: 6, fireRate: 0.9, rangeT: 0.9, targeting: 'First', damageType: 'Melee',
       splashT: 0, status: [], placement: 'Path-adjacent-only',
-      traits: { blocker: { capacity: 1, respawn: 6 }, melee: true },
+      traits: { blocker: { capacity: 1, respawn: 6 }, melee: true, meleeSlash: { radiusT: 1.7, arc: 2.4 } },
       upgrades: { branch: [
         { name: 'Pitchfork Drill', desc: '+capacity, +dmg', mods: { blockCap: 1, damage: 0.4 } },
         { name: 'Conscript Line', desc: 'faster respawn, +hp', mods: { respawn: -3, hp: 0.6 } } ] },
@@ -51,7 +51,7 @@
       lore: 'Fire remembers what steel forgets.' }),
 
     T({ id: 'slinger', name: 'Stone Slinger', rarity: 'Common', cost: 100,
-      damage: 16, fireRate: 0.65, rangeT: 2.8, targeting: 'Strongest', damageType: 'Physical',
+      damage: 16, fireRate: 0.65, rangeT: 2.8, targeting: 'Strongest', damageType: 'Siege',
       splashT: 1.0, status: [], placement: 'Ground',
       traits: { splash: true, bonusVs: { trait: 'Armored', mult: 1.6 } },
       upgrades: { branch: [
@@ -61,7 +61,7 @@
       lore: 'A good sling outranges a bad conscience.' }),
 
     T({ id: 'scout', name: 'Watchtower Scout', rarity: 'Common', cost: 60,
-      damage: 3, fireRate: 0.8, rangeT: 3.0, targeting: 'First', damageType: 'Physical',
+      damage: 3, fireRate: 0.8, rangeT: 3.0, targeting: 'First', damageType: 'Piercing',
       splashT: 0, status: ['Mark'], placement: 'High-ground-only',
       traits: { support: { rangeAura: 0.15, radiusT: 3 }, mark: 0.10, reveal: 3.2 },
       upgrades: { branch: [
@@ -82,9 +82,9 @@
       lore: 'Punches through plate like parchment.' }),
 
     T({ id: 'menatarms', name: 'Man-at-Arms', rarity: 'Uncommon', cost: 200,
-      damage: 14, fireRate: 1.0, rangeT: 0.9, targeting: 'First', damageType: 'Physical',
+      damage: 14, fireRate: 1.0, rangeT: 0.9, targeting: 'First', damageType: 'Melee',
       splashT: 0, status: [], placement: 'Path-adjacent-only',
-      traits: { blocker: { capacity: 3, respawn: 8 }, melee: true },
+      traits: { blocker: { capacity: 3, respawn: 8 }, melee: true, meleeSlash: { radiusT: 1.9, arc: 2.8 } },
       upgrades: { branch: [
         { name: 'Shieldwall', desc: '+hp, hold 4', mods: { blockCap: 1, hp: 0.8 } },
         { name: 'Halberd', desc: '+dmg cleave', mods: { damage: 0.6, splashT: 0.8 } } ] },
@@ -123,9 +123,9 @@
       lore: 'A yard of ash, a yew of war.' }),
 
     T({ id: 'knight', name: 'Knight Errant', rarity: 'Rare', cost: 500,
-      damage: 44, fireRate: 1.2, rangeT: 1.2, targeting: 'Last', damageType: 'Physical',
+      damage: 44, fireRate: 1.2, rangeT: 1.2, targeting: 'Last', damageType: 'Melee',
       splashT: 0.6, status: [], placement: 'Ground',
-      traits: { mobile: { speed: 90, interceptR: 999 }, blocker: { capacity: 2, respawn: 5 } },
+      traits: { mobile: { speed: 90, interceptR: 999 }, blocker: { capacity: 2, respawn: 5 }, melee: true, meleeSlash: { radiusT: 2.0, arc: 3.0 } },
       upgrades: { branch: [
         { name: 'Charger', desc: 'faster, more dmg', mods: { moveSpeed: 40, damage: 0.4 } },
         { name: 'Bulwark', desc: 'holds 4, +hp', mods: { blockCap: 2, hp: 1.0 } } ] },
@@ -143,7 +143,7 @@
       lore: 'Faith is the only wall that mends itself.' }),
 
     T({ id: 'trebuchet', name: 'Trebuchet', rarity: 'Rare', cost: 600,
-      damage: 150, fireRate: 0.2, rangeT: 7.0, targeting: 'Most-Clustered', damageType: 'Physical',
+      damage: 150, fireRate: 0.2, rangeT: 7.0, targeting: 'Most-Clustered', damageType: 'Siege',
       splashT: 1.8, status: [], placement: 'Ground',
       traits: { splash: true, minRangeT: 4 },
       upgrades: { branch: [
@@ -185,7 +185,7 @@
       lore: 'Powder was a mistake. This is its apology.' }),
 
     T({ id: 'falconer', name: 'Royal Falconer', rarity: 'Epic', cost: 1000,
-      damage: 36, fireRate: 1.4, rangeT: 3.0, targeting: 'First', damageType: 'Physical',
+      damage: 36, fireRate: 1.4, rangeT: 3.0, targeting: 'First', damageType: 'Piercing',
       splashT: 0, status: [], placement: 'Ground',
       traits: { summon: { kind: 'falcon', count: 3, seek: 'Flying', dps: 30, speed: 160 } },
       upgrades: { branch: [
@@ -220,7 +220,7 @@
       lore: 'Three schools, one temper, no survivors.' }),
 
     T({ id: 'engineer', name: 'Siege Engineer Corps', rarity: 'Legendary', cost: 3200,
-      damage: 90, fireRate: 0.8, rangeT: 3.2, targeting: 'First', damageType: 'Physical',
+      damage: 90, fireRate: 0.8, rangeT: 3.2, targeting: 'First', damageType: 'Siege',
       splashT: 0.6, status: [], placement: 'Ground',
       traits: { builder: { every: 30, max: 4, turretDps: 45, turretRangeT: 3 } },
       upgrades: { branch: [
@@ -240,7 +240,7 @@
       lore: 'It answers to no terrain and no crown.' }),
 
     T({ id: 'basilisk', name: 'The Sultan\'s Basilisk', rarity: 'Legendary', cost: 3600,
-      damage: 480, fireRate: 0.12, rangeT: 5.5, targeting: 'Most-Clustered', damageType: 'Physical',
+      damage: 480, fireRate: 0.12, rangeT: 5.5, targeting: 'Most-Clustered', damageType: 'Siege',
       splashT: 2.2, status: ['Stagger'], placement: 'Ground',
       // footprint 2 = a genuine 2x2 giant; heavyReload flags the long charge-up
       // animation + the deep "great cannon" boom (both purely presentational).
