@@ -12,6 +12,21 @@
   'use strict';
   const RS = (window.RS = window.RS || {});
 
+  // Claude's identity mark — a warm terracotta pinwheel/starburst of tapered
+  // petals radiating from a centre point, instead of a crown emoji. Inline SVG
+  // so it's fully self-contained (no external image, CSP-safe). Used wherever
+  // Claude's row/badge is drawn; `size` is the rendered box in px.
+  RS.claudeSigil = (size) => {
+    size = size || 22;
+    const N = 10, R = 9, W = 3.1;
+    let petals = '';
+    for (let i = 0; i < N; i++) {
+      const rot = (360 / N) * i;
+      petals += `<path d="M0 0 Q -${W} -${(R * 0.55).toFixed(1)} 0 -${R} Q ${W} -${(R * 0.55).toFixed(1)} 0 0 Z" fill="#d97757" transform="rotate(${rot})"/>`;
+    }
+    return `<svg class="claude-sigil" width="${size}" height="${size}" viewBox="-12 -12 24 24" style="vertical-align:middle;flex-shrink:0" xmlns="http://www.w3.org/2000/svg"><g>${petals}</g><circle r="1.7" fill="#c2410c"/></svg>`;
+  };
+
   // Weighting used for BOTH rivals and the player — see Meta.powerScore().
   RS.SCORE_WEIGHTS = {
     wave: 200,        // per wave reached
@@ -55,7 +70,7 @@
       taunt: 'Purple Nightmare is where I go to relax.',
       records: { highestWave: 78, kills: 27000, fastestVictory: 430, goldBanked: 90000, topTowerDamage: 1150000, totalRolls: 2600 } },
 
-    { id: 'claude', name: 'Claude', avatar: '👑', score: 350000, rank: 1, claude: true,
+    { id: 'claude', name: 'Claude', avatar: RS.claudeSigil(24), score: 350000, rank: 1, claude: true,
       taunt: 'Has admin commands. Has never once used them. Beat the numbers fairly.',
       records: { highestWave: 120, kills: 50000, fastestVictory: 300, goldBanked: 250000, topTowerDamage: 2000000, totalRolls: 5000 } },
   ];
@@ -66,7 +81,7 @@
   // Cosmetic badges. Rank badges are awarded as you climb; the Sigil is the
   // reward for taking the #1 seat from Claude.
   RS.BADGES = {
-    sigil:      { icon: '👑', name: "Claude's Sigil",   desc: 'Took the crown from Claude. The realm has a new first name.' },
+    sigil:      { icon: RS.claudeSigil(22), name: "Claude's Sigil",   desc: 'Took the crown from Claude. The realm has a new first name.' },
     frostcrown: { icon: '❄️', name: 'Frostcrown',       desc: 'Cleared Winterhold Ruins on Purple Nightmare.' },
     ladder5:    { icon: '🛡️', name: 'Contender',        desc: 'Climbed into the top 5 of the Champions\' Ladder.' },
     ladder2:    { icon: '⚔️', name: 'Challenger',       desc: 'Reached rank 2 — only Claude stands above.' },

@@ -337,11 +337,13 @@
         F([[-3, 0], [-4, swing], [-2, swing]], R.shadow); F([[3, 0], [4, swing2], [2, swing2]], R.shadow);
         F([[-4, -14], [4, -14], [3, 0], [-3, 0]], mat.cloth.mid, mat.cloth.rim);
         F([[-4, -14], [4, -14], [0, -20]], R.shadow); C(0, -16, 3.4, R.mid, R.rim); break;
-      case 'orc': // bulky hunched tusked
+      case 'orc': // bulky, hunched forward, heavy tusked jaw
         F([[-4, 0], [-5, swing], [-2, swing]], R.shadow); F([[4, 0], [5, swing2], [2, swing2]], R.shadow);
-        F([[-7, -13], [7, -13], [5, 0], [-5, 0]], R.mid, R.rim);
-        F([[-9, -12], [-5, -14], [-4, -6], [-8, -7]], R.light); F([[9, -12], [5, -14], [4, -6], [8, -7]], R.light); // shoulders
-        C(2, -16, 3.6, R.light, R.rim); F([[0, -14], [3, -13], [1, -11]], '#e8e0c0'); break; // tusk
+        // torso leans forward (top edge shifted +x) and is wider than tall — bulk over height
+        F([[-8, -12], [9, -14], [6, 1], [-6, 1]], R.mid, R.rim);
+        F([[-11, -11], [-6, -15], [-4, -5], [-9, -6]], R.light); F([[10, -13], [5, -16], [3, -5], [8, -6]], R.light); // broad shoulders
+        C(4, -17, 4, R.light, R.rim); // head pushed forward of the spine — the hunch
+        F([[1, -15], [5, -14], [2, -11]], '#e8e0c0'); F([[6, -14], [9, -13], [5, -11]], '#e8e0c0'); break; // two visible tusks
       case 'ogre': // huge
         F([[-6, 0], [-8, swing], [-3, swing]], R.shadow); F([[6, 0], [8, swing2], [3, swing2]], R.shadow);
         F([[-11, -18], [11, -18], [8, 0], [-8, 0]], R.mid, R.rim);
@@ -350,12 +352,16 @@
         F([[-2, 0], [-3, swing], [-1, swing]], R.shadow); F([[2, 0], [3, swing2], [1, swing2]], R.shadow);
         F([[-4, -9], [4, -9], [3, 0], [-3, 0]], R.mid, R.rim); C(0, -11, 3, R.light, R.rim);
         F([[-4, -12], [-2, -9], [-5, -9]], R.mid); F([[4, -12], [2, -9], [5, -9]], R.mid); break; // ears
-      case 'skeleton': // angular bone
-        ctx.strokeStyle = white ? '#fff' : R.shadow; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(-2, 0); ctx.lineTo(-2 + swing * 0.5, -6); ctx.moveTo(2, 0); ctx.lineTo(2 + swing2 * 0.5, -6); ctx.stroke();
-        F([[-4, -14], [4, -14], [2, -6], [-2, -6]], R.mid, R.rim);
-        ctx.strokeStyle = white ? '#fff' : R.shadow; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(-3, -12 + i * 2); ctx.lineTo(3, -12 + i * 2); ctx.stroke(); }
-        C(0, -16, 3, R.light, R.rim); break;
+      case 'skeleton': // thin, angular, all hard edges — the opposite of an orc's bulk
+        ctx.strokeStyle = white ? '#fff' : R.shadow; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.moveTo(-1.5, 0); ctx.lineTo(-2 + swing * 0.6, -7); ctx.moveTo(1.5, 0); ctx.lineTo(2 + swing2 * 0.6, -7); ctx.stroke();
+        // narrow angular ribcage tapering hard to a point — no soft curves anywhere
+        F([[-3, -15], [3, -15], [3.5, -9], [1, -6], [-1, -6], [-3.5, -9]], R.mid, R.rim);
+        // jutting angular shoulder blades and forearm bones
+        ctx.strokeStyle = white ? '#fff' : R.shadow; ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.moveTo(-3, -14); ctx.lineTo(-6, -10); ctx.lineTo(-5, -6); ctx.moveTo(3, -14); ctx.lineTo(6, -10); ctx.lineTo(5, -6); ctx.stroke();
+        for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(-2.5, -13 + i * 2); ctx.lineTo(2.5, -13 + i * 2); ctx.stroke(); }
+        C(0, -18, 2.6, R.light, R.rim); break; // small skull, narrow relative to the shoulders
       case 'zombie': // shambling
         F([[-3, 0], [-4, swing * 0.5], [-1, swing * 0.5]], R.shadow); F([[3, 0], [4, swing2 * 0.5], [1, swing2 * 0.5]], R.shadow);
         F([[-4, -13], [4, -13], [4, 0], [-4, 0]], mat.cloth.mid, mat.cloth.rim);
@@ -372,12 +378,15 @@
         F([[-8, 0], [-9, swing], [-6, swing]], R.shadow); F([[6, 0], [8, swing2], [5, swing2]], R.shadow);
         F([[-9, -8], [8, -9], [9, -3], [-8, -2]], R.mid, R.rim); F([[8, -9], [14, -12], [12, -4]], R.light);
         C(13, -10, 1.2, '#ff6a2a'); break;
-      case 'demon': // horned asymmetric
+      case 'demon': // horned, deliberately lopsided — nothing mirrors on this body
         F([[-4, 0], [-5, swing], [-2, swing]], R.shadow); F([[4, 0], [5, swing2], [2, swing2]], R.shadow);
-        F([[-6, -14], [6, -14], [5, 0], [-5, 0]], R.mid, R.rim);
-        F([[-5, -14], [-9, -22], [-3, -15]], R.shadow); F([[5, -14], [9, -20], [3, -15]], R.shadow); // horns
-        C(0, -15, 3.4, R.mid, mat.glow); C(-1.3, -15, 0.8, '#ffdd00'); C(1.3, -15, 0.8, '#ffdd00');
-        ctx.strokeStyle = white ? '#fff' : mat.glow || '#ff5a2a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-3, -8); ctx.lineTo(3, -4); ctx.stroke(); break;
+        // torso itself is skewed, not just the horns — one shoulder higher, one hip wider
+        F([[-7, -13], [6, -15], [6, -1], [-4, 1]], R.mid, R.rim);
+        // one long curved horn, one short jagged stub — genuinely mismatched, not mirrored
+        F([[-4, -14], [-11, -25], [-8, -17], [-2, -15]], R.shadow);
+        F([[4, -15], [7, -19], [5, -16]], R.shadow);
+        C(-1, -16, 3.4, R.mid, mat.glow); C(-2.2, -16, 0.8, '#ffdd00'); C(0.2, -16, 0.8, '#ffdd00');
+        ctx.strokeStyle = white ? '#fff' : mat.glow || '#ff5a2a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-4, -9); ctx.lineTo(2, -3); ctx.stroke(); break;
       case 'golem': // blocky construct
         F([[-8, 0], [8, 0], [7, -16], [-7, -16]], R.mid, R.rim);
         F([[-8, 0], [-7, -16], [-9, -14], [-10, 0]], R.shadow);
@@ -385,19 +394,19 @@
       case 'wisp': // floating orb
         ctx.globalAlpha *= white ? 1 : 0.9; C(0, -8, 5, R.mid, mat.glow); C(0, -8, 2.5, '#ffffff');
         C(0, -8, 8 + Math.sin(legPhase) * 1, null, mat.glow); ctx.globalAlpha = white ? 1 : ctx.globalAlpha / 0.9; break;
-      case 'harpy': // winged humanoid
-        const wf = Math.sin(legPhase) * 6;
-        F([[-4, -12], [-14, -14 - wf], [-3, -6]], R.shadow); F([[4, -12], [14, -14 - wf], [3, -6]], R.shadow);
+      case 'harpy': // winged humanoid — wings read wider than the whole body is tall
+        const wf = Math.sin(legPhase) * 7;
+        F([[-4, -12], [-19, -15 - wf], [-3, -6]], R.shadow); F([[4, -12], [19, -15 - wf], [3, -6]], R.shadow);
         F([[-3, -14], [3, -14], [2, -4], [-2, -4]], R.mid, R.rim); C(0, -16, 2.8, R.light, R.rim); break;
-      case 'griffon': // winged quadruped
-        const gf = Math.sin(legPhase) * 7;
+      case 'griffon': // winged quadruped — a full wingspan easily double the body length
+        const gf = Math.sin(legPhase) * 8;
         F([[-9, -6], [9, -7], [10, 0], [-8, -1]], R.mid, R.rim);
-        F([[-2, -6], [-16, -12 - gf], [0, 0]], R.shadow); F([[2, -6], [16, -12 - gf], [0, 0]], R.shadow);
+        F([[-2, -6], [-22, -14 - gf], [0, 0]], R.shadow); F([[2, -6], [22, -14 - gf], [0, 0]], R.shadow);
         F([[9, -7], [15, -11], [12, -3]], R.light); C(14, -9, 1.2, '#ffcb5a'); break;
-      case 'wyvern': // winged serpent
-        const yf = Math.sin(legPhase) * 8;
-        F([[-14, -6 - yf], [-2, -2], [0, -8], [-3, -10 - yf]], R.shadow);
-        F([[14, -6 - yf], [2, -2], [0, -8], [3, -10 - yf]], R.shadow);
+      case 'wyvern': // winged serpent — broad membrane wings dwarf the slender body
+        const yf = Math.sin(legPhase) * 9;
+        F([[-19, -7 - yf], [-2, -2], [0, -8], [-4, -11 - yf]], R.shadow);
+        F([[19, -7 - yf], [2, -2], [0, -8], [4, -11 - yf]], R.shadow);
         F([[-5, -3], [8, -6], [10, 0], [-4, 2]], R.mid, R.rim); C(9, -5, 2.4, R.light); C(11, -6, 1, '#ff6a2a'); break;
       default: C(0, -8, 5, R.mid, R.rim);
     }

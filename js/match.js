@@ -849,7 +849,7 @@
      * a cluster — this is the melee answer to a projectile volley. */
     _meleeSlash(t) {
       const ms = t.def.traits.meleeSlash;
-      const reach = ms.radiusT * TILE * t.buff.range;
+      const reach = this._meleeReach(t); // == the engage reach — see _meleeReach
       this.grid.query(t.x, t.y, reach, this._tmp);
       let best = null, bd = reach * reach;
       const inReach = [];
@@ -1038,18 +1038,27 @@
       this.addFloater(t.x, t.y - 30, 'FLAME SWEEP', RS.PALETTE.blood);
     }
 
+    // The ONE reach value shared by both the engage/freeze logic below and the
+    // slash attack in _meleeSlash. They used to be computed separately (a
+    // 1.8-tile floor here vs. each tower's own radiusT there) and could drift
+    // apart — Peasant Militia's slash radius (1.7 tiles) was slightly SMALLER
+    // than this engage floor, so it could freeze an enemy 5px outside its own
+    // attack range. With capacity 1, that one bad engagement permanently
+    // jammed the tower for the rest of the match (it can't re-engage anyone
+    // else while stuck holding an unreachable target) — the tower would look
+    // completely broken from then on. Routing both through this one function
+    // makes that divergence structurally impossible.
+    _meleeReach(t) {
+      const slashT = t.def.traits.meleeSlash ? t.def.traits.meleeSlash.radiusT : 0;
+      return Math.max(t.range, slashT * TILE, 1.8 * TILE) * t.buff.range;
+    }
+
     _blockerUpdate(t, dt) {
       const b = t.blocker;
       if (b.respawnT > 0) { b.respawnT -= dt; if (b.respawnT <= 0) b.hp = b.maxHp; return; }
       // release dead engagements
       b.engaged = b.engaged.filter((uid) => { const e = this.enemies.find((x) => x.uid === uid && x.alive); if (!e) return false; return e.engagedByUid === t.uid; });
-      // Engage new enemies within reach. Path-adjacent-only blockers sit one
-      // tile OFF the road (never on it — see Design Decision #4), so their
-      // engage radius must clear at least a full tile centre-to-centre (48px
-      // orthogonal, ~68px diagonal). The previous 0.9-tile floor (43px) was
-      // smaller than that minimum distance, so Peasant Militia / Man-at-Arms
-      // could never reach the road at all — this floor guarantees they can.
-      const reach = Math.max(t.range, 1.8 * TILE);
+      const reach = this._meleeReach(t);
       if (b.engaged.length < b.capacity) {
         this.grid.query(t.x, t.y, reach, this._tmp);
         for (const e of this._tmp) {

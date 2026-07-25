@@ -143,7 +143,7 @@
           <div class="ladbanner">
             <div><span class="ladrank">#${myRank}</span><span class="ladrankttl">${Meta.rankTitle(myRank)}</span></div>
             ${next ? `<div class="ladnext">Next: <b>${next.avatar} ${next.name}</b> — <span>${gap.toLocaleString()} power to overtake</span></div>`
-                   : `<div class="ladnext crowned">👑 You hold the top seat. The realm answers to you.</div>`}
+                   : `<div class="ladnext crowned">${RS.claudeSigil(18)} You hold the top seat. The realm answers to you.</div>`}
           </div>
           <div class="ladder">${rows}</div>
           <h3 class="special-h">Your Record Sheet <small>power ${myScore.toLocaleString()}</small></h3>
@@ -897,7 +897,7 @@
           ${this._lastLeveled ? `<div class="levelup">⬆ Account Level ${Meta.p.account.level}! ${RS.ACCOUNT.unlocks[Meta.p.account.level] || ''}</div>` : ''}
           ${this._newCosmetic ? `<div class="levelup" style="border-color:#9b59b6;color:#c79bff">👑 Cosmetic unlocked: ${this._newCosmetic}!</div>` : ''}
           ${this._newRecords && this._newRecords.length ? `<div class="levelup" style="border-color:#f0a92e;color:#f0a92e">🏆 New personal best: ${this._newRecords.map((k) => Meta.RECORD_META[k].label).join(', ')}!</div>` : ''}
-          ${this._ladder && this._ladder.newlyDefeated.length ? this._ladder.newlyDefeated.map((rv) => `<div class="defeat-card ${rv.claude ? 'claude' : ''}"><span class="dav">${rv.avatar}</span><div><b>${rv.claude ? '👑 YOU HAVE DETHRONED CLAUDE' : 'Rival defeated: ' + rv.name}</b><span>${rv.claude ? "The top seat of the Champions' Ladder is yours." : 'You climbed past them on the ladder.'}</span></div></div>`).join('') : ''}
+          ${this._ladder && this._ladder.newlyDefeated.length ? this._ladder.newlyDefeated.map((rv) => `<div class="defeat-card ${rv.claude ? 'claude' : ''}"><span class="dav">${rv.avatar}</span><div><b>${rv.claude ? RS.claudeSigil(18) + ' YOU HAVE DETHRONED CLAUDE' : 'Rival defeated: ' + rv.name}</b><span>${rv.claude ? "The top seat of the Champions' Ladder is yours." : 'You climbed past them on the ladder.'}</span></div></div>`).join('') : ''}
           ${this._ladder && this._ladder.rankAfter < this._ladder.rankBefore ? `<div class="rankclimb">📈 Ladder rank <s>#${this._ladder.rankBefore}</s> → <b>#${this._ladder.rankAfter}</b> · ${Meta.rankTitle(this._ladder.rankAfter)}</div>` : ''}
           ${this._ladder && this._ladder.newBadges.length ? `<div class="levelup" style="border-color:#c79bff;color:#c79bff">🎖️ Badge earned: ${this._ladder.newBadges.map((b) => RS.BADGES[b].icon + ' ' + RS.BADGES[b].name).join(', ')}</div>` : ''}
           <h3>Damage by Tower</h3>
