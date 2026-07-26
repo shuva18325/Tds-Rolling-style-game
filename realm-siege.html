@@ -677,30 +677,57 @@ button:hover::after { transform: translateX(120%); }
 .sandbox-warn b { color: var(--warn); }
 .sandbox-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
 .sandbox-banner { position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 10px;
   background: linear-gradient(#2a2440,#1a1728); border: 1px solid #9b59b6; color: #c79bff;
-  padding: 4px 14px; border-radius: 14px; font-size: 12px; font-weight: 700; letter-spacing: .6px;
-  box-shadow: 0 0 16px -4px #9b59b6; pointer-events: none; }
+  padding: 4px 6px 4px 14px; border-radius: 14px; font-size: 12px; font-weight: 700; letter-spacing: .6px;
+  box-shadow: 0 0 16px -4px #9b59b6; pointer-events: auto; z-index: 30; }
+.sandbox-admin-btn { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 10px;
+  background: linear-gradient(#12200f,#0a140a); border: 1px solid #3fdb6f; color: #8bff9e;
+  text-shadow: 0 0 6px rgba(120,255,150,.5); box-shadow: 0 0 10px -3px rgba(80,220,120,.6); }
+.sandbox-admin-btn:hover { background: linear-gradient(#183018,#0c1a0c); }
 .sandbox-note { background: #2a2440; border: 1px solid #9b59b6; color: #c79bff; border-radius: 8px;
   padding: 8px 12px; font-size: 13px; margin: 8px auto 4px; max-width: 520px; }
 
-.cmdpanel { position: fixed; right: 16px; bottom: 16px; width: min(430px, 92vw); z-index: 200;
-  background: linear-gradient(165deg,#161a16,#0c0e0c); border: 1px solid #4a7a4a; border-radius: 10px;
-  box-shadow: 0 12px 36px rgba(0,0,0,.7), 0 0 0 1px rgba(120,220,120,.08);
-  font-family: ui-monospace, Menlo, Consolas, monospace; overflow: hidden; }
-.cmd-head { display: flex; align-items: center; gap: 8px; padding: 7px 10px;
-  background: #12160f; border-bottom: 1px solid #2f4a2f; }
-.cmd-head b { color: #7bd070; font-size: 12px; }
-.cmd-mode { margin-left: auto; font-size: 10px; letter-spacing: .8px; color: var(--dim); }
-.cmd-mode.on { color: #c79bff; }
-.cmd-x { padding: 1px 7px; font-size: 11px; background: transparent; border-color: transparent; color: #6a7a6a; box-shadow: none; }
-.cmd-x:hover { color: var(--text); border-color: var(--line); }
-.cmd-log { height: 160px; overflow-y: auto; padding: 8px 10px; font-size: 11.5px; line-height: 1.6; }
-.cmd-line { white-space: pre-wrap; word-break: break-word; }
-.cmd-line.you { color: #9fd0ff; } .cmd-line.ok { color: #7bd070; }
-.cmd-line.err { color: #ff7a6a; } .cmd-line.dim { color: #5a6a5a; }
-.cmd-in { width: 100%; border: 0; border-top: 1px solid #2f4a2f; background: #0a0c0a; color: #cfe8cf;
-  padding: 9px 10px; font-family: inherit; font-size: 12px; outline: none; }
-.cmd-in::placeholder { color: #46564a; }
+/* sandbox identity chip: green terminal tone + a light continuous glitch */
+.profchip.sb-id { border-color: #3fdb6f; cursor: default; }
+.profchip.sb-id .pav { filter: drop-shadow(0 0 4px rgba(120,255,150,.6)); }
+.binaryname { font-family: ui-monospace, Menlo, Consolas, monospace; color: #8bff9e;
+  letter-spacing: .5px; text-shadow: 0 0 6px rgba(120,255,150,.55); animation: binGlitch 3.2s steps(1) infinite; }
+@keyframes binGlitch {
+  0%, 92%, 100% { opacity: 1; transform: none; }
+  93% { opacity: .55; transform: translateX(-1px); }
+  94% { opacity: 1; transform: translateX(1px); }
+  96% { opacity: .7; transform: none; }
+}
+
+.cmdpanel { position: fixed; right: 16px; bottom: 16px; width: min(440px, 92vw); z-index: 200;
+  background: #05070550; border: 1px solid #3fdb6f; border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.75), 0 0 0 1px rgba(90,220,120,.15), 0 0 26px -6px rgba(80,220,120,.35);
+  font-family: ui-monospace, Menlo, Consolas, monospace; overflow: hidden; position: fixed; }
+.cmd-head { position: relative; z-index: 2; display: flex; align-items: center; gap: 8px; padding: 7px 10px;
+  background: linear-gradient(#0d1710,#080c08); border-bottom: 1px solid #2f4a2f; }
+.cmd-head b { color: #8bff9e; font-size: 12px; letter-spacing: 1px; text-shadow: 0 0 8px rgba(120,255,150,.5); }
+.cmd-mode { margin-left: auto; font-size: 10px; letter-spacing: .8px; color: #4a6a4a; }
+.cmd-mode.on { color: #8bff9e; text-shadow: 0 0 6px rgba(120,255,150,.5); }
+.cmd-x { padding: 1px 7px; font-size: 11px; background: transparent; border-color: transparent; color: #4a6a4a; box-shadow: none; }
+.cmd-x:hover { color: #cfe; border-color: #2f4a2f; }
+.cmd-rain { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; opacity: .55; pointer-events: none; }
+/* scanline overlay for the terminal-hacked look */
+.cmdpanel::after { content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(0,0,0,0.16) 0 1px, transparent 1px 3px);
+  mix-blend-mode: multiply; }
+.cmd-log { position: relative; z-index: 2; height: 170px; overflow-y: auto; padding: 8px 10px; font-size: 11.5px;
+  line-height: 1.6; background: rgba(4,8,4,0.35); }
+.cmd-line { white-space: pre-wrap; word-break: break-word; text-shadow: 0 0 4px rgba(90,220,120,.25); }
+.cmd-line.you { color: #9fd0ff; text-shadow: 0 0 4px rgba(120,180,255,.3); }
+.cmd-line.ok { color: #8bff9e; } .cmd-line.err { color: #ff8a7a; text-shadow: 0 0 4px rgba(255,100,80,.3); }
+.cmd-line.dim { color: #4a6a4a; text-shadow: none; }
+.cmd-inrow { position: relative; z-index: 2; display: flex; align-items: center; gap: 6px;
+  border-top: 1px solid #2f4a2f; background: rgba(6,10,6,0.7); padding: 0 10px; }
+.cmd-prompt { color: #8bff9e; font-size: 12px; text-shadow: 0 0 6px rgba(120,255,150,.5); }
+.cmd-in { flex: 1; width: 100%; border: 0; background: transparent; color: #cfe8cf;
+  padding: 9px 0; font-family: inherit; font-size: 12px; outline: none; }
+.cmd-in::placeholder { color: #3a5a3a; }
 
 </style>
 
@@ -2105,6 +2132,17 @@ button:hover::after { transform: translateX(120%); }
       coldness: true, houseOnly: true, winter: true, fixedDiff: 'Purple Nightmare',
       families: { Bandit: 0, Orc: 2, Undead: 4, Demon: 2, Arcane: 2, Aerial: 2 },
       desc: 'A frozen ruin under endless blizzard. Towers can be built ONLY inside the campfire-lit houses — everywhere else, the cold kills. Every foe wears a Cold shroud that only Fire or Holy damage can melt.' }),
+
+    // 🧪 SANDBOX RANGE — sandboxOnly hides it from the normal map grid; Sandbox
+    // routes into it automatically. Wide open ground on both sides of a short
+    // path so every tower's footprint and range fits somewhere, no water/
+    // hazard/holy/cursed/highground tiles to complicate placement testing.
+    M({ id: 'sandbox_range', name: 'Sandbox Range', order: 99, sandboxOnly: true,
+      paths: [[[0, 7], [9, 7], [9, 6], [19, 6]]],
+      water: [], highground: [], hazard: [], holy: [], cursed: [], unbuildable: [],
+      env: { weather: ['Clear'], dayNight: false, gimmick: 'none' },
+      families: { Bandit: 1, Orc: 1, Undead: 1, Demon: 1, Arcane: 1, Aerial: 1 },
+      desc: 'A blank drill yard. Sandbox only — build and break anything.' }),
   ];
 
   RS.MAP_BY_ID = {};
@@ -7697,11 +7735,16 @@ button:hover::after { transform: translateX(120%); }
     _panel: null,
     _history: [],
 
-    // Only the secret username sees the command panel at all.
+    // The secret username can always see the panel (even outside sandbox, to
+    // poke around); being IN sandbox unlocks it too, regardless of your real
+    // name — sandbox itself is the safety boundary (commands refuse to run
+    // outside it below), so gating the panel further on top of that was just
+    // friction for the one mode where testing is the entire point.
     isDev() {
       const p = RS.Meta && RS.Meta.p && RS.Meta.p.profile;
       return !!(p && (p.name || '').trim().toUpperCase() === SECRET_NAME);
     },
+    canOpenPanel() { return this.active || this.isDev(); },
 
     /* ------------------------------ entry ----------------------------- */
     enter() {
@@ -7787,33 +7830,96 @@ button:hover::after { transform: translateX(120%); }
           m.waveIndex = Math.max(0, Math.min(m.maxWaves, to - 1));
           return { ok: true, msg: `Jumped to wave ${m.waveIndex + 1}` };
         }
+        case '/spawntower': {
+          if (!m) return { ok: false, msg: '/spawntower needs an active match' };
+          const def = RS.TOWER_BY_ID[arg];
+          if (!def) return { ok: false, msg: `Unknown tower "${arg || ''}". Try /help` };
+          m.gold = Math.max(m.gold, def.cost);   // sandbox: never blocked on gold — bump
+          let c = parseInt(arg2, 10), rr = parseInt(parts[3], 10);         // BEFORE searching, or the
+          if (isNaN(c) || isNaN(rr)) {                                    // gold check inside canPlace()
+            const spot = this._findBuildSpot(m, def);                     // fails every candidate tile
+            if (!spot) return { ok: false, msg: `No open tile fits ${def.name} (${def.placement})` };
+            c = spot.c; rr = spot.r;
+          }
+          const res = m.place(def, c, rr);
+          return res.ok ? { ok: true, msg: `Placed ${def.name} at (${c},${rr})` } : { ok: false, msg: res.reason };
+        }
+        case '/clear': {
+          if (!m) return { ok: false, msg: '/clear needs an active match' };
+          const what = (arg || 'all').toLowerCase();
+          let n = 0;
+          if (what === 'enemies' || what === 'all') {
+            n += m.enemies.length; m.enemies.length = 0; m.spawnQueue.length = 0;
+          }
+          if (what === 'towers' || what === 'all') {
+            const list = m.towers.slice(); list.forEach((t) => m._removeTower(t)); n += list.length;
+          }
+          if (!['enemies', 'towers', 'all'].includes(what)) return { ok: false, msg: 'Usage: /clear enemies|towers|all' };
+          return { ok: true, msg: `Cleared ${what} (${n} removed)` };
+        }
         case '/help':
-          return { ok: true, msg: '/give [n] · /spawn [enemyId] [n] · /rankup [level] · /wave [n]' };
+          return { ok: true, msg: '/give [n] · /spawn [enemyId] [n] · /spawntower [towerId] [c] [r] · /clear [enemies|towers|all] · /rankup [level] · /wave [n]' };
         default:
           return { ok: false, msg: `Unknown command "${cmd}". Try /help` };
       }
+    },
+
+    // First open tile a tower's placement rule allows, preferring path-
+    // adjacent tiles for anything that needs them so the search doesn't have
+    // to scan the whole board for the common case.
+    _findBuildSpot(m, def) {
+      const wantsPath = def.placement === 'Path-adjacent-only';
+      const wantsHigh = def.placement === 'High-ground-only';
+      for (let r = 0; r < m.rows; r++) for (let c = 0; c < m.cols; c++) {
+        if (wantsPath && !m.pathAdjacent.has(c + ',' + r)) continue;
+        if (wantsHigh && m.tileKind(c, r) !== 'highground') continue;
+        if (m.canPlace(def, c, r).ok) return { c, r };
+      }
+      return null;
+    },
+
+    // Reusable "decrypting" text reveal: target characters lock in left to
+    // right while the rest flicker between 0/1, used for the sandbox identity
+    // display. Pure DOM/text — no game state touched.
+    binaryDecode(el, target, ms) {
+      if (!el || el._decoding) return;
+      el._decoding = true;
+      const dur = ms || 750;
+      const t0 = performance.now();
+      const step = (now) => {
+        const t = Math.min(1, (now - t0) / dur);
+        const revealed = Math.floor(t * target.length);
+        let out = '';
+        for (let i = 0; i < target.length; i++) out += i < revealed ? target[i] : (Math.random() < 0.5 ? '0' : '1');
+        el.textContent = out;
+        if (t < 1) requestAnimationFrame(step);
+        else { el.textContent = target; el._decoding = false; }
+      };
+      requestAnimationFrame(step);
     },
 
     /* ------------------------------ panel ----------------------------- */
     togglePanel() { this._panel ? this.hidePanel() : this.showPanel(); },
 
     showPanel() {
-      if (this._panel || !this.isDev()) return;
+      if (this._panel || !this.canOpenPanel()) return;
       const el = document.createElement('div');
       el.className = 'cmdpanel';
       el.innerHTML = `
+        <canvas class="cmd-rain" id="cmdRain"></canvas>
         <div class="cmd-head">
-          <b>⌘ Command Panel</b>
-          <span class="cmd-mode ${this.active ? 'on' : ''}">${this.active ? 'SANDBOX' : 'NORMAL — commands disabled'}</span>
+          <b>⌘ ADMIN CONSOLE</b>
+          <span class="cmd-mode ${this.active ? 'on' : ''}">${this.active ? '● SANDBOX' : '○ NORMAL — commands disabled'}</span>
           <button class="cmd-x" id="cmdClose">✕</button>
         </div>
-        <div class="cmd-log" id="cmdLog"><div class="cmd-line dim">Type /help for the command list.</div></div>
-        <input class="cmd-in" id="cmdIn" placeholder="/give 50000" spellcheck="false" autocomplete="off">`;
+        <div class="cmd-log" id="cmdLog"><div class="cmd-line dim">root@sandbox:~$ type /help for the command list</div></div>
+        <div class="cmd-inrow"><span class="cmd-prompt">&gt;</span><input class="cmd-in" id="cmdIn" placeholder="/give 50000" spellcheck="false" autocomplete="off"></div>`;
       document.body.appendChild(el);
       this._panel = el;
       const log = el.querySelector('#cmdLog');
       const input = el.querySelector('#cmdIn');
       el.querySelector('#cmdClose').onclick = () => this.hidePanel();
+      this._startRain(el.querySelector('#cmdRain'));
       const push = (txt, cls) => {
         const d = document.createElement('div');
         d.className = 'cmd-line ' + (cls || '');
@@ -7846,7 +7952,31 @@ button:hover::after { transform: translateX(120%); }
       input.focus();
     },
 
-    hidePanel() { if (this._panel) { this._panel.remove(); this._panel = null; } },
+    hidePanel() { this._stopRain(); if (this._panel) { this._panel.remove(); this._panel = null; } },
+
+    // Cheap falling-binary backdrop behind the log — a fixed low-res canvas
+    // redrawn on a plain interval (not rAF: this is a UI overlay, not part of
+    // the game's render loop, and a match may already be rendering at 60fps
+    // underneath it).
+    _startRain(cv) {
+      if (!cv) return;
+      const ctx = cv.getContext('2d');
+      const resize = () => { cv.width = cv.clientWidth; cv.height = cv.clientHeight; };
+      resize();
+      const fontSize = 12, cols = Math.max(1, Math.floor(cv.width / fontSize));
+      const drops = new Array(cols).fill(0).map(() => Math.random() * -20);
+      this._rainTimer = setInterval(() => {
+        if (cv.clientWidth !== cv.width || cv.clientHeight !== cv.height) resize();
+        ctx.fillStyle = 'rgba(6,10,7,0.28)'; ctx.fillRect(0, 0, cv.width, cv.height);
+        ctx.font = fontSize + 'px monospace';
+        for (let i = 0; i < cols; i++) {
+          ctx.fillStyle = Math.random() < 0.06 ? '#bdf5c0' : 'rgba(90,200,110,0.55)';
+          ctx.fillText(Math.random() < 0.5 ? '0' : '1', i * fontSize, drops[i] * fontSize);
+          drops[i] = drops[i] * fontSize > cv.height && Math.random() > 0.975 ? 0 : drops[i] + 1;
+        }
+      }, 90);
+    },
+    _stopRain() { if (this._rainTimer) { clearInterval(this._rainTimer); this._rainTimer = null; } },
   };
 
   RS.Sandbox = Sandbox;
@@ -7923,6 +8053,13 @@ button:hover::after { transform: translateX(120%); }
     _topbar() {
       const t = Meta.p.tokens, a = Meta.p.account, p = Meta.p.profile;
       const need = RS.ACCOUNT.xpCurve(a.level);
+      // Sandbox identity: display-only override — the saved profile is never
+      // touched, so exiting sandbox restores the real name/avatar untouched.
+      const sb = RS.Sandbox && RS.Sandbox.active;
+      const avatar = sb ? '🔬' : (p.avatar || '⚔️');
+      const nameHtml = sb
+        ? `<span class="binaryname" id="binName" data-target="ILOVECODING">ILOVECODING</span>`
+        : (p.name || 'Set Name');
       return `<div class="topbar">
         <div class="brand">⚔ REALM SIEGE</div>
         <div class="tokens">
@@ -7931,7 +8068,7 @@ button:hover::after { transform: translateX(120%); }
           <span class="tk gold" title="Gold">🟡 ${fmt(t.gold)}</span>
           <span class="tk relic" title="Mythic Relics">🔮 ${fmt(t.relic)}</span>
           <span class="tk lvl" title="Account level">Lv ${a.level} <span class="xpbar"><i style="width:${Math.min(100, a.xp / need * 100)}%"></i></span></span>
-          <button class="profchip" id="topProfile" title="Edit your champion"><span class="pav">${p.avatar || '⚔️'}</span>${p.name || 'Set Name'}${Meta.earnedBadges().length ? `<span class="pbadges">${Meta.earnedBadges().map((b) => b.icon).join('')}</span>` : ''}</button>
+          <button class="profchip ${sb ? 'sb-id' : ''}" id="topProfile" title="${sb ? 'Sandbox identity (not saved)' : 'Edit your champion'}"><span class="pav">${avatar}</span>${nameHtml}${!sb && Meta.earnedBadges().length ? `<span class="pbadges">${Meta.earnedBadges().map((b) => b.icon).join('')}</span>` : ''}</button>
         </div>
       </div>`;
     },
@@ -8071,14 +8208,28 @@ button:hover::after { transform: translateX(120%); }
       $('#sbGo', modal).onclick = () => {
         RS.Sandbox.enter(); close();
         this.toast('Sandbox active — nothing here is saved', RS.PALETTE.warn);
-        this._refreshTopbar(); this.renderMenu();
+        // Land straight on the dedicated Sandbox Range instead of the menu —
+        // "so I can test" means getting into a match fast, not another click.
+        this.selectedMap = RS.MAP_BY_ID.sandbox_range;
+        this.selectedDiff = RS.DIFF_BY_ID.Easy;
+        this.endless = false;
+        this.workingLoadout = [];
+        this.show('loadout');
       };
     },
 
     _rewardStr(r) { return Object.entries(r).map(([k, v]) => `+${v} ${k}`).join(', '); },
     _wireGo() {
       $$('[data-go]', this.root).forEach((b) => b.onclick = () => this.show(b.dataset.go));
-      const pc = $('#topProfile', this.root); if (pc) pc.onclick = () => this._showProfileModal(true);
+      this._afterTopbar();
+    },
+    // Rebinds the profile chip and (re)starts the binary-decode animation.
+    // Called after every _topbar() render, including the outerHTML swap in
+    // _refreshTopbar(), which drops any handlers/animations bound before it.
+    _afterTopbar() {
+      const pc = $('#topProfile', this.root); if (pc) pc.onclick = () => { if (!RS.Sandbox.active) this._showProfileModal(true); };
+      const bn = $('#binName', this.root);
+      if (bn) RS.Sandbox.binaryDecode(bn, bn.dataset.target || 'ILOVECODING');
     },
 
     /* ---------------------------- map select -------------------------- */
@@ -8093,7 +8244,7 @@ button:hover::after { transform: translateX(120%); }
       const gd = RS.DIFF_BY_ID[this.globalDiff];
       const hardcoreDone = clearedAt('Hardcore');
       const skulls = (n) => '💀'.repeat(n) + '<span class="sk-off">💀</span>'.repeat(6 - n);
-      const maps = RS.MAPS.filter((m) => !m.winter);
+      const maps = RS.MAPS.filter((m) => !m.winter && !m.sandboxOnly);
       this.root.innerHTML = this._topbar() + `
         <div class="page">
           <div class="page-head"><button class="back" data-go="menu">← Menu</button><h2>Choose Your Battlefield</h2></div>
@@ -8347,7 +8498,7 @@ button:hover::after { transform: translateX(120%); }
         this._refreshPity();
       }, dur);
     },
-    _refreshTopbar() { const tb = $('.topbar', this.root); if (tb) tb.outerHTML = this._topbar(); },
+    _refreshTopbar() { const tb = $('.topbar', this.root); if (tb) tb.outerHTML = this._topbar(); this._afterTopbar(); },
     _refreshPity() { /* re-render pity + history areas if present */ const p = $('.pity', this.root); if (p) { this.renderRollPartial(); } },
     renderRollPartial() {
       const pity = Meta.p.pity;
@@ -8557,7 +8708,7 @@ button:hover::after { transform: translateX(120%); }
           <div class="hud-tray" id="hTray"></div>
           <div class="hud-selected" id="hSelected"></div>
           <button class="callwave" id="btnWave">▶ Start Wave <small>R</small></button>
-          ${RS.Sandbox.active ? '<div class="sandbox-banner">🧪 SANDBOX — progress not counted</div>' : ''}
+          ${RS.Sandbox.active ? '<div class="sandbox-banner">🧪 SANDBOX — progress not counted <button id="sandboxAdminBtn" class="sandbox-admin-btn" title="Command Panel (`)">⌘ Admin Panel</button></div>' : ''}
         </div>`;
       this.canvas = $('#game'); this.renderer.canvas = this.canvas; this.renderer.ctx = this.canvas.getContext('2d');
       this._bindCanvas();
@@ -8569,6 +8720,7 @@ button:hover::after { transform: translateX(120%); }
       $('#hMax').textContent = this.match.maxWaves > 900 ? '∞' : this.match.maxWaves;
       this.refreshHud();
       RS.Tutorial && RS.Tutorial.maybeStart();
+      const sab = $('#sandboxAdminBtn'); if (sab) sab.onclick = () => RS.Sandbox.togglePanel();
     },
 
     _buildTray() {
@@ -8762,7 +8914,7 @@ button:hover::after { transform: translateX(120%); }
     _bindGlobalKeys() {
       window.addEventListener('keydown', (e) => {
         // Secret dev console. Only the ILOVECODING profile can open it.
-        if ((e.key === '`' || e.key === '~') && RS.Sandbox.isDev()) { e.preventDefault(); RS.Sandbox.togglePanel(); return; }
+        if ((e.key === '`' || e.key === '~') && RS.Sandbox.canOpenPanel()) { e.preventDefault(); RS.Sandbox.togglePanel(); return; }
         if (document.querySelector('.cmd-in') === document.activeElement) return;
         if (this.screen !== 'match' || !this.match) {
           if (this.screen === 'roll' && (e.key === 'r' || e.key === 'R')) this.doRoll('Basic', 1);

@@ -67,6 +67,13 @@
     _topbar() {
       const t = Meta.p.tokens, a = Meta.p.account, p = Meta.p.profile;
       const need = RS.ACCOUNT.xpCurve(a.level);
+      // Sandbox identity: display-only override — the saved profile is never
+      // touched, so exiting sandbox restores the real name/avatar untouched.
+      const sb = RS.Sandbox && RS.Sandbox.active;
+      const avatar = sb ? '🔬' : (p.avatar || '⚔️');
+      const nameHtml = sb
+        ? `<span class="binaryname" id="binName" data-target="ILOVECODING">ILOVECODING</span>`
+        : (p.name || 'Set Name');
       return `<div class="topbar">
         <div class="brand">⚔ REALM SIEGE</div>
         <div class="tokens">
@@ -75,7 +82,7 @@
           <span class="tk gold" title="Gold">🟡 ${fmt(t.gold)}</span>
           <span class="tk relic" title="Mythic Relics">🔮 ${fmt(t.relic)}</span>
           <span class="tk lvl" title="Account level">Lv ${a.level} <span class="xpbar"><i style="width:${Math.min(100, a.xp / need * 100)}%"></i></span></span>
-          <button class="profchip" id="topProfile" title="Edit your champion"><span class="pav">${p.avatar || '⚔️'}</span>${p.name || 'Set Name'}${Meta.earnedBadges().length ? `<span class="pbadges">${Meta.earnedBadges().map((b) => b.icon).join('')}</span>` : ''}</button>
+          <button class="profchip ${sb ? 'sb-id' : ''}" id="topProfile" title="${sb ? 'Sandbox identity (not saved)' : 'Edit your champion'}"><span class="pav">${avatar}</span>${nameHtml}${!sb && Meta.earnedBadges().length ? `<span class="pbadges">${Meta.earnedBadges().map((b) => b.icon).join('')}</span>` : ''}</button>
         </div>
       </div>`;
     },
@@ -215,14 +222,28 @@
       $('#sbGo', modal).onclick = () => {
         RS.Sandbox.enter(); close();
         this.toast('Sandbox active — nothing here is saved', RS.PALETTE.warn);
-        this._refreshTopbar(); this.renderMenu();
+        // Land straight on the dedicated Sandbox Range instead of the menu —
+        // "so I can test" means getting into a match fast, not another click.
+        this.selectedMap = RS.MAP_BY_ID.sandbox_range;
+        this.selectedDiff = RS.DIFF_BY_ID.Easy;
+        this.endless = false;
+        this.workingLoadout = [];
+        this.show('loadout');
       };
     },
 
     _rewardStr(r) { return Object.entries(r).map(([k, v]) => `+${v} ${k}`).join(', '); },
     _wireGo() {
       $$('[data-go]', this.root).forEach((b) => b.onclick = () => this.show(b.dataset.go));
-      const pc = $('#topProfile', this.root); if (pc) pc.onclick = () => this._showProfileModal(true);
+      this._afterTopbar();
+    },
+    // Rebinds the profile chip and (re)starts the binary-decode animation.
+    // Called after every _topbar() render, including the outerHTML swap in
+    // _refreshTopbar(), which drops any handlers/animations bound before it.
+    _afterTopbar() {
+      const pc = $('#topProfile', this.root); if (pc) pc.onclick = () => { if (!RS.Sandbox.active) this._showProfileModal(true); };
+      const bn = $('#binName', this.root);
+      if (bn) RS.Sandbox.binaryDecode(bn, bn.dataset.target || 'ILOVECODING');
     },
 
     /* ---------------------------- map select -------------------------- */
@@ -237,7 +258,7 @@
       const gd = RS.DIFF_BY_ID[this.globalDiff];
       const hardcoreDone = clearedAt('Hardcore');
       const skulls = (n) => '💀'.repeat(n) + '<span class="sk-off">💀</span>'.repeat(6 - n);
-      const maps = RS.MAPS.filter((m) => !m.winter);
+      const maps = RS.MAPS.filter((m) => !m.winter && !m.sandboxOnly);
       this.root.innerHTML = this._topbar() + `
         <div class="page">
           <div class="page-head"><button class="back" data-go="menu">← Menu</button><h2>Choose Your Battlefield</h2></div>
@@ -491,7 +512,7 @@
         this._refreshPity();
       }, dur);
     },
-    _refreshTopbar() { const tb = $('.topbar', this.root); if (tb) tb.outerHTML = this._topbar(); },
+    _refreshTopbar() { const tb = $('.topbar', this.root); if (tb) tb.outerHTML = this._topbar(); this._afterTopbar(); },
     _refreshPity() { /* re-render pity + history areas if present */ const p = $('.pity', this.root); if (p) { this.renderRollPartial(); } },
     renderRollPartial() {
       const pity = Meta.p.pity;
@@ -701,7 +722,7 @@
           <div class="hud-tray" id="hTray"></div>
           <div class="hud-selected" id="hSelected"></div>
           <button class="callwave" id="btnWave">▶ Start Wave <small>R</small></button>
-          ${RS.Sandbox.active ? '<div class="sandbox-banner">🧪 SANDBOX — progress not counted</div>' : ''}
+          ${RS.Sandbox.active ? '<div class="sandbox-banner">🧪 SANDBOX — progress not counted <button id="sandboxAdminBtn" class="sandbox-admin-btn" title="Command Panel (`)">⌘ Admin Panel</button></div>' : ''}
         </div>`;
       this.canvas = $('#game'); this.renderer.canvas = this.canvas; this.renderer.ctx = this.canvas.getContext('2d');
       this._bindCanvas();
@@ -713,6 +734,7 @@
       $('#hMax').textContent = this.match.maxWaves > 900 ? '∞' : this.match.maxWaves;
       this.refreshHud();
       RS.Tutorial && RS.Tutorial.maybeStart();
+      const sab = $('#sandboxAdminBtn'); if (sab) sab.onclick = () => RS.Sandbox.togglePanel();
     },
 
     _buildTray() {
@@ -906,7 +928,7 @@
     _bindGlobalKeys() {
       window.addEventListener('keydown', (e) => {
         // Secret dev console. Only the ILOVECODING profile can open it.
-        if ((e.key === '`' || e.key === '~') && RS.Sandbox.isDev()) { e.preventDefault(); RS.Sandbox.togglePanel(); return; }
+        if ((e.key === '`' || e.key === '~') && RS.Sandbox.canOpenPanel()) { e.preventDefault(); RS.Sandbox.togglePanel(); return; }
         if (document.querySelector('.cmd-in') === document.activeElement) return;
         if (this.screen !== 'match' || !this.match) {
           if (this.screen === 'roll' && (e.key === 'r' || e.key === 'R')) this.doRoll('Basic', 1);

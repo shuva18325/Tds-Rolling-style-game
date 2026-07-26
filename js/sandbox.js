@@ -24,11 +24,16 @@
     _panel: null,
     _history: [],
 
-    // Only the secret username sees the command panel at all.
+    // The secret username can always see the panel (even outside sandbox, to
+    // poke around); being IN sandbox unlocks it too, regardless of your real
+    // name — sandbox itself is the safety boundary (commands refuse to run
+    // outside it below), so gating the panel further on top of that was just
+    // friction for the one mode where testing is the entire point.
     isDev() {
       const p = RS.Meta && RS.Meta.p && RS.Meta.p.profile;
       return !!(p && (p.name || '').trim().toUpperCase() === SECRET_NAME);
     },
+    canOpenPanel() { return this.active || this.isDev(); },
 
     /* ------------------------------ entry ----------------------------- */
     enter() {
@@ -114,33 +119,96 @@
           m.waveIndex = Math.max(0, Math.min(m.maxWaves, to - 1));
           return { ok: true, msg: `Jumped to wave ${m.waveIndex + 1}` };
         }
+        case '/spawntower': {
+          if (!m) return { ok: false, msg: '/spawntower needs an active match' };
+          const def = RS.TOWER_BY_ID[arg];
+          if (!def) return { ok: false, msg: `Unknown tower "${arg || ''}". Try /help` };
+          m.gold = Math.max(m.gold, def.cost);   // sandbox: never blocked on gold — bump
+          let c = parseInt(arg2, 10), rr = parseInt(parts[3], 10);         // BEFORE searching, or the
+          if (isNaN(c) || isNaN(rr)) {                                    // gold check inside canPlace()
+            const spot = this._findBuildSpot(m, def);                     // fails every candidate tile
+            if (!spot) return { ok: false, msg: `No open tile fits ${def.name} (${def.placement})` };
+            c = spot.c; rr = spot.r;
+          }
+          const res = m.place(def, c, rr);
+          return res.ok ? { ok: true, msg: `Placed ${def.name} at (${c},${rr})` } : { ok: false, msg: res.reason };
+        }
+        case '/clear': {
+          if (!m) return { ok: false, msg: '/clear needs an active match' };
+          const what = (arg || 'all').toLowerCase();
+          let n = 0;
+          if (what === 'enemies' || what === 'all') {
+            n += m.enemies.length; m.enemies.length = 0; m.spawnQueue.length = 0;
+          }
+          if (what === 'towers' || what === 'all') {
+            const list = m.towers.slice(); list.forEach((t) => m._removeTower(t)); n += list.length;
+          }
+          if (!['enemies', 'towers', 'all'].includes(what)) return { ok: false, msg: 'Usage: /clear enemies|towers|all' };
+          return { ok: true, msg: `Cleared ${what} (${n} removed)` };
+        }
         case '/help':
-          return { ok: true, msg: '/give [n] · /spawn [enemyId] [n] · /rankup [level] · /wave [n]' };
+          return { ok: true, msg: '/give [n] · /spawn [enemyId] [n] · /spawntower [towerId] [c] [r] · /clear [enemies|towers|all] · /rankup [level] · /wave [n]' };
         default:
           return { ok: false, msg: `Unknown command "${cmd}". Try /help` };
       }
+    },
+
+    // First open tile a tower's placement rule allows, preferring path-
+    // adjacent tiles for anything that needs them so the search doesn't have
+    // to scan the whole board for the common case.
+    _findBuildSpot(m, def) {
+      const wantsPath = def.placement === 'Path-adjacent-only';
+      const wantsHigh = def.placement === 'High-ground-only';
+      for (let r = 0; r < m.rows; r++) for (let c = 0; c < m.cols; c++) {
+        if (wantsPath && !m.pathAdjacent.has(c + ',' + r)) continue;
+        if (wantsHigh && m.tileKind(c, r) !== 'highground') continue;
+        if (m.canPlace(def, c, r).ok) return { c, r };
+      }
+      return null;
+    },
+
+    // Reusable "decrypting" text reveal: target characters lock in left to
+    // right while the rest flicker between 0/1, used for the sandbox identity
+    // display. Pure DOM/text — no game state touched.
+    binaryDecode(el, target, ms) {
+      if (!el || el._decoding) return;
+      el._decoding = true;
+      const dur = ms || 750;
+      const t0 = performance.now();
+      const step = (now) => {
+        const t = Math.min(1, (now - t0) / dur);
+        const revealed = Math.floor(t * target.length);
+        let out = '';
+        for (let i = 0; i < target.length; i++) out += i < revealed ? target[i] : (Math.random() < 0.5 ? '0' : '1');
+        el.textContent = out;
+        if (t < 1) requestAnimationFrame(step);
+        else { el.textContent = target; el._decoding = false; }
+      };
+      requestAnimationFrame(step);
     },
 
     /* ------------------------------ panel ----------------------------- */
     togglePanel() { this._panel ? this.hidePanel() : this.showPanel(); },
 
     showPanel() {
-      if (this._panel || !this.isDev()) return;
+      if (this._panel || !this.canOpenPanel()) return;
       const el = document.createElement('div');
       el.className = 'cmdpanel';
       el.innerHTML = `
+        <canvas class="cmd-rain" id="cmdRain"></canvas>
         <div class="cmd-head">
-          <b>⌘ Command Panel</b>
-          <span class="cmd-mode ${this.active ? 'on' : ''}">${this.active ? 'SANDBOX' : 'NORMAL — commands disabled'}</span>
+          <b>⌘ ADMIN CONSOLE</b>
+          <span class="cmd-mode ${this.active ? 'on' : ''}">${this.active ? '● SANDBOX' : '○ NORMAL — commands disabled'}</span>
           <button class="cmd-x" id="cmdClose">✕</button>
         </div>
-        <div class="cmd-log" id="cmdLog"><div class="cmd-line dim">Type /help for the command list.</div></div>
-        <input class="cmd-in" id="cmdIn" placeholder="/give 50000" spellcheck="false" autocomplete="off">`;
+        <div class="cmd-log" id="cmdLog"><div class="cmd-line dim">root@sandbox:~$ type /help for the command list</div></div>
+        <div class="cmd-inrow"><span class="cmd-prompt">&gt;</span><input class="cmd-in" id="cmdIn" placeholder="/give 50000" spellcheck="false" autocomplete="off"></div>`;
       document.body.appendChild(el);
       this._panel = el;
       const log = el.querySelector('#cmdLog');
       const input = el.querySelector('#cmdIn');
       el.querySelector('#cmdClose').onclick = () => this.hidePanel();
+      this._startRain(el.querySelector('#cmdRain'));
       const push = (txt, cls) => {
         const d = document.createElement('div');
         d.className = 'cmd-line ' + (cls || '');
@@ -173,7 +241,31 @@
       input.focus();
     },
 
-    hidePanel() { if (this._panel) { this._panel.remove(); this._panel = null; } },
+    hidePanel() { this._stopRain(); if (this._panel) { this._panel.remove(); this._panel = null; } },
+
+    // Cheap falling-binary backdrop behind the log — a fixed low-res canvas
+    // redrawn on a plain interval (not rAF: this is a UI overlay, not part of
+    // the game's render loop, and a match may already be rendering at 60fps
+    // underneath it).
+    _startRain(cv) {
+      if (!cv) return;
+      const ctx = cv.getContext('2d');
+      const resize = () => { cv.width = cv.clientWidth; cv.height = cv.clientHeight; };
+      resize();
+      const fontSize = 12, cols = Math.max(1, Math.floor(cv.width / fontSize));
+      const drops = new Array(cols).fill(0).map(() => Math.random() * -20);
+      this._rainTimer = setInterval(() => {
+        if (cv.clientWidth !== cv.width || cv.clientHeight !== cv.height) resize();
+        ctx.fillStyle = 'rgba(6,10,7,0.28)'; ctx.fillRect(0, 0, cv.width, cv.height);
+        ctx.font = fontSize + 'px monospace';
+        for (let i = 0; i < cols; i++) {
+          ctx.fillStyle = Math.random() < 0.06 ? '#bdf5c0' : 'rgba(90,200,110,0.55)';
+          ctx.fillText(Math.random() < 0.5 ? '0' : '1', i * fontSize, drops[i] * fontSize);
+          drops[i] = drops[i] * fontSize > cv.height && Math.random() > 0.975 ? 0 : drops[i] + 1;
+        }
+      }, 90);
+    },
+    _stopRain() { if (this._rainTimer) { clearInterval(this._rainTimer); this._rainTimer = null; } },
   };
 
   RS.Sandbox = Sandbox;

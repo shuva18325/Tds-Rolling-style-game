@@ -131,6 +131,17 @@
       coldness: true, houseOnly: true, winter: true, fixedDiff: 'Purple Nightmare',
       families: { Bandit: 0, Orc: 2, Undead: 4, Demon: 2, Arcane: 2, Aerial: 2 },
       desc: 'A frozen ruin under endless blizzard. Towers can be built ONLY inside the campfire-lit houses — everywhere else, the cold kills. Every foe wears a Cold shroud that only Fire or Holy damage can melt.' }),
+
+    // 🧪 SANDBOX RANGE — sandboxOnly hides it from the normal map grid; Sandbox
+    // routes into it automatically. Wide open ground on both sides of a short
+    // path so every tower's footprint and range fits somewhere, no water/
+    // hazard/holy/cursed/highground tiles to complicate placement testing.
+    M({ id: 'sandbox_range', name: 'Sandbox Range', order: 99, sandboxOnly: true,
+      paths: [[[0, 7], [9, 7], [9, 6], [19, 6]]],
+      water: [], highground: [], hazard: [], holy: [], cursed: [], unbuildable: [],
+      env: { weather: ['Clear'], dayNight: false, gimmick: 'none' },
+      families: { Bandit: 1, Orc: 1, Undead: 1, Demon: 1, Arcane: 1, Aerial: 1 },
+      desc: 'A blank drill yard. Sandbox only — build and break anything.' }),
   ];
 
   RS.MAP_BY_ID = {};
