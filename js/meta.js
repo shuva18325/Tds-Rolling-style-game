@@ -24,7 +24,7 @@
       unlocked: {},    // mapId -> highest unlocked difficulty order (Easy=0 always)
       account: { level: 1, xp: 0 },
       objectives: {},  // id -> progress
-      settings: { sfx: true, showRange: false, particles: true, quickRoll: false, quickRollUnlocked: false },
+      settings: { sfx: true, music: true, showRange: false, particles: true, quickRoll: false, quickRollUnlocked: false },
       loadouts: [],    // saved presets [{name, ids:[...]}]
       activeLoadout: null,
       codex: { towers: [], enemies: [] },
@@ -70,6 +70,7 @@
       out.tokens = Object.assign({}, base.tokens, s.tokens);
       out.rolls = Object.assign({}, base.rolls, s.rolls);
       out.pity = Object.assign({}, base.pity, s.pity);
+      out.settings = Object.assign({}, base.settings, s.settings);
       out.tutorial = Object.assign({}, base.tutorial, s.tutorial);
       out.tutorial.tips = Object.assign({}, s.tutorial && s.tutorial.tips);
       out.shards = Object.assign({}, base.shards, s.shards);

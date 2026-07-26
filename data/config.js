@@ -165,6 +165,16 @@
     { id: 'kill1000', desc: 'Slay 1000 enemies', goal: 1000, reward: { copper: 300 }, kind: 'kill' },
   ];
 
+  // ---- Tower set bonuses (§synergy) ----
+  // Owning several towers of a tier grants a shared passive. Ancient towers
+  // extend every debuff they inflict (burn, slow, stagger, stun windows) —
+  // the boost scales with the rarity rank of each tower in the set, so a
+  // deeper/higher set is worth more than just a bigger head-count.
+  RS.SET_BONUS = {
+    Ancient: { min: 2, curseDur: 0.15, label: 'Ancient Pact',
+      desc: '2+ Ancient towers: every debuff they inflict lasts longer.' },
+  };
+
   // ---- Status effect rules (§8.5) ----
   RS.STATUS = {
     burnMaxStacks: 5,

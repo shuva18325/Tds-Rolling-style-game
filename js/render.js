@@ -137,6 +137,7 @@
       VFX.ring(e.x, e.y, A2.glow, 8, 90, 0.6, 5);
       if (A2.fx === 'shard') VFX.shards(e.x, e.y, 20, A2.glow); else VFX.embers(e.x, e.y, 20, A2.glow);
       RS.Audio && RS.Audio.boss();
+      RS.Audio && RS.Audio.duckMusic(2.2);   // let the horn cut through the bed
     }
 
     _enemyDeath(info) {
@@ -996,7 +997,15 @@
         // siege guns' visible reload animation (crew loading, breech glowing).
         const cycle = t.fireRate * t.buff.fireRate; const reload = cycle > 0 ? A.clamp(1 - t.cooldown / (1 / cycle), 0, 1) : 1;
         ctx.save(); if (dim) ctx.globalAlpha = 0.6;
-        S.drawTower(ctx, t.def, t.x, t.y, { t: this.clock + v.phase, atk, aim: v.aim, ascended: t.ascended, place: v.placeT, reload });
+        // Surface live ability state on the sprite: the shout burst window,
+        // the Warlord's Rage meter, and the Fallen Knight's Wrath.
+        let power = null;
+        const TT = t.def.traits;
+        if (TT.shout) power = t.shoutT > 0 ? Math.min(1, t.shoutT / 1.2) : 0;
+        else if (TT.rage) power = Math.min(1, (t.rage || 0) / ((TT.rage.max || 1)));
+        else if (TT.fallenWrath) power = t.fwT > 0 ? 1 : 0;
+        S.drawTower(ctx, t.def, t.x, t.y, { t: this.clock + v.phase, atk, aim: v.aim, ascended: t.ascended, place: v.placeT, reload, power });
+        if (t.stunT > 0) this._stunSpark(ctx, t);
         ctx.restore();
         // status rings
         if (t.charmT > 0) { ctx.strokeStyle = '#e04bcf'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(t.x, t.y, 16, 0, TAU); ctx.stroke(); }
@@ -1012,6 +1021,23 @@
       for (const s of m.summons) {
         if (s.kind === 'falcon') { ctx.save(); ctx.translate(s.x, s.y); const f = Math.sin(this.clock * 18) * 3; S.facet(ctx, [[-7, 0], [0, 3], [7, 0], [0, -3 - f]], '#d9cba0', '#fff'); ctx.restore(); }
         else if (s.kind === 'wraith') { ctx.globalAlpha = 0.8; S.circ(ctx, s.x, s.y, 6, A.alpha('#7d5fa0', 0.9), '#9fe0b8'); S.circ(ctx, s.x - 1.5, s.y - 1, 1, '#7bff9f'); S.circ(ctx, s.x + 1.5, s.y - 1, 1, '#7bff9f'); ctx.globalAlpha = 1; }
+        else if (s.kind === 'legionary') {
+          // Roman legionary: scutum + gladius, marching down the road
+          const bob = Math.sin(this.clock * 8 + s.x * 0.1) * 1.2;
+          ctx.save(); ctx.translate(s.x, s.y + bob);
+          ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(0, 7, 6, 2.4, 0, 0, TAU); ctx.fill();
+          S.facet(ctx, [[-3, 6], [-3, -5], [3, -5], [3, 6]], '#a8483a', '#d07a5a');       // tunic
+          S.facet(ctx, [[-5, -4], [-5, 5], [-1, 5], [-1, -4]], RS.RAMP.gold.mid, RS.RAMP.gold.rim); // scutum
+          S.circ(ctx, 0, -7, 2.6, RS.RAMP.gold.light, RS.RAMP.gold.rim);                   // helm
+          S.facet(ctx, [[-1, -10], [1, -10], [0, -13]], '#c0392b');                        // crest
+          ctx.strokeStyle = RS.RAMP.steel.light; ctx.lineWidth = 1.2;
+          ctx.beginPath(); ctx.moveTo(3, 1); ctx.lineTo(7, -5); ctx.stroke();              // gladius
+          // health pip so losses read
+          if (s.maxHp) { const f = Math.max(0, s.hp / s.maxHp);
+            ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(-5, -15, 10, 2);
+            ctx.fillStyle = f > 0.4 ? RS.PALETTE.good : RS.PALETTE.bad; ctx.fillRect(-5, -15, 10 * f, 2); }
+          ctx.restore();
+        }
         else if (s.kind === 'turret') { S.facet(ctx, [[s.x - 6, s.y + 6], [s.x - 6, s.y - 4], [s.x + 6, s.y - 4], [s.x + 6, s.y + 6]], RS.RAMP.iron.mid, RS.RAMP.iron.rim); ctx.save(); ctx.translate(s.x, s.y - 3); ctx.rotate(this.clock); ctx.fillStyle = RS.RAMP.iron.light; ctx.fillRect(-2, -8, 4, 8); ctx.restore(); }
       }
     }
@@ -1144,8 +1170,66 @@
           ctx.beginPath(); ctx.moveTo(f.x + Math.cos(sweep) * r0, f.y + Math.sin(sweep) * r0);
           ctx.lineTo(f.x + Math.cos(sweep) * r1, f.y + Math.sin(sweep) * r1); ctx.stroke();
         }
+        // Shield Smash shockwave — an expanding ring of slowing force
+        else if (f.kind === 'shock') {
+          const k = 1 - (f.t / f.max);
+          ctx.globalAlpha = (1 - k) * 0.9;
+          ctx.strokeStyle = '#9fd0ff'; ctx.lineWidth = 5 * (1 - k) + 1;
+          ctx.beginPath(); ctx.arc(f.x, f.y, f.r * k, 0, TAU); ctx.stroke();
+          ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.4;
+          ctx.beginPath(); ctx.arc(f.x, f.y, f.r * k * 0.82, 0, TAU); ctx.stroke();
+        }
+        // Boss Ground Stomp — dust ring + radial cracks
+        else if (f.kind === 'stomp') {
+          const k = 1 - (f.t / f.max);
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.globalAlpha = (1 - k) * 0.85;
+          ctx.strokeStyle = '#c9a878'; ctx.lineWidth = 7 * (1 - k) + 1.5;
+          ctx.beginPath(); ctx.arc(f.x, f.y, f.r * k, 0, TAU); ctx.stroke();
+          ctx.strokeStyle = 'rgba(40,28,20,0.8)'; ctx.lineWidth = 2.4;
+          for (let i = 0; i < 8; i++) {
+            const ang = i * (TAU / 8) + f.x * 0.01;
+            ctx.beginPath(); ctx.moveTo(f.x + Math.cos(ang) * 8, f.y + Math.sin(ang) * 8);
+            ctx.lineTo(f.x + Math.cos(ang) * f.r * k, f.y + Math.sin(ang) * f.r * k); ctx.stroke();
+          }
+        }
+        // Boss Tower Slice — the swing arc, red on a hit, white when it glances
+        else if (f.kind === 'slice') {
+          const k = 1 - (f.t / f.max);
+          ctx.globalAlpha = (1 - k);
+          ctx.strokeStyle = f.blocked ? '#9fd0ff' : '#ff5a3a';
+          ctx.lineWidth = 3.5; ctx.lineCap = 'round';
+          const dx = f.tx - f.x, dy = f.ty - f.y;
+          ctx.beginPath();
+          ctx.moveTo(f.x + dx * k * 0.2, f.y + dy * k * 0.2);
+          ctx.lineTo(f.x + dx * Math.min(1, k * 1.4), f.y + dy * Math.min(1, k * 1.4));
+          ctx.stroke();
+          if (k > 0.6) {
+            ctx.fillStyle = f.blocked ? '#dff0ff' : '#ffd45a';
+            for (let i = 0; i < 5; i++) {
+              const a2 = Math.random() * TAU, d2 = Math.random() * 12;
+              ctx.beginPath(); ctx.arc(f.tx + Math.cos(a2) * d2, f.ty + Math.sin(a2) * d2, 1.4, 0, TAU); ctx.fill();
+            }
+          }
+        }
       }
       ctx.restore(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    }
+
+    // A stunned tower sparks and greys out until it recovers.
+    _stunSpark(ctx, t) {
+      const k = this.clock;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 3; i++) {
+        const a = k * 7 + i * 2.1;
+        ctx.fillStyle = A.alpha('#ffe08a', 0.55 + Math.sin(k * 20 + i) * 0.35);
+        ctx.beginPath(); ctx.arc(t.x + Math.cos(a) * 11, t.y - 14 + Math.sin(a) * 4, 1.7, 0, TAU); ctx.fill();
+      }
+      ctx.restore();
+      ctx.save(); ctx.strokeStyle = 'rgba(255,224,138,0.8)'; ctx.lineWidth = 1.4; ctx.lineCap = 'round';
+      const j = () => (Math.random() - 0.5) * 9;
+      ctx.beginPath(); ctx.moveTo(t.x + j(), t.y - 18 + j()); ctx.lineTo(t.x + j(), t.y - 10 + j()); ctx.stroke();
+      ctx.restore();
     }
 
     /* ------------------------------ auras --------------------------- */

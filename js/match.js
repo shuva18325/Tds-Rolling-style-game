@@ -723,6 +723,41 @@
           if (strong) { e.maxHp += RS.towerDps(strong.def) * 40; e.hp += RS.towerDps(strong.def) * 40; }
         }
       }
+      // ---- Ground Stomp: slams the ground, stuns nearby towers for 2s ----
+      if (ab.groundStomp) {
+        e.abilT.gs = (e.abilT.gs || 0) + dt;
+        if (e.abilT.gs >= ab.groundStomp.every) {
+          e.abilT.gs = 0;
+          const rad = ab.groundStomp.radius;
+          let hit = 0;
+          for (const t of this.towers) {
+            if (dist2(e.x, e.y, t.x, t.y) > rad * rad) continue;
+            if (this.stunTower(t, 2)) hit++;
+          }
+          this.shake = Math.max(this.shake, 20);
+          (this._fx = this._fx || []).push({ kind: 'stomp', x: e.x, y: e.y, r: rad, t: 0.55, max: 0.55 });
+          RS.bus.emit('boss-stomp', { enemy: e, hit });
+        }
+      }
+      // ---- Tower Slice: swings at one tower, sparks, 1.5s stun ----
+      if (ab.towerSlice) {
+        e.abilT.ts = (e.abilT.ts || 0) + dt;
+        if (e.abilT.ts >= ab.towerSlice.every) {
+          e.abilT.ts = 0;
+          const rad = ab.towerSlice.radius;
+          let best = null, bd = rad * rad;
+          for (const t of this.towers) {
+            const d = dist2(e.x, e.y, t.x, t.y);
+            if (d < bd) { bd = d; best = t; }
+          }
+          if (best) {
+            const stunned = this.stunTower(best, 1.5);
+            (this._fx = this._fx || []).push({ kind: 'slice', x: e.x, y: e.y, tx: best.x, ty: best.y, t: 0.3, max: 0.3, blocked: !stunned });
+            this.shake = Math.max(this.shake, 10);
+            RS.bus.emit('boss-slice', { enemy: e, tower: best, stunned });
+          }
+        }
+      }
       if (ab.summonBalor && pct <= 0.4 && !e._balor) {
         e._balor = true;
         for (let i = 0; i < ab.summonBalor; i++) this._spawnEnemy('balor', e.lane, Math.max(0, e.progress - 40 - i * 10));
@@ -817,6 +852,14 @@
       for (const t of this.towers) {
         if (t.charmT > 0) { t.charmT -= dt; continue; }
         if (t.disabledT > 0) { t.disabledT -= dt; continue; }
+        // Boss Ground Stomp / Tower Slice. Adamantine armour never gets here.
+        if (t.stunT > 0) { t.stunT -= dt; continue; }
+        const TR = t.def.traits;
+        if (TR.shout) this._shoutUpdate(t, dt);
+        if (TR.rage) this._rageUpdate(t, dt);
+        if (TR.bloodrush) this._bloodrushUpdate(t, dt);
+        if (TR.fallenWrath) this._fallenWrathUpdate(t, dt);
+        if (TR.legion) this._legionUpdate(t, dt);
         if (t.flashT > 0) t.flashT -= dt;
         // overheat gimmick
         if (this.map.env.gimmick === 'lava') {
@@ -839,12 +882,16 @@
           if (t.abilityT >= every) { t.abilityT = 0; this._flameSweep(t); }
         }
         // firing
-        t.cooldown -= dt * t.buff.fireRate;
+        let rateMult = t.buff.fireRate;
+        if (t.rage) rateMult *= 1 + t.rage;                                  // Rage: attack speed
+        if (t.fwT > 0) rateMult *= 1 + t.def.traits.fallenWrath.fireRate;    // Fallen Wrath
+        if (t.brT > 0) rateMult *= 1.35;                                     // Bloodrush
+        t.cooldown -= dt * rateMult;
         if (t.muzzle > 0) t.muzzle -= dt;
         if (t.cooldown > 0) continue;
         const fired = this._towerFire(t);
         if (fired) {
-          t.cooldown = 1 / (t.fireRate * t.buff.fireRate);
+          t.cooldown = 1 / (t.fireRate * rateMult);
           t.muzzle = 0.08; t.flashT = 0.08;
           if (this.map.env.gimmick === 'lava') {
             t.overheatShots++;
@@ -858,7 +905,13 @@
 
     _towerFire(t) {
       // Melee gladiators sweep a blade arc over the road instead of shooting.
-      if (t.def.traits.meleeSlash) return this._meleeSlash(t);
+      // Imperial Slash, Cleave and Black Sword Slash are the same mechanic with
+      // different reach/arc — Black Sword Slash alone also reaches flyers.
+      const tr = t.def.traits;
+      if (tr.meleeSlash) return this._sweepAttack(t, tr.meleeSlash, false);
+      if (tr.imperialSlash) return this._sweepAttack(t, tr.imperialSlash, false);
+      if (tr.cleave) return this._sweepAttack(t, tr.cleave, false, 'cleaveRadiusT');
+      if (tr.blackSlash) return this._sweepAttack(t, tr.blackSlash, true, 'blackRadiusT');
       // support/aura-only towers don't fire projectiles unless they have damage role
       const range = this._effectiveRange(t);
       // gather candidates in range
@@ -898,14 +951,16 @@
      * ground enemy inside it. The arc is aimed at whoever is nearest (so it
      * naturally tracks the path passing the tower) and is wide enough to catch
      * a cluster — this is the melee answer to a projectile volley. */
-    _meleeSlash(t) {
-      const ms = t.def.traits.meleeSlash;
-      const reach = this._meleeReach(t); // == the engage reach — see _meleeReach
+    _sweepAttack(t, ms, allowAir, radiusMod) {
+      const bonus = (radiusMod && t._mods && t._mods[radiusMod]) || 0;
+      const reach = allowAir
+        ? Math.max(t.range, (ms.radiusT + bonus) * TILE) * t.buff.range
+        : this._meleeReach(t) + bonus * TILE; // ground sweeps share the engage reach
       this.grid.query(t.x, t.y, reach, this._tmp);
       let best = null, bd = reach * reach;
       const inReach = [];
       for (const e of this._tmp) {
-        if (!e.alive || e.isFlying) continue; // blades don't reach flyers
+        if (!e.alive || (e.isFlying && !allowAir)) continue; // blades don't reach flyers unless the sweep is anti-air
         if (e.def.traits.includes('Stealth') && !this._revealed(e)) continue;
         const d = dist2(t.x, t.y, e.x, e.y);
         if (d > reach * reach) continue;
@@ -917,16 +972,105 @@
       const half = ms.arc / 2;
       const dInfo = this._computeShotDamage(t, best);
       let hits = 0;
+      const passes = ms.hits || 1;   // Black Sword Slash is a multi-hit arc
       for (const e of inReach) {
         let da = Math.abs(Math.atan2(e.y - t.y, e.x - t.x) - ang);
         if (da > Math.PI) da = Math.abs(da - RS.util.TAU);
         if (da > half) continue;
-        this._applyHit(t, e, dInfo);
+        for (let k = 0; k < passes; k++) this._applyHit(t, e, dInfo);
         hits++;
       }
       if (!hits) return false;
+      if (t.def.traits.rage) this._addRage(t, hits);
       // visual: crescent sweep consumed by the renderer's _fx layer
-      (this._fx = this._fx || []).push({ kind: 'slash', x: t.x, y: t.y, ang, half, reach, color: RS.DMG_COLOR.Melee, t: 0.18 });
+      (this._fx = this._fx || []).push({ kind: 'slash', x: t.x, y: t.y, ang, half, reach,
+        color: t.def.traits.blackSlash ? '#14121a' : RS.DMG_COLOR[t.def.damageType] || RS.DMG_COLOR.Melee, t: 0.18 });
+      return true;
+    }
+
+    /* ------------------- Rage / Bloodrush (The Warlord) ---------------- */
+    // Rage builds with every connected swing and decays when he stops hitting.
+    _addRage(t, hits) {
+      const r = t.def.traits.rage;
+      const per = r.perHit + ((t._mods && t._mods.ragePerHit) || 0);
+      const max = r.max + ((t._mods && t._mods.rageMax) || 0);
+      t.rage = Math.min(max, (t.rage || 0) + per * hits);
+      t.rageT = 0;
+    }
+    _rageUpdate(t, dt) {
+      const r = t.def.traits.rage;
+      t.rageT = (t.rageT || 0) + dt;
+      if (t.ascended) return;                 // ascended: rage never decays
+      if (t.rageT > r.decay) t.rage = Math.max(0, (t.rage || 0) - dt * 0.35);
+    }
+    // Bloodrush: a burst window that opens when wounded enemies crowd him.
+    _bloodrushUpdate(t, dt) {
+      const b = t.def.traits.bloodrush;
+      t.brT = Math.max(0, (t.brT || 0) - dt);
+      t.brCd = Math.max(0, (t.brCd || 0) - dt);
+      if (t.brT > 0 || (t.brCd > 0 && !t.ascended)) return;
+      const rad = this._meleeReach(t) + TILE;
+      let low = 0;
+      for (const e of this.enemies) {
+        if (!e.alive || e.hp / e.maxHp > b.hpPct) continue;
+        if (dist2(t.x, t.y, e.x, e.y) < rad * rad) low++;
+      }
+      if (low >= b.near) {
+        t.brT = b.dur; t.brCd = b.cd;
+        this.addFloater(t.x, t.y - 26, 'BLOODRUSH', RS.rarityColor('Mythic'));
+        this.shake = Math.max(this.shake, 8);
+        RS.bus.emit('tower-burst', { tower: t, kind: 'bloodrush' });
+      }
+    }
+
+    /* ------------------ Fallen Wrath (The Fallen Knight) --------------- */
+    // Auto-triggers the moment a boss walks into range. No input required.
+    _fallenWrathUpdate(t, dt) {
+      const w = t.def.traits.fallenWrath;
+      t.fwT = Math.max(0, (t.fwT || 0) - dt);
+      if (t.ascended) { t.fwT = Math.max(t.fwT, 1); return; }  // ascended: never ends
+      if (t.fwT > 0) return;
+      const range = this._effectiveRange(t);
+      for (const e of this.enemies) {
+        if (!e.alive || !e.isBoss) continue;
+        if (dist2(t.x, t.y, e.x, e.y) > range * range) continue;
+        t.fwT = w.dur;
+        this.addFloater(t.x, t.y - 30, 'FALLEN WRATH', RS.rarityColor('Mythic+'));
+        this.shake = Math.max(this.shake, 12);
+        RS.bus.emit('tower-burst', { tower: t, kind: 'wrath' });
+        break;
+      }
+    }
+
+    /* ------------------- shout (The General / The Captain) ------------- */
+    // A cooldown-gated burst window rather than a permanent aura: the value is
+    // in lining fast-attack towers up inside the radius before it fires.
+    _shoutUpdate(t, dt) {
+      const sh = t.def.traits.shout;
+      t.shoutT = Math.max(0, (t.shoutT || 0) - dt);
+      if (t.ascended) { t.shoutT = Math.max(t.shoutT, 1); return; }  // ascended: permanent
+      t.shoutCd = (t.shoutCd == null ? sh.every : t.shoutCd) - dt;
+      if (t.shoutCd > 0) return;
+      t.shoutCd = sh.every + ((t._mods && t._mods.shoutEvery) || 0);
+      t.shoutT = sh.dur + ((t._mods && t._mods.shoutDur) || 0);
+      this.addFloater(t.x, t.y - 26, t.def.id === 'captain' ? 'ALL HANDS!' : 'FORWARD!', RS.PALETTE.gold);
+      RS.bus.emit('tower-shout', { tower: t });
+    }
+
+    // Damage dealt to a TOWER by a boss ability. Adamantine plate soaks 20%.
+    bossAbilityDamageMult(t) {
+      const ad = t.def.traits.adamantine;
+      return ad ? 1 - (ad.bossDR || 0) : 1;
+    }
+
+    // Stun a tower for `dur` seconds. Adamantine armour ignores it entirely.
+    stunTower(t, dur) {
+      if (t.def.traits.adamantine) {
+        this.addFloater(t.x, t.y - 24, 'IMMUNE', RS.PALETTE.frost);
+        return false;
+      }
+      t.stunT = Math.max(t.stunT || 0, dur);
+      RS.bus.emit('tower-stunned', { tower: t, dur });
       return true;
     }
 
@@ -937,6 +1081,9 @@
 
     _computeShotDamage(t, target) {
       let dmg = t.damage * t.buff.dmg;
+      if (t.rage) dmg *= 1 + t.rage * 0.35;          // Rage: heavier swings
+      if (t.brT > 0) dmg *= 1 + t.def.traits.bloodrush.dmg;   // Bloodrush burst
+      if (t.fwT > 0) dmg *= 1 + t.def.traits.fallenWrath.dmg; // Fallen Wrath
       const def = t.def;
       // bonus vs traits/family
       const bv = def.traits.bonusVs;
@@ -982,14 +1129,17 @@
       this._applyStatuses(t, e, extra);
     }
 
+    // Every debuff duration a tower inflicts is scaled by the Ancient set bonus.
+    _curseDur(d) { return d * ((this._setBonus && this._setBonus.curseDur) || 1); }
+
     _applyStatuses(t, e, extra) {
       const tr = t.def.traits;
-      if (tr.burn) C.Status.burn(e, (tr.burn.dps) + ((t._mods && t._mods.burnDps) || 0), tr.burn.dur);
-      if ((t._mods && t._mods.addBurn)) C.Status.burn(e, t._mods.addBurn, 3);
-      if (tr.stagger) C.Status.stagger(e, tr.stagger, 1.2);
-      if (t.def.status && t.def.status.includes('Mark')) C.Status.mark(e, tr.mark || 0.1);
-      if (extra && extra.slow) C.Status.slow(e, extra.slow, 1.5);
-      if (extra && extra.stun) C.Status.stun(e, extra.stun);
+      if (tr.burn) C.Status.burn(e, (tr.burn.dps) + ((t._mods && t._mods.burnDps) || 0), this._curseDur(tr.burn.dur));
+      if ((t._mods && t._mods.addBurn)) C.Status.burn(e, t._mods.addBurn, this._curseDur(3));
+      if (tr.stagger) C.Status.stagger(e, tr.stagger, this._curseDur(1.2));
+      if (t.def.status && t.def.status.includes('Mark')) C.Status.mark(e, (tr.mark || 0.1) + ((t._mods && t._mods.mark) || 0));
+      if (extra && extra.slow) C.Status.slow(e, extra.slow, this._curseDur(1.5));
+      if (extra && extra.stun) C.Status.stun(e, this._curseDur(extra.stun));
     }
 
     _fireProjectile(t, target) {
@@ -1178,15 +1328,34 @@
       t.x = seg.a.x + (seg.b.x - seg.a.x) * tt; t.y = seg.a.y + (seg.b.y - seg.a.y) * tt - 6;
     }
 
+    // Legionary Summon: the Emperor musters soldiers that run down the road
+    // and fight whatever they meet, rather than sitting on his tile.
+    _legionUpdate(t, dt) {
+      const cfg = t.def.traits.legion;
+      t.legionT = (t.legionT || 0) + dt;
+      const every = t.ascended ? 2 : cfg.every;
+      if (t.legionT < every) return;
+      t.legionT = 0;
+      const max = cfg.max + ((t._mods && t._mods.legionMax) || 0);
+      const cur = this.summons.filter((s) => s.kind === 'legionary' && s.ownerUid === t.uid).length;
+      if (cur >= max) return;
+      const dps = cfg.dps + ((t._mods && t._mods.legionDps) || 0);
+      const s = this._spawnSummon('legionary', t, t.x, t.y, dps * (t.ascended ? 1.5 : 1), 1.6 * TILE);
+      if (s) { s.hp = s.maxHp = cfg.hp; s.type = 'Melee'; s.speed = 78; s.life = Infinity; }
+      RS.bus.emit('legion-muster', { tower: t });
+    }
+
     /* --------------------------- summons ------------------------------ */
     _spawnSummon(kind, owner, x, y, dps, range) {
-      this.summons.push({
+      const made = {
         kind, ownerUid: owner.uid, x, y, hx: x, hy: y, dps: dps || 30,
         range: range || 3 * TILE, cooldown: 0, target: null, life: kind === 'wraith' ? 30 : Infinity,
         seek: owner.def.traits.summon ? owner.def.traits.summon.seek : null,
         speed: kind === 'falcon' ? 160 : (kind === 'wraith' ? 70 : 0), type: kind === 'wraith' ? 'Necrotic' : 'Siege',
         owner,
-      });
+      };
+      this.summons.push(made);
+      return made;
     }
 
     _updateSummons(dt) {
@@ -1211,10 +1380,24 @@
           const dx = s.target.x - s.x, dy = s.target.y - s.y, d = Math.hypot(dx, dy) || 1;
           if (d > 18) { s.x += (dx / d) * s.speed * dt; s.y += (dy / d) * s.speed * dt; }
         } else if (s.kind === 'turret') { s.x = s.hx; s.y = s.hy; }
+        // Imperial Command: legionaries fighting near the Emperor hit harder.
+        let cmd = 1;
+        if (s.kind === 'legionary' && s.owner) {
+          const ic = s.owner.def.traits.imperialCommand;
+          if (ic) {
+            const rad = (ic.radiusT + ((s.owner._mods && s.owner._mods.commandRadiusT) || 0)) * TILE;
+            if (dist2(s.x, s.y, s.owner.x, s.owner.y) < rad * rad) cmd = 1 + ic.dmg + ((s.owner._mods && s.owner._mods.commandDmg) || 0);
+          }
+          // a legionary in contact with the horde takes losses and eventually falls
+          if (s.target && dist(s.x, s.y, s.target.x, s.target.y) < 26) {
+            s.hp -= s.target.def.bounty * 1.6 * dt;
+            if (s.hp <= 0) { this._burst(s.x, s.y, '#c9a25a', 5); continue; }
+          }
+        }
         // attack
         if (s.target && s.cooldown <= 0 && dist(s.x, s.y, s.target.x, s.target.y) < (s.speed > 0 ? 24 : s.range)) {
           s.cooldown = s.kind === 'turret' ? 0.6 : 0.4;
-          const dmg = s.dps * (s.kind === 'turret' ? 0.6 : 0.4);
+          const dmg = s.dps * (s.kind === 'turret' ? 0.6 : 0.4) * cmd;
           const ctx = {}; const opts = { ownerUid: s.ownerUid };
           const final = C.resolveDamage(dmg, s.type, s.target, opts, ctx);
           this._damageEnemy(s.target, final, s.type, { ownerUid: s.ownerUid });
@@ -1261,8 +1444,39 @@
       // enemy speed auras reset
       for (const e of this.enemies) e.buffSpeed = 1;
 
+      // ---- SET BONUS: 2+ Ancient towers extend every debuff they inflict ----
+      // Scales with rarity: each qualifying tower contributes in proportion to
+      // its rarity rank, so the bonus grows with the tier of the set, not just
+      // the head-count. Consumed by _curseDur() when statuses are applied.
+      this._setBonus = { curseDur: 1, ancient: 0 };
+      {
+        const SB = RS.SET_BONUS && RS.SET_BONUS.Ancient;
+        if (SB) {
+          const anc = this.towers.filter((t) => t.def.rarity === 'Ancient');
+          this._setBonus.ancient = anc.length;
+          if (anc.length >= SB.min) {
+            const base = RS.rarityRank('Ancient') || 1;
+            let add = 0;
+            for (let i = 1; i < anc.length; i++) add += SB.curseDur * ((RS.rarityRank(anc[i].def.rarity) || base) / base);
+            this._setBonus.curseDur = 1 + add;
+          }
+        }
+      }
+
       for (const src of this.towers) {
         const tr = src.def.traits;
+        // shout: a live burst window buffing everything inside the radius
+        if (tr.shout && src.shoutT > 0) {
+          const radius = (tr.shout.radiusT + ((src._mods && src._mods.shoutRadiusT) || 0)) * TILE;
+          const amt = tr.shout.fireRate + ((src._mods && src._mods.shoutFireRate) || 0);
+          const all = src.ascended;   // ascended: the order reaches the whole field
+          for (const t of this.towers) {
+            if (t === src) continue;
+            if (!all && dist2(src.x, src.y, t.x, t.y) >= radius * radius) continue;
+            t.buff.fireRate *= 1 + amt;
+            if (all && src.def.id === 'captain') t.buff.dmg *= 1.25;
+          }
+        }
         // support: range/attackspeed aura
         if (tr.support) {
           const radius = (tr.support.radiusT + ((src._mods && src._mods.auraRadiusT) || 0)) * TILE;
@@ -1339,6 +1553,18 @@
         }
         this.freeze = 0.4; this.shake = Math.max(this.shake, 24);
         this.addFloater(this.goalPx.x, 60, 'JUDGMENT', RS.rarityColor('Mythic+'));
+      } else if (a.kind === 'shieldSmash') {
+        // Shockwave: slows ground AND air inside the radius.
+        const rad = a.radiusT * TILE;
+        for (const e of this.enemies) {
+          if (!e.alive || dist2(t.x, t.y, e.x, e.y) > rad * rad) continue;
+          C.Status.slow(e, a.slow, this._curseDur(a.dur));
+          if (t.ascended) C.Status.stun(e, 1);
+        }
+        this.shake = Math.max(this.shake, 18);
+        (this._fx = this._fx || []).push({ kind: 'shock', x: t.x, y: t.y, r: rad, t: 0.45, max: 0.45 });
+        this.addFloater(t.x, t.y - 30, 'SHIELD SMASH', RS.rarityColor('Mythic+'));
+        RS.bus.emit('shield-smash', { tower: t });
       } else if (a.kind === 'reforge') {
         this.pathShorten = Math.min(0.6, this.pathShorten + a.shorten);
         // add high-ground platforms near path
@@ -1429,7 +1655,10 @@
   }
 
   // Placement caps & star cap (referenced by match).
-  RS.PLACE_CAP = { Common: 8, Uncommon: 6, Rare: 5, Epic: 4, Legendary: 3, Ancient: 2, Mythic: 2, 'Mythic+': 1 };
+  // Ancient is 3, not 2, so the Ancient Pact set bonus ("2+ Ancient towers")
+  // can actually scale past its own minimum — at a cap of 2 the bonus was a
+  // binary on/off switch rather than a set you build toward.
+  RS.PLACE_CAP = { Common: 8, Uncommon: 6, Rare: 5, Epic: 4, Legendary: 3, Ancient: 3, Mythic: 2, 'Mythic+': 1 };
   RS.STAR3_TOWER_CAP = 14;
   RS.Match = Match;
 })();

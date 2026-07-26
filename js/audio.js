@@ -93,6 +93,105 @@
     },
     win() { [523, 659, 784, 1046].forEach((f, i) => this.tone({ freq: f, type: 'triangle', dur: 0.3, vol: 0.18, delay: i * 0.12 })); },
     lose() { [440, 349, 262].forEach((f, i) => this.tone({ freq: f, type: 'sawtooth', dur: 0.4, vol: 0.18, delay: i * 0.16 })); },
+
+    /* ========================= AMBIENT MUSIC =========================
+     * Generative, per-map. No samples: a slow drone pair, a sparse arpeggio
+     * picked from the map's scale, and an occasional swell. Each map supplies
+     * a root note, a scale and a timbre, so Farmstead sounds like open country
+     * and the Obsidian Gate sounds like a forge. Gated by settings.music.
+     * ================================================================= */
+    _music: null,
+    MAP_THEME: {
+      farmstead:   { root: 196.00, scale: [0, 2, 4, 7, 9],      wave: 'triangle', drone: 'sine',     tempo: 2.9, air: 0.30 },
+      riverford:   { root: 174.61, scale: [0, 2, 3, 5, 7, 10],  wave: 'sine',     drone: 'sine',     tempo: 3.2, air: 0.42 },
+      blackforest: { root: 146.83, scale: [0, 2, 3, 7, 8],      wave: 'triangle', drone: 'sawtooth', tempo: 3.6, air: 0.26 },
+      highkeep:    { root: 220.00, scale: [0, 2, 4, 5, 7, 11],  wave: 'square',   drone: 'sine',     tempo: 2.6, air: 0.34 },
+      frostvale:   { root: 261.63, scale: [0, 2, 3, 5, 7, 10],  wave: 'sine',     drone: 'sine',     tempo: 3.8, air: 0.55 },
+      sunkenbog:   { root: 130.81, scale: [0, 1, 3, 5, 6, 8],   wave: 'sine',     drone: 'sawtooth', tempo: 4.2, air: 0.48 },
+      ashen:       { root: 155.56, scale: [0, 1, 4, 5, 7, 8],   wave: 'triangle', drone: 'sawtooth', tempo: 3.0, air: 0.22 },
+      aldermere:   { root: 164.81, scale: [0, 2, 3, 5, 7, 8],   wave: 'triangle', drone: 'sine',     tempo: 3.4, air: 0.38 },
+      dragonspine: { root: 185.00, scale: [0, 2, 5, 7, 9],      wave: 'square',   drone: 'sine',     tempo: 2.8, air: 0.45 },
+      cathedral:   { root: 207.65, scale: [0, 4, 5, 7, 11],     wave: 'sine',     drone: 'sine',     tempo: 4.4, air: 0.62 },
+      obsidian:    { root: 138.59, scale: [0, 1, 3, 6, 7, 10],  wave: 'sawtooth', drone: 'sawtooth', tempo: 2.7, air: 0.18 },
+      emberthrone: { root: 123.47, scale: [0, 1, 4, 6, 7, 10],  wave: 'sawtooth', drone: 'sawtooth', tempo: 2.4, air: 0.20 },
+      winterhold:  { root: 116.54, scale: [0, 2, 3, 5, 8, 10],  wave: 'sine',     drone: 'sine',     tempo: 4.6, air: 0.68 },
+    },
+    _musicOn() { return this.ctx && (RS.Meta && RS.Meta.p ? RS.Meta.p.settings.music !== false : true); },
+
+    // Start (or switch to) a map's ambient bed. Safe to call repeatedly.
+    startMusic(mapId) {
+      this.init(); this.resume();
+      if (!this.ctx) return;
+      if (this._music && this._music.mapId === mapId) return;
+      this.stopMusic();
+      if (!this._musicOn()) return;
+      const th = this.MAP_THEME[mapId] || this.MAP_THEME.farmstead;
+      const c = this.ctx;
+      const bus = c.createGain(); bus.gain.value = 0; bus.connect(this.master);
+      bus.gain.linearRampToValueAtTime(0.5, c.currentTime + 3);   // fade in
+      // gentle low-pass so nothing ever gets shrill under the SFX
+      const filt = c.createBiquadFilter(); filt.type = 'lowpass';
+      filt.frequency.value = 900 + th.air * 1400; filt.Q.value = 0.6;
+      filt.connect(bus);
+      // two detuned drones a fifth apart = the harmonic bed
+      const drones = [];
+      for (const [mult, det, vol] of [[1, -4, 0.10], [1.5, 5, 0.055], [0.5, 0, 0.075]]) {
+        const o = c.createOscillator(), g = c.createGain();
+        o.type = th.drone; o.frequency.value = th.root * mult; o.detune.value = det;
+        g.gain.value = vol; o.connect(g); g.connect(filt); o.start();
+        drones.push({ o, g });
+      }
+      // a slow LFO opening and closing the filter — the "breathing" of the bed
+      const lfo = c.createOscillator(), lfoG = c.createGain();
+      lfo.type = 'sine'; lfo.frequency.value = 0.05 + th.air * 0.04;
+      lfoG.gain.value = 260; lfo.connect(lfoG); lfoG.connect(filt.frequency); lfo.start();
+      this._music = { mapId, bus, filt, drones, lfo, lfoG, th, timer: null, step: 0 };
+      // sparse arpeggio picked from the map's scale
+      const tick = () => {
+        if (!this._music || this._music.mapId !== mapId) return;
+        if (this._musicOn()) {
+          const M = this._music, s2 = M.th.scale;
+          M.step++;
+          if (M.step % 3 !== 0) {   // leave gaps; a note every bar or two
+            const semi = s2[Math.floor(Math.random() * s2.length)] + (Math.random() < 0.3 ? 12 : 0);
+            const f = M.th.root * 2 * Math.pow(2, semi / 12);
+            const o = c.createOscillator(), g = c.createGain();
+            const t0 = c.currentTime;
+            o.type = M.th.wave; o.frequency.value = f;
+            g.gain.setValueAtTime(0.0001, t0);
+            g.gain.exponentialRampToValueAtTime(0.075, t0 + 0.25);
+            g.gain.exponentialRampToValueAtTime(0.0001, t0 + 2.6);
+            o.connect(g); g.connect(M.filt); o.start(t0); o.stop(t0 + 2.8);
+          }
+        }
+        this._music.timer = setTimeout(tick, (th.tempo + Math.random() * 1.4) * 1000);
+      };
+      this._music.timer = setTimeout(tick, 1200);
+    },
+
+    stopMusic() {
+      const M = this._music; if (!M) return;
+      this._music = null;
+      clearTimeout(M.timer);
+      const c = this.ctx, t = c.currentTime;
+      try {
+        M.bus.gain.cancelScheduledValues(t);
+        M.bus.gain.setValueAtTime(M.bus.gain.value, t);
+        M.bus.gain.linearRampToValueAtTime(0.0001, t + 1.2);   // fade out
+        M.drones.forEach((d) => d.o.stop(t + 1.4));
+        M.lfo.stop(t + 1.4);
+      } catch (e) { /* context already torn down */ }
+    },
+
+    // Duck the bed briefly (boss entrance, judgment) so the hit reads.
+    duckMusic(dur) {
+      const M = this._music; if (!M || !this.ctx) return;
+      const t = this.ctx.currentTime;
+      M.bus.gain.cancelScheduledValues(t);
+      M.bus.gain.setValueAtTime(M.bus.gain.value, t);
+      M.bus.gain.linearRampToValueAtTime(0.12, t + 0.12);
+      M.bus.gain.linearRampToValueAtTime(0.5, t + (dur || 1.6));
+    },
   };
 
   // Lazy-init on the first gesture so autoplay policy is satisfied.

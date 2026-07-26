@@ -252,6 +252,32 @@
       ascend: { desc: 'Reload halved; the barrel glows white-hot between shots.' },
       lore: 'Cast in a single mould over forty days, drawn by sixty oxen. It does not besiege a wall — it ends the argument.' }),
 
+    /* -------------------------- SUPPORT / COMMAND ----------------------
+     * Shout towers. They contribute little damage themselves; their value is
+     * the burst window they open for everything standing near them, which is
+     * why fast-attack towers want to sit inside the aura.                  */
+    T({ id: 'general', name: 'The General', rarity: 'Rare', cost: 550,
+      damage: 22, fireRate: 0.55, rangeT: 2.8, targeting: 'First', damageType: 'Piercing',
+      splashT: 0, status: [], placement: 'Ground',
+      // shout: a cooldown-gated burst window, NOT a permanent aura
+      traits: { shout: { every: 14, dur: 4, fireRate: 0.35, radiusT: 3.2 }, flintlock: true },
+      upgrades: { branch: [
+        { name: 'Field Promotion', desc: 'shout more often', mods: { shoutEvery: -4 } },
+        { name: 'Parade Ground', desc: 'wider, longer shout', mods: { shoutRadiusT: 1.4, shoutDur: 2 } } ] },
+      ascend: { desc: 'The order never ends: shout is permanent and reaches the whole field.' },
+      lore: 'He has never drawn a proper sword. He has never needed to.' }),
+
+    T({ id: 'captain', name: 'The Captain', rarity: 'Epic', cost: 1350,
+      damage: 40, fireRate: 0.6, rangeT: 3.2, targeting: 'First', damageType: 'Piercing',
+      splashT: 0, status: [], placement: 'Water-capable',
+      // the water variant: stronger buff, longer duration, higher rarity
+      traits: { shout: { every: 13, dur: 7, fireRate: 0.55, radiusT: 3.8 }, flintlock: true, naval: true },
+      upgrades: { branch: [
+        { name: 'Broadside Drill', desc: 'stronger shout', mods: { shoutFireRate: 0.2 } },
+        { name: 'Press-Ganged Crew', desc: 'much longer shout', mods: { shoutDur: 4 } } ] },
+      ascend: { desc: 'All hands: shout is permanent and also grants +25% damage.' },
+      lore: 'Buildable on water, and twice as loud as anything on land.' }),
+
     /* ----------------------------- ANCIENT ----------------------------- */
     /* A tier above Legendary, below Mythic — relics of a older, classical age.
      * Costs and output sit deliberately between Paladin/Archmage (~3-3.5k) and
@@ -289,6 +315,19 @@
       ascend: { desc: 'The curse never lifts: marked targets stay marked until they die.' },
       lore: 'The god-kings are dust. Their honor guard never stood down.' }),
 
+    T({ id: 'emperor', name: 'The Roman Emperor', rarity: 'Ancient', cost: 5600,
+      damage: 195, fireRate: 1.0, rangeT: 2.4, targeting: 'First', damageType: 'Melee',
+      splashT: 0, status: [], placement: 'Path-adjacent-only',
+      traits: { melee: true,
+        imperialSlash: { radiusT: 2.2, arc: 3.0 },        // Imperial Slash
+        legion: { every: 12, max: 4, dps: 70, hp: 900 },   // Legionary Summon
+        imperialCommand: { radiusT: 4, dmg: 0.20 } },      // Imperial Command
+      upgrades: { branch: [
+        { name: 'Praetorian Guard', desc: 'tougher, deadlier legionaries', mods: { legionDps: 45, legionMax: 2 } },
+        { name: 'Triumph', desc: 'stronger Imperial Command', mods: { commandDmg: 0.15, commandRadiusT: 1.5 } } ] },
+      ascend: { desc: 'The legion never dwindles: instant re-muster and +50% legionary damage.' },
+      lore: 'He does not hold the road. The road is already his.' }),
+
     /* ------------------------------ MYTHIC ----------------------------- */
     T({ id: 'marshal', name: 'Grand Marshal of the Realm', rarity: 'Mythic', cost: 8000,
       damage: 20, fireRate: 1.0, rangeT: 2.0, targeting: 'First', damageType: 'Holy',
@@ -321,6 +360,19 @@
       ascend: { desc: 'Wraiths are unkillable and rise from any kill on the map.' },
       lore: 'Death, for the Lich, is merely conscription.' }),
 
+    T({ id: 'warlord', name: 'The Warlord', rarity: 'Mythic', cost: 9200,
+      damage: 300, fireRate: 0.85, rangeT: 2.5, targeting: 'Most-Clustered', damageType: 'Melee',
+      splashT: 0, status: [], placement: 'Path-adjacent-only',
+      traits: { melee: true, blocker: { capacity: 3, respawn: 5 },
+        cleave: { radiusT: 2.6, arc: 3.6 },                        // Cleave
+        rage: { perHit: 0.05, max: 1.2, decay: 2.5 },              // Rage
+        bloodrush: { hpPct: 0.25, near: 4, dmg: 0.8, dur: 6, cd: 18 } }, // Bloodrush
+      upgrades: { branch: [
+        { name: 'Unending Fury', desc: 'rage builds faster and higher', mods: { ragePerHit: 0.03, rageMax: 0.6 } },
+        { name: 'Leviathan Edge', desc: 'wider cleave, more damage', mods: { cleaveRadiusT: 0.8, damage: 0.4 } } ] },
+      ascend: { desc: 'Rage never decays and Bloodrush has no cooldown.' },
+      lore: 'The axe is named. He is not.' }),
+
     /* ------------------------------ MYTHIC+ ---------------------------- */
     T({ id: 'grail', name: 'Avatar of the Eternal Grail', rarity: 'Mythic+', cost: 25000,
       damage: 300, fireRate: 1.2, rangeT: 4.0, targeting: 'Strongest', damageType: 'Holy',
@@ -343,6 +395,26 @@
         { name: 'Architect', desc: 'shorter CD', mods: { activeCd: -30 } } ] },
       ascend: { desc: 'Reforge also spawns two free turrets on new platforms.' },
       lore: 'It does not hold the line. It rewrites where the line is.' }),
+    T({ id: 'fallen', name: 'The Fallen Knight', rarity: 'Mythic+', cost: 25000,
+      damage: 420, fireRate: 1.1, rangeT: 3.0, targeting: 'First', damageType: 'True',
+      splashT: 1.2, status: [], placement: 'Ground',
+      traits: {
+        // Adamantine Armor (passive) — immune to every control effect, cannot
+        // be knocked back, and takes 20% less damage from boss abilities.
+        adamantine: { bossDR: 0.20 },
+        // Black Sword Slash (primary) — a sweeping arc that hits ground AND air
+        blackSlash: { radiusT: 3.0, arc: 3.4, hits: 2 },
+        antiAir: true,
+        // Shield Smash (active) — shockwave, 40% slow for 4s, air and ground
+        active: { name: 'Shield Smash', cd: 20, kind: 'shieldSmash', slow: 0.40, dur: 4, radiusT: 3.6 },
+        // Fallen Wrath (burst) — auto-triggers when a boss enters range
+        fallenWrath: { fireRate: 0.60, dmg: 0.50, dur: 8 } },
+      upgrades: { branch: [
+        { name: 'Black Vigil', desc: 'wider slash, more damage', mods: { damage: 0.5, blackRadiusT: 0.8 } },
+        { name: 'Unbroken Oath', desc: 'Shield Smash far more often', mods: { activeCd: -8 } } ] },
+      ascend: { desc: 'Fallen Wrath never ends and Shield Smash also stuns for 1s.' },
+      lore: 'The armour outlived the oath, the king, and the kingdom. It is still walking.' }),
+
   ];
 
   // Fast lookup + a couple of derived helpers used by UI/engine.
@@ -395,6 +467,11 @@
     wyrm:      { l2: std('Molten Gullet', 'Fiercer breath. +22% dmg, +12% range, +8% attack speed.'), l3: std('Ancient Fury', 'Wider cone. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Elder Cataclysm' },
     lich:      { l2: std('Grave Bind', 'Stronger raise. +22% dmg, +12% range, +8% attack speed.'), l3: std('Death Dominion', 'Wider grasp. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Undying Legion' },
     grail:     { l2: std('Radiant Ascension', 'Holier light. +22% dmg, +12% range, +8% attack speed.'), l3: std('Eternal Grace', 'Farther reach. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Judgment Eternal' },
+    general:   { l2: std('Drill Sergeant', 'Sharper orders. +22% dmg, +12% range, +8% attack speed.'), l3: std('War Council', 'Better timing. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Eternal Command' },
+    captain:   { l2: std('Ship of the Line', 'A louder deck. +22% dmg, +12% range, +8% attack speed.'), l3: std('Admiralty', 'Fleet discipline. +22% dmg, +12% range, +8% attack speed.'), ascend: 'All Hands' },
+    emperor:   { l2: std('Purple Cloak', 'Imperial bearing. +22% dmg, +12% range, +8% attack speed.'), l3: std('Pax Romana', 'The order holds. +22% dmg, +12% range, +8% attack speed.'), ascend: 'The Eternal Legion' },
+    warlord:   { l2: std('Blood Oath', 'Deeper fury. +22% dmg, +12% range, +8% attack speed.'), l3: std('Leviathan Haft', 'A heavier axe. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Endless Slaughter' },
+    fallen:    { l2: std('Adamantine Plate', 'Nothing gets through. +22% dmg, +12% range, +8% attack speed.'), l3: std('Black Edge', 'The sword drinks. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Wrath Everlasting' },
     sovereign: { l2: std('Reality Weave', 'Warped might. +22% dmg, +12% range, +8% attack speed.'), l3: std('Worldforge Core', 'Wider warp. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Reforge the World' },
   };
 })();

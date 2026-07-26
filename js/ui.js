@@ -50,6 +50,7 @@
       this.screen = screen;
       this.placing = null; this.selectedTower = null;
       const inMatch = screen === 'match';
+      if (!inMatch && RS.Audio) RS.Audio.stopMusic();   // ambient bed is match-only
       $('#matchWrap').style.display = inMatch ? 'flex' : 'none';
       this.root.style.display = inMatch ? 'none' : 'block';
       if (inMatch) { this._buildHud(); return; }
@@ -176,6 +177,7 @@
             <button class="mbtn" data-go="codex"><b>📖 Codex</b><span>${Math.round(Meta.codexPct() * 100)}% complete</span></button>
             <button class="mbtn" data-go="leaderboard"><b>🏆 Champions' Ladder</b><span>Rank #${Meta.myRank()} · climb to Claude</span></button>
             <button class="mbtn" data-go="settings"><b>⚙ Settings</b><span>Save & options</span></button>
+            <button class="mbtn sandbox-btn" id="sandboxBtn"><b>🧪 Sandbox</b><span>${RS.Sandbox.active ? 'ACTIVE — progress not counted' : 'Free play · nothing is saved'}</span></button>
           </div>
           <div class="objectives">
             <h3>Objectives</h3>
@@ -183,7 +185,40 @@
           </div>
         </div>`;
       this._wireGo();
+      const sb = $('#sandboxBtn'); if (sb) sb.onclick = () => this.toggleSandbox();
     },
+
+    /* ------------------------------ sandbox --------------------------- */
+    // Entering shows the warning first; leaving restores the real profile.
+    toggleSandbox() {
+      if (RS.Sandbox.active) {
+        RS.Sandbox.exit();
+        this.toast('Left Sandbox — your normal progress is back', RS.PALETTE.good);
+        this._refreshTopbar(); this.renderMenu();
+        return;
+      }
+      const modal = h(`<div class="modal-bg"><div class="modal sandbox-modal">
+        <div class="modal-head"><h3>🧪 Enter Sandbox Mode?</h3></div>
+        <p class="sandbox-warn"><b>Sandbox progress will NOT count.</b> Nothing you earn, roll, clear or
+        rank here touches your account, and no result is submitted to the Champions' Ladder.
+        When you exit, your <b>NORMAL progress returns</b> exactly as you left it.</p>
+        <p class="lore">Everything is unlocked while you are inside: every tower, every map, every currency.</p>
+        <div class="sandbox-actions">
+          <button class="bigbtn" id="sbCancel">Cancel</button>
+          <button class="bigbtn hl" id="sbGo">Enter Sandbox</button>
+        </div>
+      </div></div>`);
+      document.body.appendChild(modal);
+      const close = () => modal.remove();
+      $('#sbCancel', modal).onclick = close;
+      modal.onclick = (e) => { if (e.target === modal) close(); };
+      $('#sbGo', modal).onclick = () => {
+        RS.Sandbox.enter(); close();
+        this.toast('Sandbox active — nothing here is saved', RS.PALETTE.warn);
+        this._refreshTopbar(); this.renderMenu();
+      };
+    },
+
     _rewardStr(r) { return Object.entries(r).map(([k, v]) => `+${v} ${k}`).join(', '); },
     _wireGo() {
       $$('[data-go]', this.root).forEach((b) => b.onclick = () => this.show(b.dataset.go));
@@ -611,6 +646,7 @@
             <label class="toggle"><input type="checkbox" id="setRange" ${s.showRange ? 'checked' : ''}> Show range overlays by default</label>
             <label class="toggle"><input type="checkbox" id="setPart" ${s.particles ? 'checked' : ''}> Particles</label>
             <label class="toggle"><input type="checkbox" id="setSfx" ${s.sfx ? 'checked' : ''}> Sound cues</label>
+            <label class="toggle"><input type="checkbox" id="setMusic" ${s.music !== false ? 'checked' : ''}> Ambient music</label>
           </div>
           <h3>Save Management</h3>
           <div class="savebox">
@@ -625,6 +661,11 @@
       $('#setRange').onchange = (e) => { s.showRange = e.target.checked; Meta.save(); };
       $('#setPart').onchange = (e) => { s.particles = e.target.checked; Meta.save(); };
       $('#setSfx').onchange = (e) => { s.sfx = e.target.checked; Meta.save(); };
+      $('#setMusic').onchange = (e) => {
+        s.music = e.target.checked; Meta.save();
+        if (!s.music) RS.Audio && RS.Audio.stopMusic();
+        else if (this.match) RS.Audio && RS.Audio.startMusic(this.match.map.id);
+      };
       $('#expBtn').onclick = () => { $('#saveText').value = Meta.exportSave(); this.toast('Save exported below', RS.PALETTE.good); };
       $('#impBtn').onclick = () => { if (Meta.importSave($('#saveText').value)) { this.toast('Save imported!', RS.PALETTE.good); this.renderSettings(); } else this.toast('Invalid save string', RS.PALETTE.bad); };
       $('#resetBtn').onclick = () => { if (confirm('Wipe all progress?')) { Meta.reset(); this.toast('Progress reset', RS.PALETTE.warn); this.show('menu'); } };
@@ -637,6 +678,7 @@
       this.match = new RS.Match(this.selectedMap, diff, this.workingLoadout, meta);
       this.renderer.showRange = Meta.p.settings.showRange;
       this.renderer.selected = null; this.renderer.ghost = null;
+      RS.Audio && RS.Audio.startMusic(this.selectedMap.id);
       this.show('match');
     },
 
@@ -659,6 +701,7 @@
           <div class="hud-tray" id="hTray"></div>
           <div class="hud-selected" id="hSelected"></div>
           <button class="callwave" id="btnWave">▶ Start Wave <small>R</small></button>
+          ${RS.Sandbox.active ? '<div class="sandbox-banner">🧪 SANDBOX — progress not counted</div>' : ''}
         </div>`;
       this.canvas = $('#game'); this.renderer.canvas = this.canvas; this.renderer.ctx = this.canvas.getContext('2d');
       this._bindCanvas();
@@ -862,6 +905,9 @@
 
     _bindGlobalKeys() {
       window.addEventListener('keydown', (e) => {
+        // Secret dev console. Only the ILOVECODING profile can open it.
+        if ((e.key === '`' || e.key === '~') && RS.Sandbox.isDev()) { e.preventDefault(); RS.Sandbox.togglePanel(); return; }
+        if (document.querySelector('.cmd-in') === document.activeElement) return;
         if (this.screen !== 'match' || !this.match) {
           if (this.screen === 'roll' && (e.key === 'r' || e.key === 'R')) this.doRoll('Basic', 1);
           return;
@@ -880,6 +926,13 @@
     endMatch() {
       const m = this.match; if (this._ended) return; this._ended = true;
       RS.Tutorial && RS.Tutorial.skip();   // first battle finished: never show it again
+      // Sandbox results are thrown away: no rewards, no records, no ladder.
+      if (RS.Sandbox.active) {
+        this._lastRewards = { copper: 0, silver: 0, gold: 0, relic: 0, xp: 0 };
+        this._lastLeveled = null;
+        this.show('summary');
+        return;
+      }
       const won = m.state === 'won';
       // record codex from encountered
       m.encountered.forEach((k) => { if (k.startsWith('enemy:')) Meta.seeEnemy(k.slice(6)); });
@@ -924,6 +977,7 @@
       this.root.innerHTML = this._topbar() + `
         <div class="page summary">
           <div class="summary-banner ${won ? 'win' : 'lose'}">${won ? '🏆 VICTORY' : '💀 DEFEAT'}</div>
+          ${RS.Sandbox.active ? '<div class="sandbox-note">🧪 Sandbox run — nothing was awarded and no record was set.</div>' : ''}
           <h2>${m.map.name} · ${m.diff.id}</h2>
           ${won ? `<div class="stars-big">${star(m.stars)}</div><div class="starnote">1★ clear · 2★ no leaks · 3★ no leaks + ≤${RS.STAR3_TOWER_CAP} towers</div>` : `<div class="starnote">Reached wave ${m.waveIndex} of ${m.maxWaves > 900 ? '∞' : m.maxWaves}</div>`}
           <div class="rewards">

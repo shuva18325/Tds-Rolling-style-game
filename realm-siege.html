@@ -667,6 +667,41 @@ button:hover::after { transform: translateX(120%); }
   background: transparent; border-color: transparent; color: #8a7f68; box-shadow: none; }
 .tut-tip-x:hover { color: var(--text); border-color: var(--line); }
 
+/* ===== sandbox mode + dev command panel ===== */
+.mbtn.sandbox-btn { border-color: #6a5aa0; background: linear-gradient(145deg,#2a2440,#1a1728); }
+.mbtn.sandbox-btn b { color: #c0a8ff; }
+.sandbox-modal { max-width: 460px; border-color: #9b59b6; }
+.sandbox-modal .modal-head h3 { color: #c79bff; }
+.sandbox-warn { background: #2a1c14; border: 1px solid var(--warn); border-left: 4px solid var(--warn);
+  border-radius: 8px; padding: 10px 12px; font-size: 13px; line-height: 1.55; color: #e8d8b8; margin-bottom: 10px; }
+.sandbox-warn b { color: var(--warn); }
+.sandbox-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+.sandbox-banner { position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+  background: linear-gradient(#2a2440,#1a1728); border: 1px solid #9b59b6; color: #c79bff;
+  padding: 4px 14px; border-radius: 14px; font-size: 12px; font-weight: 700; letter-spacing: .6px;
+  box-shadow: 0 0 16px -4px #9b59b6; pointer-events: none; }
+.sandbox-note { background: #2a2440; border: 1px solid #9b59b6; color: #c79bff; border-radius: 8px;
+  padding: 8px 12px; font-size: 13px; margin: 8px auto 4px; max-width: 520px; }
+
+.cmdpanel { position: fixed; right: 16px; bottom: 16px; width: min(430px, 92vw); z-index: 200;
+  background: linear-gradient(165deg,#161a16,#0c0e0c); border: 1px solid #4a7a4a; border-radius: 10px;
+  box-shadow: 0 12px 36px rgba(0,0,0,.7), 0 0 0 1px rgba(120,220,120,.08);
+  font-family: ui-monospace, Menlo, Consolas, monospace; overflow: hidden; }
+.cmd-head { display: flex; align-items: center; gap: 8px; padding: 7px 10px;
+  background: #12160f; border-bottom: 1px solid #2f4a2f; }
+.cmd-head b { color: #7bd070; font-size: 12px; }
+.cmd-mode { margin-left: auto; font-size: 10px; letter-spacing: .8px; color: var(--dim); }
+.cmd-mode.on { color: #c79bff; }
+.cmd-x { padding: 1px 7px; font-size: 11px; background: transparent; border-color: transparent; color: #6a7a6a; box-shadow: none; }
+.cmd-x:hover { color: var(--text); border-color: var(--line); }
+.cmd-log { height: 160px; overflow-y: auto; padding: 8px 10px; font-size: 11.5px; line-height: 1.6; }
+.cmd-line { white-space: pre-wrap; word-break: break-word; }
+.cmd-line.you { color: #9fd0ff; } .cmd-line.ok { color: #7bd070; }
+.cmd-line.err { color: #ff7a6a; } .cmd-line.dim { color: #5a6a5a; }
+.cmd-in { width: 100%; border: 0; border-top: 1px solid #2f4a2f; background: #0a0c0a; color: #cfe8cf;
+  padding: 9px 10px; font-family: inherit; font-size: 12px; outline: none; }
+.cmd-in::placeholder { color: #46564a; }
+
 </style>
 
 <!-- REALM SIEGE — single-file build. Play: rolls, 12 maps, 4 difficulties. -->
@@ -1075,6 +1110,16 @@ button:hover::after { transform: translateX(120%); }
     { id: 'kill1000', desc: 'Slay 1000 enemies', goal: 1000, reward: { copper: 300 }, kind: 'kill' },
   ];
 
+  // ---- Tower set bonuses (§synergy) ----
+  // Owning several towers of a tier grants a shared passive. Ancient towers
+  // extend every debuff they inflict (burn, slow, stagger, stun windows) —
+  // the boost scales with the rarity rank of each tower in the set, so a
+  // deeper/higher set is worth more than just a bigger head-count.
+  RS.SET_BONUS = {
+    Ancient: { min: 2, curseDur: 0.15, label: 'Ancient Pact',
+      desc: '2+ Ancient towers: every debuff they inflict lasts longer.' },
+  };
+
   // ---- Status effect rules (§8.5) ----
   RS.STATUS = {
     burnMaxStacks: 5,
@@ -1241,6 +1286,11 @@ button:hover::after { transform: translateX(120%); }
     spartan:    { sil: 'spartan',    anim: 'blocker', scale: 1.08 },
     greekfire:  { sil: 'greekfire',  anim: 'siege' },
     pharaoh:    { sil: 'pharaoh',    anim: 'mage', scale: 1.05 },
+    general:    { sil: 'general',    anim: 'mage' },
+    captain:    { sil: 'captain',    anim: 'mage' },
+    emperor:    { sil: 'emperor',    anim: 'blocker', scale: 1.06 },
+    warlord:    { sil: 'warlord',    anim: 'blocker', scale: 1.12 },
+    fallen:     { sil: 'fallen',     anim: 'blocker', scale: 1.15 },
     marshal:    { sil: 'marshal',    anim: 'banner' },
     wyrm:       { sil: 'wyrm',       anim: 'static', scale: 1.25 },
     lich:       { sil: 'lich',       anim: 'mage' },
@@ -1549,6 +1599,32 @@ button:hover::after { transform: translateX(120%); }
       ascend: { desc: 'Reload halved; the barrel glows white-hot between shots.' },
       lore: 'Cast in a single mould over forty days, drawn by sixty oxen. It does not besiege a wall — it ends the argument.' }),
 
+    /* -------------------------- SUPPORT / COMMAND ----------------------
+     * Shout towers. They contribute little damage themselves; their value is
+     * the burst window they open for everything standing near them, which is
+     * why fast-attack towers want to sit inside the aura.                  */
+    T({ id: 'general', name: 'The General', rarity: 'Rare', cost: 550,
+      damage: 22, fireRate: 0.55, rangeT: 2.8, targeting: 'First', damageType: 'Piercing',
+      splashT: 0, status: [], placement: 'Ground',
+      // shout: a cooldown-gated burst window, NOT a permanent aura
+      traits: { shout: { every: 14, dur: 4, fireRate: 0.35, radiusT: 3.2 }, flintlock: true },
+      upgrades: { branch: [
+        { name: 'Field Promotion', desc: 'shout more often', mods: { shoutEvery: -4 } },
+        { name: 'Parade Ground', desc: 'wider, longer shout', mods: { shoutRadiusT: 1.4, shoutDur: 2 } } ] },
+      ascend: { desc: 'The order never ends: shout is permanent and reaches the whole field.' },
+      lore: 'He has never drawn a proper sword. He has never needed to.' }),
+
+    T({ id: 'captain', name: 'The Captain', rarity: 'Epic', cost: 1350,
+      damage: 40, fireRate: 0.6, rangeT: 3.2, targeting: 'First', damageType: 'Piercing',
+      splashT: 0, status: [], placement: 'Water-capable',
+      // the water variant: stronger buff, longer duration, higher rarity
+      traits: { shout: { every: 13, dur: 7, fireRate: 0.55, radiusT: 3.8 }, flintlock: true, naval: true },
+      upgrades: { branch: [
+        { name: 'Broadside Drill', desc: 'stronger shout', mods: { shoutFireRate: 0.2 } },
+        { name: 'Press-Ganged Crew', desc: 'much longer shout', mods: { shoutDur: 4 } } ] },
+      ascend: { desc: 'All hands: shout is permanent and also grants +25% damage.' },
+      lore: 'Buildable on water, and twice as loud as anything on land.' }),
+
     /* ----------------------------- ANCIENT ----------------------------- */
     /* A tier above Legendary, below Mythic — relics of a older, classical age.
      * Costs and output sit deliberately between Paladin/Archmage (~3-3.5k) and
@@ -1586,6 +1662,19 @@ button:hover::after { transform: translateX(120%); }
       ascend: { desc: 'The curse never lifts: marked targets stay marked until they die.' },
       lore: 'The god-kings are dust. Their honor guard never stood down.' }),
 
+    T({ id: 'emperor', name: 'The Roman Emperor', rarity: 'Ancient', cost: 5600,
+      damage: 195, fireRate: 1.0, rangeT: 2.4, targeting: 'First', damageType: 'Melee',
+      splashT: 0, status: [], placement: 'Path-adjacent-only',
+      traits: { melee: true,
+        imperialSlash: { radiusT: 2.2, arc: 3.0 },        // Imperial Slash
+        legion: { every: 12, max: 4, dps: 70, hp: 900 },   // Legionary Summon
+        imperialCommand: { radiusT: 4, dmg: 0.20 } },      // Imperial Command
+      upgrades: { branch: [
+        { name: 'Praetorian Guard', desc: 'tougher, deadlier legionaries', mods: { legionDps: 45, legionMax: 2 } },
+        { name: 'Triumph', desc: 'stronger Imperial Command', mods: { commandDmg: 0.15, commandRadiusT: 1.5 } } ] },
+      ascend: { desc: 'The legion never dwindles: instant re-muster and +50% legionary damage.' },
+      lore: 'He does not hold the road. The road is already his.' }),
+
     /* ------------------------------ MYTHIC ----------------------------- */
     T({ id: 'marshal', name: 'Grand Marshal of the Realm', rarity: 'Mythic', cost: 8000,
       damage: 20, fireRate: 1.0, rangeT: 2.0, targeting: 'First', damageType: 'Holy',
@@ -1618,6 +1707,19 @@ button:hover::after { transform: translateX(120%); }
       ascend: { desc: 'Wraiths are unkillable and rise from any kill on the map.' },
       lore: 'Death, for the Lich, is merely conscription.' }),
 
+    T({ id: 'warlord', name: 'The Warlord', rarity: 'Mythic', cost: 9200,
+      damage: 300, fireRate: 0.85, rangeT: 2.5, targeting: 'Most-Clustered', damageType: 'Melee',
+      splashT: 0, status: [], placement: 'Path-adjacent-only',
+      traits: { melee: true, blocker: { capacity: 3, respawn: 5 },
+        cleave: { radiusT: 2.6, arc: 3.6 },                        // Cleave
+        rage: { perHit: 0.05, max: 1.2, decay: 2.5 },              // Rage
+        bloodrush: { hpPct: 0.25, near: 4, dmg: 0.8, dur: 6, cd: 18 } }, // Bloodrush
+      upgrades: { branch: [
+        { name: 'Unending Fury', desc: 'rage builds faster and higher', mods: { ragePerHit: 0.03, rageMax: 0.6 } },
+        { name: 'Leviathan Edge', desc: 'wider cleave, more damage', mods: { cleaveRadiusT: 0.8, damage: 0.4 } } ] },
+      ascend: { desc: 'Rage never decays and Bloodrush has no cooldown.' },
+      lore: 'The axe is named. He is not.' }),
+
     /* ------------------------------ MYTHIC+ ---------------------------- */
     T({ id: 'grail', name: 'Avatar of the Eternal Grail', rarity: 'Mythic+', cost: 25000,
       damage: 300, fireRate: 1.2, rangeT: 4.0, targeting: 'Strongest', damageType: 'Holy',
@@ -1640,6 +1742,26 @@ button:hover::after { transform: translateX(120%); }
         { name: 'Architect', desc: 'shorter CD', mods: { activeCd: -30 } } ] },
       ascend: { desc: 'Reforge also spawns two free turrets on new platforms.' },
       lore: 'It does not hold the line. It rewrites where the line is.' }),
+    T({ id: 'fallen', name: 'The Fallen Knight', rarity: 'Mythic+', cost: 25000,
+      damage: 420, fireRate: 1.1, rangeT: 3.0, targeting: 'First', damageType: 'True',
+      splashT: 1.2, status: [], placement: 'Ground',
+      traits: {
+        // Adamantine Armor (passive) — immune to every control effect, cannot
+        // be knocked back, and takes 20% less damage from boss abilities.
+        adamantine: { bossDR: 0.20 },
+        // Black Sword Slash (primary) — a sweeping arc that hits ground AND air
+        blackSlash: { radiusT: 3.0, arc: 3.4, hits: 2 },
+        antiAir: true,
+        // Shield Smash (active) — shockwave, 40% slow for 4s, air and ground
+        active: { name: 'Shield Smash', cd: 20, kind: 'shieldSmash', slow: 0.40, dur: 4, radiusT: 3.6 },
+        // Fallen Wrath (burst) — auto-triggers when a boss enters range
+        fallenWrath: { fireRate: 0.60, dmg: 0.50, dur: 8 } },
+      upgrades: { branch: [
+        { name: 'Black Vigil', desc: 'wider slash, more damage', mods: { damage: 0.5, blackRadiusT: 0.8 } },
+        { name: 'Unbroken Oath', desc: 'Shield Smash far more often', mods: { activeCd: -8 } } ] },
+      ascend: { desc: 'Fallen Wrath never ends and Shield Smash also stuns for 1s.' },
+      lore: 'The armour outlived the oath, the king, and the kingdom. It is still walking.' }),
+
   ];
 
   // Fast lookup + a couple of derived helpers used by UI/engine.
@@ -1692,6 +1814,11 @@ button:hover::after { transform: translateX(120%); }
     wyrm:      { l2: std('Molten Gullet', 'Fiercer breath. +22% dmg, +12% range, +8% attack speed.'), l3: std('Ancient Fury', 'Wider cone. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Elder Cataclysm' },
     lich:      { l2: std('Grave Bind', 'Stronger raise. +22% dmg, +12% range, +8% attack speed.'), l3: std('Death Dominion', 'Wider grasp. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Undying Legion' },
     grail:     { l2: std('Radiant Ascension', 'Holier light. +22% dmg, +12% range, +8% attack speed.'), l3: std('Eternal Grace', 'Farther reach. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Judgment Eternal' },
+    general:   { l2: std('Drill Sergeant', 'Sharper orders. +22% dmg, +12% range, +8% attack speed.'), l3: std('War Council', 'Better timing. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Eternal Command' },
+    captain:   { l2: std('Ship of the Line', 'A louder deck. +22% dmg, +12% range, +8% attack speed.'), l3: std('Admiralty', 'Fleet discipline. +22% dmg, +12% range, +8% attack speed.'), ascend: 'All Hands' },
+    emperor:   { l2: std('Purple Cloak', 'Imperial bearing. +22% dmg, +12% range, +8% attack speed.'), l3: std('Pax Romana', 'The order holds. +22% dmg, +12% range, +8% attack speed.'), ascend: 'The Eternal Legion' },
+    warlord:   { l2: std('Blood Oath', 'Deeper fury. +22% dmg, +12% range, +8% attack speed.'), l3: std('Leviathan Haft', 'A heavier axe. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Endless Slaughter' },
+    fallen:    { l2: std('Adamantine Plate', 'Nothing gets through. +22% dmg, +12% range, +8% attack speed.'), l3: std('Black Edge', 'The sword drinks. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Wrath Everlasting' },
     sovereign: { l2: std('Reality Weave', 'Warped might. +22% dmg, +12% range, +8% attack speed.'), l3: std('Worldforge Core', 'Wider warp. +22% dmg, +12% range, +8% attack speed.'), ascend: 'Reforge the World' },
   };
 })();
@@ -1791,48 +1918,48 @@ button:hover::after { transform: translateX(120%); }
      * Each has a distinct silhouette in sprites.js (BossSil).              */
     // -- rating 1 --
     E({ id: 'boss_corvin', name: 'Bandit King Corvin', family: 'Bandit', hp: 3000, speed: 40, armor: 14, magicResist: 0.10, bounty: 300, traits: ['Boss'],
-      abilities: { boss: true, summon: { id: 'highwayman', count: 16, atHpPct: 0.5 } }, motif: 'boss', boss: 'corvin', cost: 400,
+      abilities: { boss: true, groundStomp: { every: 14, radius: 120 }, towerSlice: { every: 10, radius: 150 }, summon: { id: 'highwayman', count: 16, atHpPct: 0.5 } }, motif: 'boss', boss: 'corvin', cost: 400,
       title: 'The Roadwarden', lore: 'He taxed this road for thirty years. The crown never once collected.' }),
     // -- rating 2 --
     E({ id: 'boss_thane', name: 'The Drowned Thane', family: 'Undead', hp: 5000, speed: 34, armor: 22, magicResist: 0.15, bounty: 400, traits: ['Boss', 'Armored', 'Regenerating'],
-      abilities: { boss: true, regen: 120, summon: { id: 'sig_drowned', count: 6, atHpPct: 0.6 } }, motif: 'boss', boss: 'thane', cost: 500,
+      abilities: { boss: true, groundStomp: { every: 13, radius: 120 }, towerSlice: { every: 9, radius: 150 }, regen: 120, summon: { id: 'sig_drowned', count: 6, atHpPct: 0.6 } }, motif: 'boss', boss: 'thane', cost: 500,
       title: 'Lord of the Ford', lore: 'He rode into the river in full plate. He never rode out, and he never stopped walking.' }),
     E({ id: 'boss_hollow', name: 'The Hollow Mother', family: 'Demon', hp: 5400, speed: 30, armor: 10, magicResist: 0.35, bounty: 420, traits: ['Boss', 'Stealth'],
-      abilities: { boss: true, summon: { id: 'sig_lurker', count: 7, atHpPct: 0.65 }, phases: 2 }, motif: 'boss', boss: 'hollow', cost: 520,
+      abilities: { boss: true, groundStomp: { every: 13, radius: 120 }, towerSlice: { every: 9, radius: 150 }, summon: { id: 'sig_lurker', count: 7, atHpPct: 0.65 }, phases: 2 }, motif: 'boss', boss: 'hollow', cost: 520,
       title: 'Antlered Warden', lore: 'The forest did not grow around her. She grew around it.' }),
     // -- rating 3 --
     E({ id: 'boss_gruumak', name: 'Warlord Gruumak the Iron Tusk', family: 'Orc', hp: 8000, speed: 34, armor: 40, magicResist: 0.15, bounty: 600, traits: ['Boss', 'Armored'],
-      abilities: { boss: true, phases: 3, shatterBlocker: 10, immuneSlowBelow: 0.5 }, motif: 'boss', boss: 'gruumak', cost: 700,
+      abilities: { boss: true, groundStomp: { every: 11, radius: 120 }, towerSlice: { every: 8, radius: 150 }, phases: 3, shatterBlocker: 10, immuneSlowBelow: 0.5 }, motif: 'boss', boss: 'gruumak', cost: 700,
       title: 'Breaker of Gates', lore: 'Nine keeps have fallen to that cleaver. He counts them on the haft.' }),
     E({ id: 'boss_frostjarl', name: 'The Frost Jarl', family: 'Orc', hp: 8600, speed: 30, armor: 34, magicResist: 0.30, bounty: 640, traits: ['Boss', 'Armored', 'Immune-Slow'],
-      abilities: { boss: true, phases: 2, shatterBlocker: 12 }, motif: 'boss', boss: 'frostjarl', cost: 720,
+      abilities: { boss: true, groundStomp: { every: 11, radius: 120 }, towerSlice: { every: 8, radius: 150 }, phases: 2, shatterBlocker: 12 }, motif: 'boss', boss: 'frostjarl', cost: 720,
       title: 'He Who Waited Out Winter', lore: 'The pass has been closed for a century. This is why.' }),
     E({ id: 'boss_bogfather', name: 'The Bogfather', family: 'Undead', hp: 8200, speed: 26, armor: 12, magicResist: 0.25, bounty: 620, traits: ['Boss', 'Regenerating'],
-      abilities: { boss: true, regen: 200, summon: { id: 'sig_boghorror', count: 6, atHpPct: 0.5 } }, motif: 'boss', boss: 'bogfather', cost: 700,
+      abilities: { boss: true, groundStomp: { every: 12, radius: 120 }, towerSlice: { every: 9, radius: 150 }, regen: 200, summon: { id: 'sig_boghorror', count: 6, atHpPct: 0.5 } }, motif: 'boss', boss: 'bogfather', cost: 700,
       title: 'The Lantern in the Reeds', lore: 'Follow the light, the drowned ones say. They are not lying. They are inviting.' }),
     // -- rating 4 --
     E({ id: 'boss_cinderlord', name: 'The Cinderlord', family: 'Demon', hp: 12000, speed: 36, armor: 26, magicResist: 0.25, bounty: 900, traits: ['Boss', 'Immune-Fire'],
-      abilities: { boss: true, phases: 3, burnZones: 2, enragePhase: 3 }, motif: 'boss', boss: 'cinderlord', cost: 1000,
+      abilities: { boss: true, groundStomp: { every: 10, radius: 120 }, towerSlice: { every: 7, radius: 150 }, phases: 3, burnZones: 2, enragePhase: 3 }, motif: 'boss', boss: 'cinderlord', cost: 1000,
       title: 'Ash of the Old War', lore: 'He burned for so long that the burning became the man.' }),
     E({ id: 'boss_warden', name: 'The Last Warden', family: 'Arcane', hp: 12600, speed: 28, armor: 44, magicResist: 0.40, bounty: 940, traits: ['Boss', 'Armored', 'Shielded'],
-      abilities: { boss: true, shieldHits: 12, phases: 2, suppressAbilities: { radius: 150 } }, motif: 'boss', boss: 'warden', cost: 1050,
+      abilities: { boss: true, groundStomp: { every: 10, radius: 120 }, towerSlice: { every: 7, radius: 150 }, shieldHits: 12, phases: 2, suppressAbilities: { radius: 150 } }, motif: 'boss', boss: 'warden', cost: 1050,
       title: 'Keeper of the Broken Keep', lore: 'The keep fell. Nobody told the Warden, so the Warden holds it still.' }),
     E({ id: 'boss_stormwyrm', name: 'The Storm Wyrm', family: 'Aerial', hp: 11500, speed: 44, armor: 18, magicResist: 0.30, bounty: 960, traits: ['Boss', 'Flying', 'Fast'],
-      abilities: { boss: true, phases: 2, summon: { id: 'sig_cliffharrier', count: 8, atHpPct: 0.5 } }, motif: 'boss', boss: 'stormwyrm', cost: 1020,
+      abilities: { boss: true, groundStomp: { every: 12, radius: 120 }, towerSlice: { every: 8, radius: 150 }, phases: 2, summon: { id: 'sig_cliffharrier', count: 8, atHpPct: 0.5 } }, motif: 'boss', boss: 'stormwyrm', cost: 1020,
       title: 'The Ridge-Breaker', lore: 'It does not fly over the Spine. The Spine is what is left where it flew.' }),
     // -- rating 5 --
     E({ id: 'boss_malgrath', name: 'Malgrath the Bone Sovereign', family: 'Undead', hp: 18000, speed: 32, armor: 24, magicResist: 0.25, bounty: 1400, traits: ['Boss'],
-      abilities: { boss: true, resurrectAll: true, phases: 2, reflectPhase2: 0.25 }, motif: 'boss', boss: 'malgrath', cost: 1100,
+      abilities: { boss: true, groundStomp: { every: 9, radius: 120 }, towerSlice: { every: 7, radius: 150 }, resurrectAll: true, phases: 2, reflectPhase2: 0.25 }, motif: 'boss', boss: 'malgrath', cost: 1100,
       title: 'Crowned in the Nave', lore: 'He was buried beneath the altar. He has decided to attend the service.' }),
     E({ id: 'boss_forgemaster', name: 'The Obsidian Forgemaster', family: 'Demon', hp: 19000, speed: 30, armor: 50, magicResist: 0.30, bounty: 1500, traits: ['Boss', 'Armored', 'Immune-Fire'],
-      abilities: { boss: true, phases: 3, shatterBlocker: 8, burnZones: 1 }, motif: 'boss', boss: 'forgemaster', cost: 1600,
+      abilities: { boss: true, groundStomp: { every: 9, radius: 120 }, towerSlice: { every: 6, radius: 150 }, phases: 3, shatterBlocker: 8, burnZones: 1 }, motif: 'boss', boss: 'forgemaster', cost: 1600,
       title: 'Smith of the Black Gate', lore: 'Every blade that ever cut you was drawn from his fire, once.' }),
     // -- rating 6 --
     E({ id: 'boss_azhrakoth', name: 'Azhrakoth, the Ember Throne', family: 'Demon', hp: 26000, speed: 34, armor: 30, magicResist: 0.30, bounty: 3000, traits: ['Boss', 'Immune-Fire'],
-      abilities: { boss: true, phases: 4, flightPhase: 1, burnZones: 2, summonBalor: 3, enragePhase: 4 }, motif: 'boss', boss: 'azhrakoth', cost: 2200,
+      abilities: { boss: true, groundStomp: { every: 8, radius: 120 }, towerSlice: { every: 6, radius: 150 }, phases: 4, flightPhase: 1, burnZones: 2, summonBalor: 3, enragePhase: 4 }, motif: 'boss', boss: 'azhrakoth', cost: 2200,
       title: 'He Who Sits', lore: 'The throne was not built for him. It cooled around him.' }),
     E({ id: 'boss_herald', name: 'The Grey Herald', family: 'Arcane', hp: 24000, speed: 36, armor: 20, magicResist: 0.30, bounty: 5000, traits: ['Boss'],
-      abilities: { boss: true, endless: true, copyStrongest: { every: 60 } }, motif: 'boss', boss: 'herald', cost: 3000,
+      abilities: { boss: true, groundStomp: { every: 9, radius: 120 }, towerSlice: { every: 7, radius: 150 }, endless: true, copyStrongest: { every: 60 } }, motif: 'boss', boss: 'herald', cost: 3000,
       title: 'The Long Winter\'s Envoy', lore: 'It learns. That is the whole of the problem.' }),
   ];
 
@@ -3004,6 +3131,41 @@ button:hover::after { transform: translateX(120%); }
           if (strong) { e.maxHp += RS.towerDps(strong.def) * 40; e.hp += RS.towerDps(strong.def) * 40; }
         }
       }
+      // ---- Ground Stomp: slams the ground, stuns nearby towers for 2s ----
+      if (ab.groundStomp) {
+        e.abilT.gs = (e.abilT.gs || 0) + dt;
+        if (e.abilT.gs >= ab.groundStomp.every) {
+          e.abilT.gs = 0;
+          const rad = ab.groundStomp.radius;
+          let hit = 0;
+          for (const t of this.towers) {
+            if (dist2(e.x, e.y, t.x, t.y) > rad * rad) continue;
+            if (this.stunTower(t, 2)) hit++;
+          }
+          this.shake = Math.max(this.shake, 20);
+          (this._fx = this._fx || []).push({ kind: 'stomp', x: e.x, y: e.y, r: rad, t: 0.55, max: 0.55 });
+          RS.bus.emit('boss-stomp', { enemy: e, hit });
+        }
+      }
+      // ---- Tower Slice: swings at one tower, sparks, 1.5s stun ----
+      if (ab.towerSlice) {
+        e.abilT.ts = (e.abilT.ts || 0) + dt;
+        if (e.abilT.ts >= ab.towerSlice.every) {
+          e.abilT.ts = 0;
+          const rad = ab.towerSlice.radius;
+          let best = null, bd = rad * rad;
+          for (const t of this.towers) {
+            const d = dist2(e.x, e.y, t.x, t.y);
+            if (d < bd) { bd = d; best = t; }
+          }
+          if (best) {
+            const stunned = this.stunTower(best, 1.5);
+            (this._fx = this._fx || []).push({ kind: 'slice', x: e.x, y: e.y, tx: best.x, ty: best.y, t: 0.3, max: 0.3, blocked: !stunned });
+            this.shake = Math.max(this.shake, 10);
+            RS.bus.emit('boss-slice', { enemy: e, tower: best, stunned });
+          }
+        }
+      }
       if (ab.summonBalor && pct <= 0.4 && !e._balor) {
         e._balor = true;
         for (let i = 0; i < ab.summonBalor; i++) this._spawnEnemy('balor', e.lane, Math.max(0, e.progress - 40 - i * 10));
@@ -3098,6 +3260,14 @@ button:hover::after { transform: translateX(120%); }
       for (const t of this.towers) {
         if (t.charmT > 0) { t.charmT -= dt; continue; }
         if (t.disabledT > 0) { t.disabledT -= dt; continue; }
+        // Boss Ground Stomp / Tower Slice. Adamantine armour never gets here.
+        if (t.stunT > 0) { t.stunT -= dt; continue; }
+        const TR = t.def.traits;
+        if (TR.shout) this._shoutUpdate(t, dt);
+        if (TR.rage) this._rageUpdate(t, dt);
+        if (TR.bloodrush) this._bloodrushUpdate(t, dt);
+        if (TR.fallenWrath) this._fallenWrathUpdate(t, dt);
+        if (TR.legion) this._legionUpdate(t, dt);
         if (t.flashT > 0) t.flashT -= dt;
         // overheat gimmick
         if (this.map.env.gimmick === 'lava') {
@@ -3120,12 +3290,16 @@ button:hover::after { transform: translateX(120%); }
           if (t.abilityT >= every) { t.abilityT = 0; this._flameSweep(t); }
         }
         // firing
-        t.cooldown -= dt * t.buff.fireRate;
+        let rateMult = t.buff.fireRate;
+        if (t.rage) rateMult *= 1 + t.rage;                                  // Rage: attack speed
+        if (t.fwT > 0) rateMult *= 1 + t.def.traits.fallenWrath.fireRate;    // Fallen Wrath
+        if (t.brT > 0) rateMult *= 1.35;                                     // Bloodrush
+        t.cooldown -= dt * rateMult;
         if (t.muzzle > 0) t.muzzle -= dt;
         if (t.cooldown > 0) continue;
         const fired = this._towerFire(t);
         if (fired) {
-          t.cooldown = 1 / (t.fireRate * t.buff.fireRate);
+          t.cooldown = 1 / (t.fireRate * rateMult);
           t.muzzle = 0.08; t.flashT = 0.08;
           if (this.map.env.gimmick === 'lava') {
             t.overheatShots++;
@@ -3139,7 +3313,13 @@ button:hover::after { transform: translateX(120%); }
 
     _towerFire(t) {
       // Melee gladiators sweep a blade arc over the road instead of shooting.
-      if (t.def.traits.meleeSlash) return this._meleeSlash(t);
+      // Imperial Slash, Cleave and Black Sword Slash are the same mechanic with
+      // different reach/arc — Black Sword Slash alone also reaches flyers.
+      const tr = t.def.traits;
+      if (tr.meleeSlash) return this._sweepAttack(t, tr.meleeSlash, false);
+      if (tr.imperialSlash) return this._sweepAttack(t, tr.imperialSlash, false);
+      if (tr.cleave) return this._sweepAttack(t, tr.cleave, false, 'cleaveRadiusT');
+      if (tr.blackSlash) return this._sweepAttack(t, tr.blackSlash, true, 'blackRadiusT');
       // support/aura-only towers don't fire projectiles unless they have damage role
       const range = this._effectiveRange(t);
       // gather candidates in range
@@ -3179,14 +3359,16 @@ button:hover::after { transform: translateX(120%); }
      * ground enemy inside it. The arc is aimed at whoever is nearest (so it
      * naturally tracks the path passing the tower) and is wide enough to catch
      * a cluster — this is the melee answer to a projectile volley. */
-    _meleeSlash(t) {
-      const ms = t.def.traits.meleeSlash;
-      const reach = this._meleeReach(t); // == the engage reach — see _meleeReach
+    _sweepAttack(t, ms, allowAir, radiusMod) {
+      const bonus = (radiusMod && t._mods && t._mods[radiusMod]) || 0;
+      const reach = allowAir
+        ? Math.max(t.range, (ms.radiusT + bonus) * TILE) * t.buff.range
+        : this._meleeReach(t) + bonus * TILE; // ground sweeps share the engage reach
       this.grid.query(t.x, t.y, reach, this._tmp);
       let best = null, bd = reach * reach;
       const inReach = [];
       for (const e of this._tmp) {
-        if (!e.alive || e.isFlying) continue; // blades don't reach flyers
+        if (!e.alive || (e.isFlying && !allowAir)) continue; // blades don't reach flyers unless the sweep is anti-air
         if (e.def.traits.includes('Stealth') && !this._revealed(e)) continue;
         const d = dist2(t.x, t.y, e.x, e.y);
         if (d > reach * reach) continue;
@@ -3198,16 +3380,105 @@ button:hover::after { transform: translateX(120%); }
       const half = ms.arc / 2;
       const dInfo = this._computeShotDamage(t, best);
       let hits = 0;
+      const passes = ms.hits || 1;   // Black Sword Slash is a multi-hit arc
       for (const e of inReach) {
         let da = Math.abs(Math.atan2(e.y - t.y, e.x - t.x) - ang);
         if (da > Math.PI) da = Math.abs(da - RS.util.TAU);
         if (da > half) continue;
-        this._applyHit(t, e, dInfo);
+        for (let k = 0; k < passes; k++) this._applyHit(t, e, dInfo);
         hits++;
       }
       if (!hits) return false;
+      if (t.def.traits.rage) this._addRage(t, hits);
       // visual: crescent sweep consumed by the renderer's _fx layer
-      (this._fx = this._fx || []).push({ kind: 'slash', x: t.x, y: t.y, ang, half, reach, color: RS.DMG_COLOR.Melee, t: 0.18 });
+      (this._fx = this._fx || []).push({ kind: 'slash', x: t.x, y: t.y, ang, half, reach,
+        color: t.def.traits.blackSlash ? '#14121a' : RS.DMG_COLOR[t.def.damageType] || RS.DMG_COLOR.Melee, t: 0.18 });
+      return true;
+    }
+
+    /* ------------------- Rage / Bloodrush (The Warlord) ---------------- */
+    // Rage builds with every connected swing and decays when he stops hitting.
+    _addRage(t, hits) {
+      const r = t.def.traits.rage;
+      const per = r.perHit + ((t._mods && t._mods.ragePerHit) || 0);
+      const max = r.max + ((t._mods && t._mods.rageMax) || 0);
+      t.rage = Math.min(max, (t.rage || 0) + per * hits);
+      t.rageT = 0;
+    }
+    _rageUpdate(t, dt) {
+      const r = t.def.traits.rage;
+      t.rageT = (t.rageT || 0) + dt;
+      if (t.ascended) return;                 // ascended: rage never decays
+      if (t.rageT > r.decay) t.rage = Math.max(0, (t.rage || 0) - dt * 0.35);
+    }
+    // Bloodrush: a burst window that opens when wounded enemies crowd him.
+    _bloodrushUpdate(t, dt) {
+      const b = t.def.traits.bloodrush;
+      t.brT = Math.max(0, (t.brT || 0) - dt);
+      t.brCd = Math.max(0, (t.brCd || 0) - dt);
+      if (t.brT > 0 || (t.brCd > 0 && !t.ascended)) return;
+      const rad = this._meleeReach(t) + TILE;
+      let low = 0;
+      for (const e of this.enemies) {
+        if (!e.alive || e.hp / e.maxHp > b.hpPct) continue;
+        if (dist2(t.x, t.y, e.x, e.y) < rad * rad) low++;
+      }
+      if (low >= b.near) {
+        t.brT = b.dur; t.brCd = b.cd;
+        this.addFloater(t.x, t.y - 26, 'BLOODRUSH', RS.rarityColor('Mythic'));
+        this.shake = Math.max(this.shake, 8);
+        RS.bus.emit('tower-burst', { tower: t, kind: 'bloodrush' });
+      }
+    }
+
+    /* ------------------ Fallen Wrath (The Fallen Knight) --------------- */
+    // Auto-triggers the moment a boss walks into range. No input required.
+    _fallenWrathUpdate(t, dt) {
+      const w = t.def.traits.fallenWrath;
+      t.fwT = Math.max(0, (t.fwT || 0) - dt);
+      if (t.ascended) { t.fwT = Math.max(t.fwT, 1); return; }  // ascended: never ends
+      if (t.fwT > 0) return;
+      const range = this._effectiveRange(t);
+      for (const e of this.enemies) {
+        if (!e.alive || !e.isBoss) continue;
+        if (dist2(t.x, t.y, e.x, e.y) > range * range) continue;
+        t.fwT = w.dur;
+        this.addFloater(t.x, t.y - 30, 'FALLEN WRATH', RS.rarityColor('Mythic+'));
+        this.shake = Math.max(this.shake, 12);
+        RS.bus.emit('tower-burst', { tower: t, kind: 'wrath' });
+        break;
+      }
+    }
+
+    /* ------------------- shout (The General / The Captain) ------------- */
+    // A cooldown-gated burst window rather than a permanent aura: the value is
+    // in lining fast-attack towers up inside the radius before it fires.
+    _shoutUpdate(t, dt) {
+      const sh = t.def.traits.shout;
+      t.shoutT = Math.max(0, (t.shoutT || 0) - dt);
+      if (t.ascended) { t.shoutT = Math.max(t.shoutT, 1); return; }  // ascended: permanent
+      t.shoutCd = (t.shoutCd == null ? sh.every : t.shoutCd) - dt;
+      if (t.shoutCd > 0) return;
+      t.shoutCd = sh.every + ((t._mods && t._mods.shoutEvery) || 0);
+      t.shoutT = sh.dur + ((t._mods && t._mods.shoutDur) || 0);
+      this.addFloater(t.x, t.y - 26, t.def.id === 'captain' ? 'ALL HANDS!' : 'FORWARD!', RS.PALETTE.gold);
+      RS.bus.emit('tower-shout', { tower: t });
+    }
+
+    // Damage dealt to a TOWER by a boss ability. Adamantine plate soaks 20%.
+    bossAbilityDamageMult(t) {
+      const ad = t.def.traits.adamantine;
+      return ad ? 1 - (ad.bossDR || 0) : 1;
+    }
+
+    // Stun a tower for `dur` seconds. Adamantine armour ignores it entirely.
+    stunTower(t, dur) {
+      if (t.def.traits.adamantine) {
+        this.addFloater(t.x, t.y - 24, 'IMMUNE', RS.PALETTE.frost);
+        return false;
+      }
+      t.stunT = Math.max(t.stunT || 0, dur);
+      RS.bus.emit('tower-stunned', { tower: t, dur });
       return true;
     }
 
@@ -3218,6 +3489,9 @@ button:hover::after { transform: translateX(120%); }
 
     _computeShotDamage(t, target) {
       let dmg = t.damage * t.buff.dmg;
+      if (t.rage) dmg *= 1 + t.rage * 0.35;          // Rage: heavier swings
+      if (t.brT > 0) dmg *= 1 + t.def.traits.bloodrush.dmg;   // Bloodrush burst
+      if (t.fwT > 0) dmg *= 1 + t.def.traits.fallenWrath.dmg; // Fallen Wrath
       const def = t.def;
       // bonus vs traits/family
       const bv = def.traits.bonusVs;
@@ -3263,14 +3537,17 @@ button:hover::after { transform: translateX(120%); }
       this._applyStatuses(t, e, extra);
     }
 
+    // Every debuff duration a tower inflicts is scaled by the Ancient set bonus.
+    _curseDur(d) { return d * ((this._setBonus && this._setBonus.curseDur) || 1); }
+
     _applyStatuses(t, e, extra) {
       const tr = t.def.traits;
-      if (tr.burn) C.Status.burn(e, (tr.burn.dps) + ((t._mods && t._mods.burnDps) || 0), tr.burn.dur);
-      if ((t._mods && t._mods.addBurn)) C.Status.burn(e, t._mods.addBurn, 3);
-      if (tr.stagger) C.Status.stagger(e, tr.stagger, 1.2);
-      if (t.def.status && t.def.status.includes('Mark')) C.Status.mark(e, tr.mark || 0.1);
-      if (extra && extra.slow) C.Status.slow(e, extra.slow, 1.5);
-      if (extra && extra.stun) C.Status.stun(e, extra.stun);
+      if (tr.burn) C.Status.burn(e, (tr.burn.dps) + ((t._mods && t._mods.burnDps) || 0), this._curseDur(tr.burn.dur));
+      if ((t._mods && t._mods.addBurn)) C.Status.burn(e, t._mods.addBurn, this._curseDur(3));
+      if (tr.stagger) C.Status.stagger(e, tr.stagger, this._curseDur(1.2));
+      if (t.def.status && t.def.status.includes('Mark')) C.Status.mark(e, (tr.mark || 0.1) + ((t._mods && t._mods.mark) || 0));
+      if (extra && extra.slow) C.Status.slow(e, extra.slow, this._curseDur(1.5));
+      if (extra && extra.stun) C.Status.stun(e, this._curseDur(extra.stun));
     }
 
     _fireProjectile(t, target) {
@@ -3459,15 +3736,34 @@ button:hover::after { transform: translateX(120%); }
       t.x = seg.a.x + (seg.b.x - seg.a.x) * tt; t.y = seg.a.y + (seg.b.y - seg.a.y) * tt - 6;
     }
 
+    // Legionary Summon: the Emperor musters soldiers that run down the road
+    // and fight whatever they meet, rather than sitting on his tile.
+    _legionUpdate(t, dt) {
+      const cfg = t.def.traits.legion;
+      t.legionT = (t.legionT || 0) + dt;
+      const every = t.ascended ? 2 : cfg.every;
+      if (t.legionT < every) return;
+      t.legionT = 0;
+      const max = cfg.max + ((t._mods && t._mods.legionMax) || 0);
+      const cur = this.summons.filter((s) => s.kind === 'legionary' && s.ownerUid === t.uid).length;
+      if (cur >= max) return;
+      const dps = cfg.dps + ((t._mods && t._mods.legionDps) || 0);
+      const s = this._spawnSummon('legionary', t, t.x, t.y, dps * (t.ascended ? 1.5 : 1), 1.6 * TILE);
+      if (s) { s.hp = s.maxHp = cfg.hp; s.type = 'Melee'; s.speed = 78; s.life = Infinity; }
+      RS.bus.emit('legion-muster', { tower: t });
+    }
+
     /* --------------------------- summons ------------------------------ */
     _spawnSummon(kind, owner, x, y, dps, range) {
-      this.summons.push({
+      const made = {
         kind, ownerUid: owner.uid, x, y, hx: x, hy: y, dps: dps || 30,
         range: range || 3 * TILE, cooldown: 0, target: null, life: kind === 'wraith' ? 30 : Infinity,
         seek: owner.def.traits.summon ? owner.def.traits.summon.seek : null,
         speed: kind === 'falcon' ? 160 : (kind === 'wraith' ? 70 : 0), type: kind === 'wraith' ? 'Necrotic' : 'Siege',
         owner,
-      });
+      };
+      this.summons.push(made);
+      return made;
     }
 
     _updateSummons(dt) {
@@ -3492,10 +3788,24 @@ button:hover::after { transform: translateX(120%); }
           const dx = s.target.x - s.x, dy = s.target.y - s.y, d = Math.hypot(dx, dy) || 1;
           if (d > 18) { s.x += (dx / d) * s.speed * dt; s.y += (dy / d) * s.speed * dt; }
         } else if (s.kind === 'turret') { s.x = s.hx; s.y = s.hy; }
+        // Imperial Command: legionaries fighting near the Emperor hit harder.
+        let cmd = 1;
+        if (s.kind === 'legionary' && s.owner) {
+          const ic = s.owner.def.traits.imperialCommand;
+          if (ic) {
+            const rad = (ic.radiusT + ((s.owner._mods && s.owner._mods.commandRadiusT) || 0)) * TILE;
+            if (dist2(s.x, s.y, s.owner.x, s.owner.y) < rad * rad) cmd = 1 + ic.dmg + ((s.owner._mods && s.owner._mods.commandDmg) || 0);
+          }
+          // a legionary in contact with the horde takes losses and eventually falls
+          if (s.target && dist(s.x, s.y, s.target.x, s.target.y) < 26) {
+            s.hp -= s.target.def.bounty * 1.6 * dt;
+            if (s.hp <= 0) { this._burst(s.x, s.y, '#c9a25a', 5); continue; }
+          }
+        }
         // attack
         if (s.target && s.cooldown <= 0 && dist(s.x, s.y, s.target.x, s.target.y) < (s.speed > 0 ? 24 : s.range)) {
           s.cooldown = s.kind === 'turret' ? 0.6 : 0.4;
-          const dmg = s.dps * (s.kind === 'turret' ? 0.6 : 0.4);
+          const dmg = s.dps * (s.kind === 'turret' ? 0.6 : 0.4) * cmd;
           const ctx = {}; const opts = { ownerUid: s.ownerUid };
           const final = C.resolveDamage(dmg, s.type, s.target, opts, ctx);
           this._damageEnemy(s.target, final, s.type, { ownerUid: s.ownerUid });
@@ -3542,8 +3852,39 @@ button:hover::after { transform: translateX(120%); }
       // enemy speed auras reset
       for (const e of this.enemies) e.buffSpeed = 1;
 
+      // ---- SET BONUS: 2+ Ancient towers extend every debuff they inflict ----
+      // Scales with rarity: each qualifying tower contributes in proportion to
+      // its rarity rank, so the bonus grows with the tier of the set, not just
+      // the head-count. Consumed by _curseDur() when statuses are applied.
+      this._setBonus = { curseDur: 1, ancient: 0 };
+      {
+        const SB = RS.SET_BONUS && RS.SET_BONUS.Ancient;
+        if (SB) {
+          const anc = this.towers.filter((t) => t.def.rarity === 'Ancient');
+          this._setBonus.ancient = anc.length;
+          if (anc.length >= SB.min) {
+            const base = RS.rarityRank('Ancient') || 1;
+            let add = 0;
+            for (let i = 1; i < anc.length; i++) add += SB.curseDur * ((RS.rarityRank(anc[i].def.rarity) || base) / base);
+            this._setBonus.curseDur = 1 + add;
+          }
+        }
+      }
+
       for (const src of this.towers) {
         const tr = src.def.traits;
+        // shout: a live burst window buffing everything inside the radius
+        if (tr.shout && src.shoutT > 0) {
+          const radius = (tr.shout.radiusT + ((src._mods && src._mods.shoutRadiusT) || 0)) * TILE;
+          const amt = tr.shout.fireRate + ((src._mods && src._mods.shoutFireRate) || 0);
+          const all = src.ascended;   // ascended: the order reaches the whole field
+          for (const t of this.towers) {
+            if (t === src) continue;
+            if (!all && dist2(src.x, src.y, t.x, t.y) >= radius * radius) continue;
+            t.buff.fireRate *= 1 + amt;
+            if (all && src.def.id === 'captain') t.buff.dmg *= 1.25;
+          }
+        }
         // support: range/attackspeed aura
         if (tr.support) {
           const radius = (tr.support.radiusT + ((src._mods && src._mods.auraRadiusT) || 0)) * TILE;
@@ -3620,6 +3961,18 @@ button:hover::after { transform: translateX(120%); }
         }
         this.freeze = 0.4; this.shake = Math.max(this.shake, 24);
         this.addFloater(this.goalPx.x, 60, 'JUDGMENT', RS.rarityColor('Mythic+'));
+      } else if (a.kind === 'shieldSmash') {
+        // Shockwave: slows ground AND air inside the radius.
+        const rad = a.radiusT * TILE;
+        for (const e of this.enemies) {
+          if (!e.alive || dist2(t.x, t.y, e.x, e.y) > rad * rad) continue;
+          C.Status.slow(e, a.slow, this._curseDur(a.dur));
+          if (t.ascended) C.Status.stun(e, 1);
+        }
+        this.shake = Math.max(this.shake, 18);
+        (this._fx = this._fx || []).push({ kind: 'shock', x: t.x, y: t.y, r: rad, t: 0.45, max: 0.45 });
+        this.addFloater(t.x, t.y - 30, 'SHIELD SMASH', RS.rarityColor('Mythic+'));
+        RS.bus.emit('shield-smash', { tower: t });
       } else if (a.kind === 'reforge') {
         this.pathShorten = Math.min(0.6, this.pathShorten + a.shorten);
         // add high-ground platforms near path
@@ -3710,7 +4063,10 @@ button:hover::after { transform: translateX(120%); }
   }
 
   // Placement caps & star cap (referenced by match).
-  RS.PLACE_CAP = { Common: 8, Uncommon: 6, Rare: 5, Epic: 4, Legendary: 3, Ancient: 2, Mythic: 2, 'Mythic+': 1 };
+  // Ancient is 3, not 2, so the Ancient Pact set bonus ("2+ Ancient towers")
+  // can actually scale past its own minimum — at a cap of 2 the bonus was a
+  // binary on/off switch rather than a set you build toward.
+  RS.PLACE_CAP = { Common: 8, Uncommon: 6, Rare: 5, Epic: 4, Legendary: 3, Ancient: 3, Mythic: 2, 'Mythic+': 1 };
   RS.STAR3_TOWER_CAP = 14;
   RS.Match = Match;
 })();
@@ -3743,7 +4099,7 @@ button:hover::after { transform: translateX(120%); }
       unlocked: {},    // mapId -> highest unlocked difficulty order (Easy=0 always)
       account: { level: 1, xp: 0 },
       objectives: {},  // id -> progress
-      settings: { sfx: true, showRange: false, particles: true, quickRoll: false, quickRollUnlocked: false },
+      settings: { sfx: true, music: true, showRange: false, particles: true, quickRoll: false, quickRollUnlocked: false },
       loadouts: [],    // saved presets [{name, ids:[...]}]
       activeLoadout: null,
       codex: { towers: [], enemies: [] },
@@ -3789,6 +4145,7 @@ button:hover::after { transform: translateX(120%); }
       out.tokens = Object.assign({}, base.tokens, s.tokens);
       out.rolls = Object.assign({}, base.rolls, s.rolls);
       out.pity = Object.assign({}, base.pity, s.pity);
+      out.settings = Object.assign({}, base.settings, s.settings);
       out.tutorial = Object.assign({}, base.tutorial, s.tutorial);
       out.tutorial.tips = Object.assign({}, s.tutorial && s.tutorial.tips);
       out.shards = Object.assign({}, base.shards, s.shards);
@@ -4248,6 +4605,105 @@ button:hover::after { transform: translateX(120%); }
     },
     win() { [523, 659, 784, 1046].forEach((f, i) => this.tone({ freq: f, type: 'triangle', dur: 0.3, vol: 0.18, delay: i * 0.12 })); },
     lose() { [440, 349, 262].forEach((f, i) => this.tone({ freq: f, type: 'sawtooth', dur: 0.4, vol: 0.18, delay: i * 0.16 })); },
+
+    /* ========================= AMBIENT MUSIC =========================
+     * Generative, per-map. No samples: a slow drone pair, a sparse arpeggio
+     * picked from the map's scale, and an occasional swell. Each map supplies
+     * a root note, a scale and a timbre, so Farmstead sounds like open country
+     * and the Obsidian Gate sounds like a forge. Gated by settings.music.
+     * ================================================================= */
+    _music: null,
+    MAP_THEME: {
+      farmstead:   { root: 196.00, scale: [0, 2, 4, 7, 9],      wave: 'triangle', drone: 'sine',     tempo: 2.9, air: 0.30 },
+      riverford:   { root: 174.61, scale: [0, 2, 3, 5, 7, 10],  wave: 'sine',     drone: 'sine',     tempo: 3.2, air: 0.42 },
+      blackforest: { root: 146.83, scale: [0, 2, 3, 7, 8],      wave: 'triangle', drone: 'sawtooth', tempo: 3.6, air: 0.26 },
+      highkeep:    { root: 220.00, scale: [0, 2, 4, 5, 7, 11],  wave: 'square',   drone: 'sine',     tempo: 2.6, air: 0.34 },
+      frostvale:   { root: 261.63, scale: [0, 2, 3, 5, 7, 10],  wave: 'sine',     drone: 'sine',     tempo: 3.8, air: 0.55 },
+      sunkenbog:   { root: 130.81, scale: [0, 1, 3, 5, 6, 8],   wave: 'sine',     drone: 'sawtooth', tempo: 4.2, air: 0.48 },
+      ashen:       { root: 155.56, scale: [0, 1, 4, 5, 7, 8],   wave: 'triangle', drone: 'sawtooth', tempo: 3.0, air: 0.22 },
+      aldermere:   { root: 164.81, scale: [0, 2, 3, 5, 7, 8],   wave: 'triangle', drone: 'sine',     tempo: 3.4, air: 0.38 },
+      dragonspine: { root: 185.00, scale: [0, 2, 5, 7, 9],      wave: 'square',   drone: 'sine',     tempo: 2.8, air: 0.45 },
+      cathedral:   { root: 207.65, scale: [0, 4, 5, 7, 11],     wave: 'sine',     drone: 'sine',     tempo: 4.4, air: 0.62 },
+      obsidian:    { root: 138.59, scale: [0, 1, 3, 6, 7, 10],  wave: 'sawtooth', drone: 'sawtooth', tempo: 2.7, air: 0.18 },
+      emberthrone: { root: 123.47, scale: [0, 1, 4, 6, 7, 10],  wave: 'sawtooth', drone: 'sawtooth', tempo: 2.4, air: 0.20 },
+      winterhold:  { root: 116.54, scale: [0, 2, 3, 5, 8, 10],  wave: 'sine',     drone: 'sine',     tempo: 4.6, air: 0.68 },
+    },
+    _musicOn() { return this.ctx && (RS.Meta && RS.Meta.p ? RS.Meta.p.settings.music !== false : true); },
+
+    // Start (or switch to) a map's ambient bed. Safe to call repeatedly.
+    startMusic(mapId) {
+      this.init(); this.resume();
+      if (!this.ctx) return;
+      if (this._music && this._music.mapId === mapId) return;
+      this.stopMusic();
+      if (!this._musicOn()) return;
+      const th = this.MAP_THEME[mapId] || this.MAP_THEME.farmstead;
+      const c = this.ctx;
+      const bus = c.createGain(); bus.gain.value = 0; bus.connect(this.master);
+      bus.gain.linearRampToValueAtTime(0.5, c.currentTime + 3);   // fade in
+      // gentle low-pass so nothing ever gets shrill under the SFX
+      const filt = c.createBiquadFilter(); filt.type = 'lowpass';
+      filt.frequency.value = 900 + th.air * 1400; filt.Q.value = 0.6;
+      filt.connect(bus);
+      // two detuned drones a fifth apart = the harmonic bed
+      const drones = [];
+      for (const [mult, det, vol] of [[1, -4, 0.10], [1.5, 5, 0.055], [0.5, 0, 0.075]]) {
+        const o = c.createOscillator(), g = c.createGain();
+        o.type = th.drone; o.frequency.value = th.root * mult; o.detune.value = det;
+        g.gain.value = vol; o.connect(g); g.connect(filt); o.start();
+        drones.push({ o, g });
+      }
+      // a slow LFO opening and closing the filter — the "breathing" of the bed
+      const lfo = c.createOscillator(), lfoG = c.createGain();
+      lfo.type = 'sine'; lfo.frequency.value = 0.05 + th.air * 0.04;
+      lfoG.gain.value = 260; lfo.connect(lfoG); lfoG.connect(filt.frequency); lfo.start();
+      this._music = { mapId, bus, filt, drones, lfo, lfoG, th, timer: null, step: 0 };
+      // sparse arpeggio picked from the map's scale
+      const tick = () => {
+        if (!this._music || this._music.mapId !== mapId) return;
+        if (this._musicOn()) {
+          const M = this._music, s2 = M.th.scale;
+          M.step++;
+          if (M.step % 3 !== 0) {   // leave gaps; a note every bar or two
+            const semi = s2[Math.floor(Math.random() * s2.length)] + (Math.random() < 0.3 ? 12 : 0);
+            const f = M.th.root * 2 * Math.pow(2, semi / 12);
+            const o = c.createOscillator(), g = c.createGain();
+            const t0 = c.currentTime;
+            o.type = M.th.wave; o.frequency.value = f;
+            g.gain.setValueAtTime(0.0001, t0);
+            g.gain.exponentialRampToValueAtTime(0.075, t0 + 0.25);
+            g.gain.exponentialRampToValueAtTime(0.0001, t0 + 2.6);
+            o.connect(g); g.connect(M.filt); o.start(t0); o.stop(t0 + 2.8);
+          }
+        }
+        this._music.timer = setTimeout(tick, (th.tempo + Math.random() * 1.4) * 1000);
+      };
+      this._music.timer = setTimeout(tick, 1200);
+    },
+
+    stopMusic() {
+      const M = this._music; if (!M) return;
+      this._music = null;
+      clearTimeout(M.timer);
+      const c = this.ctx, t = c.currentTime;
+      try {
+        M.bus.gain.cancelScheduledValues(t);
+        M.bus.gain.setValueAtTime(M.bus.gain.value, t);
+        M.bus.gain.linearRampToValueAtTime(0.0001, t + 1.2);   // fade out
+        M.drones.forEach((d) => d.o.stop(t + 1.4));
+        M.lfo.stop(t + 1.4);
+      } catch (e) { /* context already torn down */ }
+    },
+
+    // Duck the bed briefly (boss entrance, judgment) so the hit reads.
+    duckMusic(dur) {
+      const M = this._music; if (!M || !this.ctx) return;
+      const t = this.ctx.currentTime;
+      M.bus.gain.cancelScheduledValues(t);
+      M.bus.gain.setValueAtTime(M.bus.gain.value, t);
+      M.bus.gain.linearRampToValueAtTime(0.12, t + 0.12);
+      M.bus.gain.linearRampToValueAtTime(0.5, t + (dur || 1.6));
+    },
   };
 
   // Lazy-init on the first gesture so autoplay policy is satisfied.
@@ -4803,6 +5259,142 @@ button:hover::after { transform: translateX(120%); }
     facet(ctx, [[8, -15], [13, -14], [12.5, -10], [8, -10]], RS.RAMP.gold.light, RS.RAMP.gold.rim); // forked was-head
     circ(ctx, 10.5, -17, 2.6 + p.charge * 2.4, A.alpha('#3fe0cc', 0.85), '#eafff9'); }; // glowing eye of Horus
 
+  Sil.general = (ctx, r, a, p) => { // The General — tricorn, sash, flintlock, raised sabre
+    const G = RS.RAMP.gold, sh = p.charge || 0;
+    limb(ctx, -3.5, 2, -5, 12, 2.6, 2, '#2a3346'); limb(ctx, 3.5, 2, 5, 12, 2.6, 2, '#2a3346'); // boots
+    facet(ctx, [[-7, -9], [7, -9], [5.5, 3], [-5.5, 3]], '#3a4a6a', '#7089b0');                  // blue coat
+    facet(ctx, [[-5.5, -8], [-1, -5], [-2.5, 3], [-5, 3]], '#e8dcc0');                           // white lapel
+    facet(ctx, [[-6, -2], [6, -2], [5, 2], [-5, 2]], '#8a2f2f', '#c05a4a');                      // red sash
+    limb(ctx, -7, -7, -12, 0, 2.4, 1.8, '#2f3c58');                                              // pistol arm
+    limb(ctx, 7, -7, 11, -12, 2.4, 1.8, '#2f3c58');                                              // sabre arm
+    facet(ctx, [[-8, -8], [-4, -11], [-3, -5], [-7, -4]], G.mid, G.rim);                          // epaulettes
+    facet(ctx, [[8, -8], [4, -11], [3, -5], [7, -4]], G.mid, G.rim);
+    circ(ctx, 0, -13, 3.4, RS.RAMP.flesh.mid);
+    // tricorn: a real brim with three upturned corners, not a black blob
+    facet(ctx, [[-10, -15], [10, -15], [7, -18], [-7, -18]], '#252b38', '#5a6580');
+    facet(ctx, [[-7, -18], [0, -23], [7, -18]], '#1c212b', '#4a5468');
+    facet(ctx, [[-2, -22], [2, -22], [0, -27]], '#e8dcc0');                                       // plume
+    ctx.strokeStyle = RS.RAMP.steel.light; ctx.lineWidth = 2; ctx.lineCap = 'round';               // sabre
+    ctx.beginPath(); ctx.moveTo(11, -12); ctx.quadraticCurveTo(17, -18, 16, -28 - sh * 4); ctx.stroke();
+    facet(ctx, [[9, -10], [14, -13], [13, -8]], G.mid, G.rim);                                     // hilt
+    facet(ctx, [[-12, 1], [-18, -2], [-17, 2], [-12, 4]], RS.RAMP.iron.mid, RS.RAMP.iron.rim);      // flintlock
+    if (sh > 0.2) { ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = A.alpha('#ffd98a', sh * 0.65); ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.arc(0, -6, 14 + sh * 9, 0, TAU); ctx.stroke(); ctx.restore(); } };
+
+  Sil.captain = (ctx, r, a, p) => { // The Captain — bicorn, naval coat, cutlass, spyglass
+    const G = RS.RAMP.gold, sh = p.charge || 0;
+    limb(ctx, -3.5, 2, -5, 12, 2.6, 2, '#14202c'); limb(ctx, 3.5, 2, 5, 12, 2.6, 2, '#14202c');
+    facet(ctx, [[-7.5, -9], [7.5, -9], [6, 3], [-6, 3]], '#1d3b52', '#5688a8');                    // navy coat
+    facet(ctx, [[-6, -9], [0, -4], [6, -9], [5, 3], [-5, 3]], '#e8dcc0');                          // white waistcoat
+    ctx.strokeStyle = G.mid; ctx.lineWidth = 1;                                                     // brass buttons
+    for (let i = 0; i < 3; i++) circ(ctx, 0, -6 + i * 3, 0.9, G.light);
+    limb(ctx, -7.5, -7, -13, -1, 2.4, 1.8, '#16303f');
+    limb(ctx, 7.5, -7, 12, -11, 2.4, 1.8, '#16303f');
+    facet(ctx, [[-9, -8], [-4, -12], [-3, -5], [-8, -4]], G.mid, G.rim);
+    facet(ctx, [[9, -8], [4, -12], [3, -5], [8, -4]], G.mid, G.rim);
+    circ(ctx, 0, -14, 3.4, RS.RAMP.flesh.mid);
+    // bicorn: two swept peaks, worn athwart
+    facet(ctx, [[-12, -17], [-4, -24], [4, -24], [12, -17], [6, -15], [-6, -15]], '#14202c', '#46647c');
+    facet(ctx, [[-4, -24], [0, -20], [4, -24], [0, -22]], '#0d1720');
+    facet(ctx, [[-1, -23], [1, -23], [0, -28]], G.light);                                            // cockade
+    ctx.strokeStyle = RS.RAMP.steel.light; ctx.lineWidth = 2.4; ctx.lineCap = 'round';                // cutlass
+    ctx.beginPath(); ctx.moveTo(12, -11); ctx.quadraticCurveTo(19, -17, 18, -27 - sh * 4); ctx.stroke();
+    facet(ctx, [[10, -9], [15, -12], [14, -7]], G.mid, G.rim);
+    facet(ctx, [[-13, -2], [-20, -4], [-19, 0], [-13, 1]], G.mid, G.rim);                             // spyglass
+    if (sh > 0.2) { ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = A.alpha('#9fe0ff', sh * 0.7); ctx.lineWidth = 2.6;
+      ctx.beginPath(); ctx.arc(0, -6, 15 + sh * 11, 0, TAU); ctx.stroke(); ctx.restore(); } };
+
+  Sil.emperor = (ctx, r, a, p) => { // The Roman Emperor — laurel, lorica, gold gladius
+    const G = RS.RAMP.gold, patina = r;
+    facet(ctx, [[-11, -12], [11, -12], [9, 12], [-9, 12]], '#8a2f3a', '#c25a5a');                      // imperial cloak
+    limb(ctx, -3.5, 4, -5, 12, 2.6, 2.1, '#7a4438'); limb(ctx, 3.5, 4, 5, 12, 2.6, 2.1, '#7a4438');
+    facet(ctx, [[-7.5, -10], [7.5, -10], [6, 5], [-6, 5]], G.mid, G.rim);                              // lorica musculata
+    ctx.strokeStyle = A.mul(G.shadow, 1.15); ctx.lineWidth = 1;                                        // muscled relief
+    ctx.beginPath(); ctx.moveTo(0, -9); ctx.lineTo(0, 3); ctx.moveTo(-4.5, -4); ctx.quadraticCurveTo(0, -1.5, 4.5, -4); ctx.stroke();
+    facet(ctx, [[-7, 4], [7, 4], [6, 10], [-6, 10]], '#b03a2e', '#d9705a');                            // pteruges
+    limb(ctx, -7.5, -8, -12, -2, 2.5, 1.9, RS.RAMP.flesh.shadow);
+    limb(ctx, 7.5, -8, 12, -5, 2.5, 1.9, RS.RAMP.flesh.shadow);
+    pauldron(ctx, -7.5, -9, -1, 5.5, A.mul(patina.mid, 1.05), patina.rim);
+    pauldron(ctx, 7.5, -9, 1, 5.5, A.mul(patina.mid, 1.05), patina.rim);
+    circ(ctx, 0, -14, 3.6, RS.RAMP.flesh.mid);
+    // laurel wreath: paired leaves around a band, not a spiked crown
+    ctx.strokeStyle = '#4f7a35'; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.arc(0, -15, 5.2, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke();
+    for (let i = 0; i < 6; i++) {
+      const ang = Math.PI * 1.1 + i * 0.28;
+      const lx = Math.cos(ang) * 5.2, ly = -15 + Math.sin(ang) * 5.2;
+      facet(ctx, [[lx, ly], [lx + Math.cos(ang - 0.5) * 3.4, ly + Math.sin(ang - 0.5) * 3.4],
+                  [lx + Math.cos(ang + 0.35) * 2.2, ly + Math.sin(ang + 0.35) * 2.2]], '#6aa84f');
+    }
+    // gold gladius held in the sword hand
+    const gx = 12 + p.lunge * 2, gy = -5;
+    // gladius: short, leaf-bladed, wider at the belly then tapering to a point
+    facet(ctx, [[gx - 1.5, gy - 2], [gx + 1.5, gy - 2], [gx + 3.4, gy - 11], [gx + 1, gy - 19], [gx - 1.4, gy - 11]],
+      G.light, G.rim);
+    facet(ctx, [[gx - 0.6, gy - 3], [gx + 1.4, gy - 3], [gx + 1, gy - 17]], A.mul(G.rim, 1.05));         // fuller
+    facet(ctx, [[gx - 4, gy], [gx + 4.5, gy - 1], [gx + 4, gy + 2.6], [gx - 3.6, gy + 3.4]],
+      A.mul(G.shadow, 1.25), G.mid);                                                                     // crossguard
+    circ(ctx, gx + 0.4, gy + 5, 1.8, A.mul(G.mid, 1.1), G.rim); };                                       // pommel
+
+  Sil.warlord = (ctx, r, a, p) => { // The Warlord — berserker, fur mantle, Leviathan axe
+    const I = RS.RAMP.iron, rage = p.charge || 0;
+    limb(ctx, -4, 3, -6, 12, 3, 2.3, '#4a3527'); limb(ctx, 4, 3, 6, 12, 3, 2.3, '#4a3527');
+    facet(ctx, [[-9, -9], [9, -9], [7, 5], [-7, 5]], '#6b4632', '#9a7048');                             // bare torso
+    facet(ctx, [[-11, -12], [-4, -15], [4, -15], [11, -12], [8, -5], [-8, -5]], '#4a3527', '#7d5a3c');   // fur mantle
+    facet(ctx, [[-7, 3], [7, 3], [6, 9], [-6, 9]], I.shadow, I.mid);                                     // iron belt
+    limb(ctx, -9, -9, -14, -3, 3, 2.2, '#7a5540');                                                       // arms
+    limb(ctx, 9, -9, 14, -8, 3.2, 2.4, '#7a5540');
+    circ(ctx, 0, -15, 3.8, RS.RAMP.flesh.mid);
+    facet(ctx, [[-5, -17], [5, -17], [4, -13], [-4, -13]], '#2a2018');                                    // warpaint band
+    circ(ctx, -1.8, -15.5, 1.2, rage > 0.35 ? '#ff5a3a' : '#3a2a20');
+    circ(ctx, 1.8, -15.5, 1.2, rage > 0.35 ? '#ff5a3a' : '#3a2a20');
+    // Leviathan-type axe: long haft, heavy double-bearded head, bound socket
+    const hx = 13 + p.lunge;
+    limb(ctx, hx - 2, 9, hx + 2, -19, 2.4, 2, '#463320', '#755c3e');
+    // head kept compact — at tower scale a boss-sized bit reads as a billboard
+    facet(ctx, [[hx + 1, -16], [hx + 4, -26], [hx + 12, -22], [hx + 12, -11], [hx + 6, -8], [hx + 1, -11]],
+      A.mul(I.mid, 0.82), I.mid);
+    facet(ctx, [[hx + 3, -16], [hx + 5, -23], [hx + 9, -20], [hx + 6, -11]], A.mul(I.light, 0.86));
+    facet(ctx, [[hx + 12, -22], [hx + 12, -11], [hx + 8, -16]], A.mul(I.shadow, 0.9));
+    socket(ctx, hx + 1.5, -13, -1.3, 3.6, 1.9, '#241b14', A.mul(I.mid, 0.9));
+    if (rage > 0.3) { ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      circ(ctx, hx + 6, -17, 8 * rage, A.alpha('#c0392b', 0.30 * rage)); ctx.restore(); } };
+
+  Sil.fallen = (ctx, r, a, p) => { // The Fallen Knight — adamantine plate, black sword, kite shield
+    const AD = RS.RAMP.steel, wrath = p.charge || 0;
+    facet(ctx, [[-12, -12], [12, -12], [10, 13], [-10, 13]], '#171a20', '#3f4650');                        // dark surcoat
+    limb(ctx, -4, 4, -6, 12, 3, 2.4, '#22262e'); limb(ctx, 4, 4, 6, 12, 3, 2.4, '#22262e');
+    facet(ctx, [[-8, -11], [8, -11], [6.5, 5], [-6.5, 5]], A.mul(AD.mid, 0.9), AD.rim);                    // cuirass
+    facet(ctx, [[-3, -10], [3, -10], [2.5, 3], [-2.5, 3]], A.mul(AD.light, 1.04));                         // lit ridge
+    limb(ctx, -8, -9, -14, -4, 3, 2.2, A.mul(AD.shadow, 1.1));                                             // shield arm
+    limb(ctx, 8, -9, 13, -7, 3, 2.2, A.mul(AD.shadow, 1.1));                                               // sword arm
+    pauldron(ctx, -8, -10, -1, 6, AD.mid, AD.rim);
+    pauldron(ctx, 8, -10, 1, 6, AD.mid, AD.rim);
+    facet(ctx, [[-5.5, -13], [5.5, -14], [5, -22], [-5, -21]], AD.light, AD.rim);                          // great helm
+    ctx.fillStyle = '#08090c'; ctx.fillRect(-4.5, -19, 9, 2.4);                                            // visor slit
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = A.alpha(wrath > 0.15 ? '#ff3a2a' : '#7fb0ff', 0.6 + wrath * 0.4);
+    ctx.fillRect(-4, -18.6, 8, 1.6); ctx.restore();
+    facet(ctx, [[-5, -22], [-3, -29], [-1, -22]], A.mul(AD.shadow, 0.9));                                  // broken crest
+    facet(ctx, [[5, -22], [3, -29], [1, -22]], A.mul(AD.shadow, 0.9));
+    // kite shield, darker than the plate so it doesn't read as a white slab
+    facet(ctx, [[-19, -13], [-11, -17], [-11, 6], [-15, 11], [-19, 5]], A.mul(AD.mid, 0.62), A.mul(AD.rim, 0.8));
+    facet(ctx, [[-17.5, -12], [-12.5, -14.5], [-12.5, 4], [-15, 8], [-17.5, 3.5]], A.mul(AD.mid, 0.78));
+    ctx.strokeStyle = '#0c0e12'; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-15, -15); ctx.lineTo(-15, 8); ctx.moveTo(-18.5, -5); ctx.lineTo(-11.5, -5); ctx.stroke();
+    // the black sword: rough, pitted, notched — matches the blade reference
+    const bx = 13, by = -7, tipY = -34 - p.lunge * 2;
+    limb(ctx, bx, by + 2, bx + 2, tipY, 2.6, 2, '#15161a', '#434852');
+    ctx.strokeStyle = '#0a0b0e'; ctx.lineWidth = 1;                                                        // edge notches
+    for (let i = 0; i < 4; i++) { const y = by - 5 - i * 6.5;
+      ctx.beginPath(); ctx.moveTo(bx + 3.4, y); ctx.lineTo(bx + 1.6, y - 2.2); ctx.stroke(); }
+    facet(ctx, [[bx - 5, by + 3], [bx + 8, by + 1], [bx + 7, by + 5], [bx - 4, by + 6]], '#23252b', '#4f5460'); // crossguard
+    if (wrath > 0.15) { ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = A.alpha('#ff2a1a', 0.35 + wrath * 0.5); ctx.lineWidth = 5; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(bx + 1, by); ctx.lineTo(bx + 2, tipY + 2); ctx.stroke(); ctx.restore(); } };
+
   Sil.wyvernrider = (ctx, r, a, p) => { // small wyvern mount hovering
     const flap = Math.sin(p.t * 6) * 5;
     facet(ctx, [[-16, -2 - flap], [-2, 3], [0, -4], [-4, -6 - flap]], A.mul(r.mid, 0.9), r.rim);
@@ -4891,6 +5483,9 @@ button:hover::after { transform: translateX(120%); }
     const atk = o.atk || 0; // 0..1 attack progress
     if (art.anim === 'archer') p.draw = 0.15 + Math.sin(t * 2 + def._ph) * 0.08 + (atk < 0.5 ? atk * 1.6 : (1 - atk) * 0.4);
     if (art.anim === 'mage') p.charge = atk;
+    // Live gameplay state can override `charge`: the shout window, Rage stacks
+    // and Fallen Wrath all need to show on the sprite, not just attack timing.
+    if (o.power != null) p.charge = o.power;
     if (art.anim === 'blocker') p.lunge = atk * 3;
     if (art.anim === 'siege') p.recoil = atk;
     const r = RS.rarityRamp(def.rarity);
@@ -5619,6 +6214,7 @@ button:hover::after { transform: translateX(120%); }
       VFX.ring(e.x, e.y, A2.glow, 8, 90, 0.6, 5);
       if (A2.fx === 'shard') VFX.shards(e.x, e.y, 20, A2.glow); else VFX.embers(e.x, e.y, 20, A2.glow);
       RS.Audio && RS.Audio.boss();
+      RS.Audio && RS.Audio.duckMusic(2.2);   // let the horn cut through the bed
     }
 
     _enemyDeath(info) {
@@ -6478,7 +7074,15 @@ button:hover::after { transform: translateX(120%); }
         // siege guns' visible reload animation (crew loading, breech glowing).
         const cycle = t.fireRate * t.buff.fireRate; const reload = cycle > 0 ? A.clamp(1 - t.cooldown / (1 / cycle), 0, 1) : 1;
         ctx.save(); if (dim) ctx.globalAlpha = 0.6;
-        S.drawTower(ctx, t.def, t.x, t.y, { t: this.clock + v.phase, atk, aim: v.aim, ascended: t.ascended, place: v.placeT, reload });
+        // Surface live ability state on the sprite: the shout burst window,
+        // the Warlord's Rage meter, and the Fallen Knight's Wrath.
+        let power = null;
+        const TT = t.def.traits;
+        if (TT.shout) power = t.shoutT > 0 ? Math.min(1, t.shoutT / 1.2) : 0;
+        else if (TT.rage) power = Math.min(1, (t.rage || 0) / ((TT.rage.max || 1)));
+        else if (TT.fallenWrath) power = t.fwT > 0 ? 1 : 0;
+        S.drawTower(ctx, t.def, t.x, t.y, { t: this.clock + v.phase, atk, aim: v.aim, ascended: t.ascended, place: v.placeT, reload, power });
+        if (t.stunT > 0) this._stunSpark(ctx, t);
         ctx.restore();
         // status rings
         if (t.charmT > 0) { ctx.strokeStyle = '#e04bcf'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(t.x, t.y, 16, 0, TAU); ctx.stroke(); }
@@ -6494,6 +7098,23 @@ button:hover::after { transform: translateX(120%); }
       for (const s of m.summons) {
         if (s.kind === 'falcon') { ctx.save(); ctx.translate(s.x, s.y); const f = Math.sin(this.clock * 18) * 3; S.facet(ctx, [[-7, 0], [0, 3], [7, 0], [0, -3 - f]], '#d9cba0', '#fff'); ctx.restore(); }
         else if (s.kind === 'wraith') { ctx.globalAlpha = 0.8; S.circ(ctx, s.x, s.y, 6, A.alpha('#7d5fa0', 0.9), '#9fe0b8'); S.circ(ctx, s.x - 1.5, s.y - 1, 1, '#7bff9f'); S.circ(ctx, s.x + 1.5, s.y - 1, 1, '#7bff9f'); ctx.globalAlpha = 1; }
+        else if (s.kind === 'legionary') {
+          // Roman legionary: scutum + gladius, marching down the road
+          const bob = Math.sin(this.clock * 8 + s.x * 0.1) * 1.2;
+          ctx.save(); ctx.translate(s.x, s.y + bob);
+          ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(0, 7, 6, 2.4, 0, 0, TAU); ctx.fill();
+          S.facet(ctx, [[-3, 6], [-3, -5], [3, -5], [3, 6]], '#a8483a', '#d07a5a');       // tunic
+          S.facet(ctx, [[-5, -4], [-5, 5], [-1, 5], [-1, -4]], RS.RAMP.gold.mid, RS.RAMP.gold.rim); // scutum
+          S.circ(ctx, 0, -7, 2.6, RS.RAMP.gold.light, RS.RAMP.gold.rim);                   // helm
+          S.facet(ctx, [[-1, -10], [1, -10], [0, -13]], '#c0392b');                        // crest
+          ctx.strokeStyle = RS.RAMP.steel.light; ctx.lineWidth = 1.2;
+          ctx.beginPath(); ctx.moveTo(3, 1); ctx.lineTo(7, -5); ctx.stroke();              // gladius
+          // health pip so losses read
+          if (s.maxHp) { const f = Math.max(0, s.hp / s.maxHp);
+            ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(-5, -15, 10, 2);
+            ctx.fillStyle = f > 0.4 ? RS.PALETTE.good : RS.PALETTE.bad; ctx.fillRect(-5, -15, 10 * f, 2); }
+          ctx.restore();
+        }
         else if (s.kind === 'turret') { S.facet(ctx, [[s.x - 6, s.y + 6], [s.x - 6, s.y - 4], [s.x + 6, s.y - 4], [s.x + 6, s.y + 6]], RS.RAMP.iron.mid, RS.RAMP.iron.rim); ctx.save(); ctx.translate(s.x, s.y - 3); ctx.rotate(this.clock); ctx.fillStyle = RS.RAMP.iron.light; ctx.fillRect(-2, -8, 4, 8); ctx.restore(); }
       }
     }
@@ -6626,8 +7247,66 @@ button:hover::after { transform: translateX(120%); }
           ctx.beginPath(); ctx.moveTo(f.x + Math.cos(sweep) * r0, f.y + Math.sin(sweep) * r0);
           ctx.lineTo(f.x + Math.cos(sweep) * r1, f.y + Math.sin(sweep) * r1); ctx.stroke();
         }
+        // Shield Smash shockwave — an expanding ring of slowing force
+        else if (f.kind === 'shock') {
+          const k = 1 - (f.t / f.max);
+          ctx.globalAlpha = (1 - k) * 0.9;
+          ctx.strokeStyle = '#9fd0ff'; ctx.lineWidth = 5 * (1 - k) + 1;
+          ctx.beginPath(); ctx.arc(f.x, f.y, f.r * k, 0, TAU); ctx.stroke();
+          ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.4;
+          ctx.beginPath(); ctx.arc(f.x, f.y, f.r * k * 0.82, 0, TAU); ctx.stroke();
+        }
+        // Boss Ground Stomp — dust ring + radial cracks
+        else if (f.kind === 'stomp') {
+          const k = 1 - (f.t / f.max);
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.globalAlpha = (1 - k) * 0.85;
+          ctx.strokeStyle = '#c9a878'; ctx.lineWidth = 7 * (1 - k) + 1.5;
+          ctx.beginPath(); ctx.arc(f.x, f.y, f.r * k, 0, TAU); ctx.stroke();
+          ctx.strokeStyle = 'rgba(40,28,20,0.8)'; ctx.lineWidth = 2.4;
+          for (let i = 0; i < 8; i++) {
+            const ang = i * (TAU / 8) + f.x * 0.01;
+            ctx.beginPath(); ctx.moveTo(f.x + Math.cos(ang) * 8, f.y + Math.sin(ang) * 8);
+            ctx.lineTo(f.x + Math.cos(ang) * f.r * k, f.y + Math.sin(ang) * f.r * k); ctx.stroke();
+          }
+        }
+        // Boss Tower Slice — the swing arc, red on a hit, white when it glances
+        else if (f.kind === 'slice') {
+          const k = 1 - (f.t / f.max);
+          ctx.globalAlpha = (1 - k);
+          ctx.strokeStyle = f.blocked ? '#9fd0ff' : '#ff5a3a';
+          ctx.lineWidth = 3.5; ctx.lineCap = 'round';
+          const dx = f.tx - f.x, dy = f.ty - f.y;
+          ctx.beginPath();
+          ctx.moveTo(f.x + dx * k * 0.2, f.y + dy * k * 0.2);
+          ctx.lineTo(f.x + dx * Math.min(1, k * 1.4), f.y + dy * Math.min(1, k * 1.4));
+          ctx.stroke();
+          if (k > 0.6) {
+            ctx.fillStyle = f.blocked ? '#dff0ff' : '#ffd45a';
+            for (let i = 0; i < 5; i++) {
+              const a2 = Math.random() * TAU, d2 = Math.random() * 12;
+              ctx.beginPath(); ctx.arc(f.tx + Math.cos(a2) * d2, f.ty + Math.sin(a2) * d2, 1.4, 0, TAU); ctx.fill();
+            }
+          }
+        }
       }
       ctx.restore(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    }
+
+    // A stunned tower sparks and greys out until it recovers.
+    _stunSpark(ctx, t) {
+      const k = this.clock;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 3; i++) {
+        const a = k * 7 + i * 2.1;
+        ctx.fillStyle = A.alpha('#ffe08a', 0.55 + Math.sin(k * 20 + i) * 0.35);
+        ctx.beginPath(); ctx.arc(t.x + Math.cos(a) * 11, t.y - 14 + Math.sin(a) * 4, 1.7, 0, TAU); ctx.fill();
+      }
+      ctx.restore();
+      ctx.save(); ctx.strokeStyle = 'rgba(255,224,138,0.8)'; ctx.lineWidth = 1.4; ctx.lineCap = 'round';
+      const j = () => (Math.random() - 0.5) * 9;
+      ctx.beginPath(); ctx.moveTo(t.x + j(), t.y - 18 + j()); ctx.lineTo(t.x + j(), t.y - 10 + j()); ctx.stroke();
+      ctx.restore();
     }
 
     /* ------------------------------ auras --------------------------- */
@@ -6991,6 +7670,189 @@ button:hover::after { transform: translateX(120%); }
 })();
 
 ;
+/* ===== js/sandbox.js ===== */
+/* =========================================================================
+ * REALM SIEGE — js/sandbox.js
+ * Sandbox Mode + the secret developer Command Panel.
+ *
+ * Sandbox is a THROWAWAY profile. On entry the real profile is snapshotted and
+ * swapped out for a fully-stocked copy; on exit the snapshot is restored and
+ * written back to disk. Nothing that happens in sandbox can touch the real
+ * account, the Champions' Ladder or map completions — the snapshot is the only
+ * thing that is ever saved afterwards.
+ *
+ * The Command Panel unlocks ONLY for the username ILOVECODING, and its commands
+ * refuse to run outside sandbox, so a tester account can never bleed into a
+ * scored run.
+ * ========================================================================= */
+(function () {
+  'use strict';
+  const RS = (window.RS = window.RS || {});
+
+  const SECRET_NAME = 'ILOVECODING';
+
+  const Sandbox = {
+    active: false,
+    _snapshot: null,
+    _panel: null,
+    _history: [],
+
+    // Only the secret username sees the command panel at all.
+    isDev() {
+      const p = RS.Meta && RS.Meta.p && RS.Meta.p.profile;
+      return !!(p && (p.name || '').trim().toUpperCase() === SECRET_NAME);
+    },
+
+    /* ------------------------------ entry ----------------------------- */
+    enter() {
+      if (this.active) return;
+      // Deep-copy the live profile so nothing in sandbox can reach it.
+      this._snapshot = JSON.parse(JSON.stringify(RS.Meta.p));
+      this.active = true;
+      // A stocked playground profile: every tower, every currency, everything
+      // unlocked. This copy is discarded wholesale on exit.
+      const p = RS.Meta.p;
+      p.tokens = { copper: 999999, silver: 99999, gold: 99999, relic: 9999 };
+      p.rolls = { Basic: 999, Lucky: 999, Super: 999, Divine: 999 };
+      RS.TOWERS.forEach((t) => { p.roster[t.id] = Math.max(p.roster[t.id] || 0, 2); });
+      p.account = { level: 50, xp: 0 };
+      RS.MAPS.forEach((m) => { p.unlocked[m.id] = 4; });
+      p.settings.quickRollUnlocked = true;
+      RS.bus.emit('sandbox-changed', true);
+    },
+
+    // Restore the real profile and persist it. Sandbox progress evaporates.
+    exit() {
+      if (!this.active) return;
+      RS.Meta.p = this._snapshot;
+      this._snapshot = null;
+      this.active = false;
+      RS.Meta._recomputeBonuses();
+      RS.Meta.save();
+      this.hidePanel();
+      RS.bus.emit('sandbox-changed', false);
+    },
+
+    /* ------------------------------ commands -------------------------- */
+    // Every command is sandbox-only. Returns { ok, msg }.
+    run(line) {
+      const raw = (line || '').trim();
+      if (!raw) return { ok: false, msg: '' };
+      this._history.push(raw);
+      if (!this.active) return { ok: false, msg: 'Commands only work in Sandbox Mode.' };
+      const parts = raw.split(/\s+/);
+      const cmd = parts[0].toLowerCase();
+      const arg = parts[1], arg2 = parts[2];
+      const m = RS.UI && RS.UI.match;
+
+      switch (cmd) {
+        case '/give': {
+          const n = Math.max(1, parseInt(arg, 10) || 10000);
+          if (m) { m.gold += n; return { ok: true, msg: `+${n.toLocaleString()} match gold` }; }
+          RS.Meta.p.tokens.copper += n;
+          return { ok: true, msg: `+${n.toLocaleString()} copper (not in a match)` };
+        }
+        case '/spawn': {
+          if (!m) return { ok: false, msg: '/spawn needs an active match' };
+          const id = arg || 'orcgrunt';
+          if (!RS.ENEMY_BY_ID[id]) return { ok: false, msg: `Unknown enemy "${id}"` };
+          const n = Math.max(1, Math.min(60, parseInt(arg2, 10) || 1));
+          for (let i = 0; i < n; i++) m._spawnEnemy(id, 0, Math.max(0, 60 - i * 12));
+          return { ok: true, msg: `Spawned ${n}x ${RS.ENEMY_BY_ID[id].name}` };
+        }
+        case '/rankup': {
+          if (!m) return { ok: false, msg: '/rankup needs an active match' };
+          const sel = RS.UI.selectedTower;
+          const targets = sel ? [sel] : m.towers;
+          if (!targets.length) return { ok: false, msg: 'No towers on the field' };
+          let n = 0;
+          for (const t of targets) {
+            const want = Math.max(1, Math.min(RS.UPGRADE.maxLevel, parseInt(arg, 10) || RS.UPGRADE.maxLevel));
+            let guard = 0;
+            while (t.level < want && guard++ < 10) {
+              m.gold += m.upgradeCost(t);           // sandbox: upgrades are free
+              if (!m.upgrade(t, 0)) break;
+              n++;
+            }
+          }
+          return { ok: true, msg: `Ranked up ${sel ? 'selected tower' : m.towers.length + ' towers'} (${n} levels)` };
+        }
+        case '/wave': {
+          if (!m) return { ok: false, msg: '/wave needs an active match' };
+          const to = parseInt(arg, 10);
+          if (isNaN(to)) {
+            m.waveIndex = Math.min(m.maxWaves - 1, m.waveIndex + 1);
+            return { ok: true, msg: `Jumped to wave ${m.waveIndex + 1}` };
+          }
+          m.waveIndex = Math.max(0, Math.min(m.maxWaves, to - 1));
+          return { ok: true, msg: `Jumped to wave ${m.waveIndex + 1}` };
+        }
+        case '/help':
+          return { ok: true, msg: '/give [n] · /spawn [enemyId] [n] · /rankup [level] · /wave [n]' };
+        default:
+          return { ok: false, msg: `Unknown command "${cmd}". Try /help` };
+      }
+    },
+
+    /* ------------------------------ panel ----------------------------- */
+    togglePanel() { this._panel ? this.hidePanel() : this.showPanel(); },
+
+    showPanel() {
+      if (this._panel || !this.isDev()) return;
+      const el = document.createElement('div');
+      el.className = 'cmdpanel';
+      el.innerHTML = `
+        <div class="cmd-head">
+          <b>⌘ Command Panel</b>
+          <span class="cmd-mode ${this.active ? 'on' : ''}">${this.active ? 'SANDBOX' : 'NORMAL — commands disabled'}</span>
+          <button class="cmd-x" id="cmdClose">✕</button>
+        </div>
+        <div class="cmd-log" id="cmdLog"><div class="cmd-line dim">Type /help for the command list.</div></div>
+        <input class="cmd-in" id="cmdIn" placeholder="/give 50000" spellcheck="false" autocomplete="off">`;
+      document.body.appendChild(el);
+      this._panel = el;
+      const log = el.querySelector('#cmdLog');
+      const input = el.querySelector('#cmdIn');
+      el.querySelector('#cmdClose').onclick = () => this.hidePanel();
+      const push = (txt, cls) => {
+        const d = document.createElement('div');
+        d.className = 'cmd-line ' + (cls || '');
+        d.textContent = txt;
+        log.appendChild(d); log.scrollTop = log.scrollHeight;
+      };
+      let hi = this._history.length;
+      input.onkeydown = (e) => {
+        e.stopPropagation();                    // don't leak into the match hotkeys
+        // Swallow the toggle key so it never types itself into the box.
+        if (e.key === '`' || e.key === '~') { e.preventDefault(); this.hidePanel(); return; }
+        if (e.key === 'Escape') { e.preventDefault(); this.hidePanel(); return; }
+        if (e.key === 'Enter') {
+          const v = input.value; input.value = '';
+          if (!v.trim()) return;
+          push('> ' + v, 'you');
+          const r = this.run(v);
+          if (r.msg) push(r.msg, r.ok ? 'ok' : 'err');
+          hi = this._history.length;
+          if (RS.UI && RS.UI.match) RS.UI.refreshHud();
+        } else if (e.key === 'ArrowUp') {
+          if (hi > 0) { hi--; input.value = this._history[hi] || ''; }
+          e.preventDefault();
+        } else if (e.key === 'ArrowDown') {
+          if (hi < this._history.length - 1) { hi++; input.value = this._history[hi] || ''; }
+          else { hi = this._history.length; input.value = ''; }
+          e.preventDefault();
+        }
+      };
+      input.focus();
+    },
+
+    hidePanel() { if (this._panel) { this._panel.remove(); this._panel = null; } },
+  };
+
+  RS.Sandbox = Sandbox;
+})();
+
+;
 /* ===== js/ui.js ===== */
 /* =========================================================================
  * REALM SIEGE — js/ui.js
@@ -7044,6 +7906,7 @@ button:hover::after { transform: translateX(120%); }
       this.screen = screen;
       this.placing = null; this.selectedTower = null;
       const inMatch = screen === 'match';
+      if (!inMatch && RS.Audio) RS.Audio.stopMusic();   // ambient bed is match-only
       $('#matchWrap').style.display = inMatch ? 'flex' : 'none';
       this.root.style.display = inMatch ? 'none' : 'block';
       if (inMatch) { this._buildHud(); return; }
@@ -7170,6 +8033,7 @@ button:hover::after { transform: translateX(120%); }
             <button class="mbtn" data-go="codex"><b>📖 Codex</b><span>${Math.round(Meta.codexPct() * 100)}% complete</span></button>
             <button class="mbtn" data-go="leaderboard"><b>🏆 Champions' Ladder</b><span>Rank #${Meta.myRank()} · climb to Claude</span></button>
             <button class="mbtn" data-go="settings"><b>⚙ Settings</b><span>Save & options</span></button>
+            <button class="mbtn sandbox-btn" id="sandboxBtn"><b>🧪 Sandbox</b><span>${RS.Sandbox.active ? 'ACTIVE — progress not counted' : 'Free play · nothing is saved'}</span></button>
           </div>
           <div class="objectives">
             <h3>Objectives</h3>
@@ -7177,7 +8041,40 @@ button:hover::after { transform: translateX(120%); }
           </div>
         </div>`;
       this._wireGo();
+      const sb = $('#sandboxBtn'); if (sb) sb.onclick = () => this.toggleSandbox();
     },
+
+    /* ------------------------------ sandbox --------------------------- */
+    // Entering shows the warning first; leaving restores the real profile.
+    toggleSandbox() {
+      if (RS.Sandbox.active) {
+        RS.Sandbox.exit();
+        this.toast('Left Sandbox — your normal progress is back', RS.PALETTE.good);
+        this._refreshTopbar(); this.renderMenu();
+        return;
+      }
+      const modal = h(`<div class="modal-bg"><div class="modal sandbox-modal">
+        <div class="modal-head"><h3>🧪 Enter Sandbox Mode?</h3></div>
+        <p class="sandbox-warn"><b>Sandbox progress will NOT count.</b> Nothing you earn, roll, clear or
+        rank here touches your account, and no result is submitted to the Champions' Ladder.
+        When you exit, your <b>NORMAL progress returns</b> exactly as you left it.</p>
+        <p class="lore">Everything is unlocked while you are inside: every tower, every map, every currency.</p>
+        <div class="sandbox-actions">
+          <button class="bigbtn" id="sbCancel">Cancel</button>
+          <button class="bigbtn hl" id="sbGo">Enter Sandbox</button>
+        </div>
+      </div></div>`);
+      document.body.appendChild(modal);
+      const close = () => modal.remove();
+      $('#sbCancel', modal).onclick = close;
+      modal.onclick = (e) => { if (e.target === modal) close(); };
+      $('#sbGo', modal).onclick = () => {
+        RS.Sandbox.enter(); close();
+        this.toast('Sandbox active — nothing here is saved', RS.PALETTE.warn);
+        this._refreshTopbar(); this.renderMenu();
+      };
+    },
+
     _rewardStr(r) { return Object.entries(r).map(([k, v]) => `+${v} ${k}`).join(', '); },
     _wireGo() {
       $$('[data-go]', this.root).forEach((b) => b.onclick = () => this.show(b.dataset.go));
@@ -7605,6 +8502,7 @@ button:hover::after { transform: translateX(120%); }
             <label class="toggle"><input type="checkbox" id="setRange" ${s.showRange ? 'checked' : ''}> Show range overlays by default</label>
             <label class="toggle"><input type="checkbox" id="setPart" ${s.particles ? 'checked' : ''}> Particles</label>
             <label class="toggle"><input type="checkbox" id="setSfx" ${s.sfx ? 'checked' : ''}> Sound cues</label>
+            <label class="toggle"><input type="checkbox" id="setMusic" ${s.music !== false ? 'checked' : ''}> Ambient music</label>
           </div>
           <h3>Save Management</h3>
           <div class="savebox">
@@ -7619,6 +8517,11 @@ button:hover::after { transform: translateX(120%); }
       $('#setRange').onchange = (e) => { s.showRange = e.target.checked; Meta.save(); };
       $('#setPart').onchange = (e) => { s.particles = e.target.checked; Meta.save(); };
       $('#setSfx').onchange = (e) => { s.sfx = e.target.checked; Meta.save(); };
+      $('#setMusic').onchange = (e) => {
+        s.music = e.target.checked; Meta.save();
+        if (!s.music) RS.Audio && RS.Audio.stopMusic();
+        else if (this.match) RS.Audio && RS.Audio.startMusic(this.match.map.id);
+      };
       $('#expBtn').onclick = () => { $('#saveText').value = Meta.exportSave(); this.toast('Save exported below', RS.PALETTE.good); };
       $('#impBtn').onclick = () => { if (Meta.importSave($('#saveText').value)) { this.toast('Save imported!', RS.PALETTE.good); this.renderSettings(); } else this.toast('Invalid save string', RS.PALETTE.bad); };
       $('#resetBtn').onclick = () => { if (confirm('Wipe all progress?')) { Meta.reset(); this.toast('Progress reset', RS.PALETTE.warn); this.show('menu'); } };
@@ -7631,6 +8534,7 @@ button:hover::after { transform: translateX(120%); }
       this.match = new RS.Match(this.selectedMap, diff, this.workingLoadout, meta);
       this.renderer.showRange = Meta.p.settings.showRange;
       this.renderer.selected = null; this.renderer.ghost = null;
+      RS.Audio && RS.Audio.startMusic(this.selectedMap.id);
       this.show('match');
     },
 
@@ -7653,6 +8557,7 @@ button:hover::after { transform: translateX(120%); }
           <div class="hud-tray" id="hTray"></div>
           <div class="hud-selected" id="hSelected"></div>
           <button class="callwave" id="btnWave">▶ Start Wave <small>R</small></button>
+          ${RS.Sandbox.active ? '<div class="sandbox-banner">🧪 SANDBOX — progress not counted</div>' : ''}
         </div>`;
       this.canvas = $('#game'); this.renderer.canvas = this.canvas; this.renderer.ctx = this.canvas.getContext('2d');
       this._bindCanvas();
@@ -7856,6 +8761,9 @@ button:hover::after { transform: translateX(120%); }
 
     _bindGlobalKeys() {
       window.addEventListener('keydown', (e) => {
+        // Secret dev console. Only the ILOVECODING profile can open it.
+        if ((e.key === '`' || e.key === '~') && RS.Sandbox.isDev()) { e.preventDefault(); RS.Sandbox.togglePanel(); return; }
+        if (document.querySelector('.cmd-in') === document.activeElement) return;
         if (this.screen !== 'match' || !this.match) {
           if (this.screen === 'roll' && (e.key === 'r' || e.key === 'R')) this.doRoll('Basic', 1);
           return;
@@ -7874,6 +8782,13 @@ button:hover::after { transform: translateX(120%); }
     endMatch() {
       const m = this.match; if (this._ended) return; this._ended = true;
       RS.Tutorial && RS.Tutorial.skip();   // first battle finished: never show it again
+      // Sandbox results are thrown away: no rewards, no records, no ladder.
+      if (RS.Sandbox.active) {
+        this._lastRewards = { copper: 0, silver: 0, gold: 0, relic: 0, xp: 0 };
+        this._lastLeveled = null;
+        this.show('summary');
+        return;
+      }
       const won = m.state === 'won';
       // record codex from encountered
       m.encountered.forEach((k) => { if (k.startsWith('enemy:')) Meta.seeEnemy(k.slice(6)); });
@@ -7918,6 +8833,7 @@ button:hover::after { transform: translateX(120%); }
       this.root.innerHTML = this._topbar() + `
         <div class="page summary">
           <div class="summary-banner ${won ? 'win' : 'lose'}">${won ? '🏆 VICTORY' : '💀 DEFEAT'}</div>
+          ${RS.Sandbox.active ? '<div class="sandbox-note">🧪 Sandbox run — nothing was awarded and no record was set.</div>' : ''}
           <h2>${m.map.name} · ${m.diff.id}</h2>
           ${won ? `<div class="stars-big">${star(m.stars)}</div><div class="starnote">1★ clear · 2★ no leaks · 3★ no leaks + ≤${RS.STAR3_TOWER_CAP} towers</div>` : `<div class="starnote">Reached wave ${m.waveIndex} of ${m.maxWaves > 900 ? '∞' : m.maxWaves}</div>`}
           <div class="rewards">
