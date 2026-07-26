@@ -859,7 +859,6 @@
         if (TR.rage) this._rageUpdate(t, dt);
         if (TR.bloodrush) this._bloodrushUpdate(t, dt);
         if (TR.fallenWrath) this._fallenWrathUpdate(t, dt);
-        if (TR.legion) this._legionUpdate(t, dt);
         if (t.flashT > 0) t.flashT -= dt;
         // overheat gimmick
         if (this.map.env.gimmick === 'lava') {
@@ -1328,21 +1327,80 @@
       t.x = seg.a.x + (seg.b.x - seg.a.x) * tt; t.y = seg.a.y + (seg.b.y - seg.a.y) * tt - 6;
     }
 
-    // Legionary Summon: the Emperor musters soldiers that run down the road
-    // and fight whatever they meet, rather than sitting on his tile.
-    _legionUpdate(t, dt) {
+    /* ------------------ Legionary Muster (The Roman Emperor) ----------
+     * Pressed, not automatic. Soldiers appear ON the road a short way ahead of
+     * the Emperor and march INTO the horde. Their quality is the tower's
+     * level: at L1 they are Peasant Levies with no armour at all; each upgrade
+     * buys damage, health and a few points of armour. On top of that every
+     * soldier hardens as it survives (armourRamp), so a fresh muster dies to
+     * anything and a held line becomes genuinely hard to shift.
+     * Reworked from a free auto-summon that made the Emperor far too strong. */
+    legionStats(t) {
       const cfg = t.def.traits.legion;
-      t.legionT = (t.legionT || 0) + dt;
-      const every = t.ascended ? 2 : cfg.every;
-      if (t.legionT < every) return;
-      t.legionT = 0;
-      const max = cfg.max + ((t._mods && t._mods.legionMax) || 0);
+      const lv = Math.max(0, t.level - 1);           // L1 = levy tier (lv 0)
+      const mods = t._mods || {};
+      return {
+        levy: lv === 0,
+        name: lv === 0 ? cfg.levy.name : 'Legionary',
+        dps: cfg.levy.dps + cfg.perLevel.dps * lv + (mods.legionDps || 0),
+        hp: cfg.levy.hp + cfg.perLevel.hp * lv,
+        armor: cfg.levy.armor + cfg.perLevel.armor * lv + (mods.legionArmor || 0),
+        max: cfg.max + (mods.legionMax || 0),
+      };
+    }
+
+    musterLegion(t) {
+      const cfg = t.def.traits.legion;
+      const st = this.legionStats(t);
       const cur = this.summons.filter((s) => s.kind === 'legionary' && s.ownerUid === t.uid).length;
-      if (cur >= max) return;
-      const dps = cfg.dps + ((t._mods && t._mods.legionDps) || 0);
-      const s = this._spawnSummon('legionary', t, t.x, t.y, dps * (t.ascended ? 1.5 : 1), 1.6 * TILE);
-      if (s) { s.hp = s.maxHp = cfg.hp; s.type = 'Melee'; s.speed = 78; s.life = Infinity; }
-      RS.bus.emit('legion-muster', { tower: t });
+      let made = 0;
+      for (let i = 0; i < cfg.perMuster && cur + made < st.max; i++) {
+        // spawn ON the path, a little ahead of the Emperor, staggered
+        const lane = 0, path = this.paths[lane];
+        const base = this._nearestPathProgress(path, t.x, t.y);
+        const prog = Math.max(0, Math.min(path.len - 1, base - 26 - i * 22));
+        const pt = this._pathPoint(path, prog);
+        const s = this._spawnSummon('legionary', t, pt.x, pt.y, st.dps, 1.6 * TILE);
+        if (!s) break;
+        s.hp = s.maxHp = st.hp;
+        s.type = 'Melee';
+        s.speed = cfg.speed;
+        s.life = Infinity;
+        s.lane = lane;
+        s.prog = prog;                 // marches backward along the path
+        s.armor = st.armor;            // base armour from tower level
+        s.baseArmor = st.armor;
+        s.levy = st.levy;
+        s.age = 0;
+        made++;
+      }
+      if (made) {
+        this.addFloater(t.x, t.y - 28, st.levy ? 'LEVY MUSTERED' : 'LEGION MUSTERED', RS.rarityColor('Ancient'));
+        RS.bus.emit('legion-muster', { tower: t, count: made, levy: st.levy });
+      }
+      return made;
+    }
+
+    // Progress (in path units) of the point on `path` closest to (x,y).
+    _nearestPathProgress(path, x, y) {
+      let acc = 0, best = 0, bd = Infinity;
+      for (const sg of path.segs) {
+        const dx = sg.b.x - sg.a.x, dy = sg.b.y - sg.a.y, L2 = dx * dx + dy * dy;
+        let u = L2 ? ((x - sg.a.x) * dx + (y - sg.a.y) * dy) / L2 : 0;
+        u = u < 0 ? 0 : u > 1 ? 1 : u;
+        const px = sg.a.x + dx * u, py = sg.a.y + dy * u;
+        const d = (px - x) * (px - x) + (py - y) * (py - y);
+        if (d < bd) { bd = d; best = acc + sg.d * u; }
+        acc += sg.d;
+      }
+      return best;
+    }
+    // World point at a given progress along a path.
+    _pathPoint(path, prog) {
+      let p = prog, seg = path.segs[0];
+      for (const sg of path.segs) { if (p <= sg.d) { seg = sg; break; } p -= sg.d; }
+      const u = seg.d > 0 ? p / seg.d : 0;
+      return { x: seg.a.x + (seg.b.x - seg.a.x) * u, y: seg.a.y + (seg.b.y - seg.a.y) * u };
     }
 
     /* --------------------------- summons ------------------------------ */
@@ -1375,8 +1433,21 @@
           }
           s.target = best;
         }
-        // move toward target (mobile summons)
-        if (s.speed > 0 && s.target) {
+        // Legionaries march ALONG the road toward the horde, and only stop
+        // when something is in front of them. Everything else homes directly.
+        if (s.kind === 'legionary') {
+          const path = this.paths[s.lane || 0];
+          const contact = s.target && dist(s.x, s.y, s.target.x, s.target.y) < 26;
+          if (!contact) {
+            s.prog = Math.max(0, s.prog - s.speed * dt);   // walk back up the road
+            const pt = this._pathPoint(path, s.prog);
+            s.x = pt.x; s.y = pt.y;
+          }
+          // armour thickens the longer a soldier survives the line
+          const ramp = s.owner && s.owner.def.traits.legion.armorRamp;
+          if (ramp) { s.age += dt; s.armor = s.baseArmor + Math.min(ramp.cap, s.age * ramp.per); }
+        }
+        else if (s.speed > 0 && s.target) {
           const dx = s.target.x - s.x, dy = s.target.y - s.y, d = Math.hypot(dx, dy) || 1;
           if (d > 18) { s.x += (dx / d) * s.speed * dt; s.y += (dy / d) * s.speed * dt; }
         } else if (s.kind === 'turret') { s.x = s.hx; s.y = s.hy; }
@@ -1388,9 +1459,11 @@
             const rad = (ic.radiusT + ((s.owner._mods && s.owner._mods.commandRadiusT) || 0)) * TILE;
             if (dist2(s.x, s.y, s.owner.x, s.owner.y) < rad * rad) cmd = 1 + ic.dmg + ((s.owner._mods && s.owner._mods.commandDmg) || 0);
           }
-          // a legionary in contact with the horde takes losses and eventually falls
+          // a legionary in contact with the horde takes losses and eventually
+          // falls — armour (level + ramp) is what keeps a veteran standing
           if (s.target && dist(s.x, s.y, s.target.x, s.target.y) < 26) {
-            s.hp -= s.target.def.bounty * 1.6 * dt;
+            const raw = s.target.def.bounty * 1.6 * dt;
+            s.hp -= raw * (1 - C.armorReduction(s.armor || 0));
             if (s.hp <= 0) { this._burst(s.x, s.y, '#c9a25a', 5); continue; }
           }
         }
@@ -1553,6 +1626,10 @@
         }
         this.freeze = 0.4; this.shake = Math.max(this.shake, 24);
         this.addFloater(this.goalPx.x, 60, 'JUDGMENT', RS.rarityColor('Mythic+'));
+      } else if (a.kind === 'legion') {
+        const n = this.musterLegion(t);
+        if (t.ascended) { t.activeCd = 0; t.activeReady = true; }   // ascended: no cooldown
+        if (!n) { t.activeReady = true; t.activeCd = 2; }           // nothing spawned: short retry
       } else if (a.kind === 'shieldSmash') {
         // Shockwave: slows ground AND air inside the radius.
         const rad = a.radiusT * TILE;

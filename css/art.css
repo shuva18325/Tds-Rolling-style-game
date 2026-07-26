@@ -498,3 +498,54 @@ button:hover::after { transform: translateX(120%); }
 .cmd-in { flex: 1; width: 100%; border: 0; background: transparent; color: #cfe8cf;
   padding: 9px 0; font-family: inherit; font-size: 12px; outline: none; }
 .cmd-in::placeholder { color: #3a5a3a; }
+
+/* ===== command autocomplete (Minecraft-style suggestion list) ===== */
+.cmd-ac { position: relative; z-index: 4; max-height: 190px; overflow-y: auto;
+  background: rgba(4,9,5,0.96); border-top: 1px solid #2f4a2f;
+  font-family: ui-monospace, Menlo, Consolas, monospace; }
+.cmd-ac-row { display: flex; align-items: baseline; gap: 10px; padding: 5px 10px;
+  cursor: pointer; border-left: 2px solid transparent; }
+.cmd-ac-row:hover { background: rgba(60,140,80,0.14); }
+.cmd-ac-row.sel { background: rgba(80,220,120,0.18); border-left-color: #8bff9e; }
+.cmd-ac-v { color: #8bff9e; font-size: 12px; text-shadow: 0 0 5px rgba(120,255,150,.4); }
+.cmd-ac-row.sel .cmd-ac-v { color: #d6ffdd; }
+.cmd-ac-h { margin-left: auto; color: #4a6a4a; font-size: 10.5px; text-align: right; }
+.cmd-ac::-webkit-scrollbar { width: 8px; }
+.cmd-ac::-webkit-scrollbar-thumb { background: #2f4a2f; border-radius: 4px; }
+.cmd-log::-webkit-scrollbar { width: 8px; }
+.cmd-log::-webkit-scrollbar-thumb { background: #2f4a2f; border-radius: 4px; }
+
+/* ===== map select: illustrated cards ===== */
+.mapgrid { gap: 18px; }
+.mapcard-lg { padding: 0; overflow: hidden; position: relative; min-height: 0;
+  background: linear-gradient(180deg, #23221d, #17161200); }
+.mapcard-lg::before { inset: 0; border-radius: 10px; border-color: rgba(217,164,65,.22); }
+.map-thumb { display: block; width: 100%; height: 104px; border-bottom: 1px solid rgba(217,164,65,.22);
+  image-rendering: auto; transition: transform .35s ease, filter .35s ease; }
+.mapcard-lg:hover .map-thumb { transform: scale(1.06); filter: saturate(1.15) brightness(1.06); }
+.map-ord { position: absolute; top: 6px; left: 10px; font-family: Georgia, serif; font-size: 26px;
+  font-weight: 800; color: rgba(255,240,200,.30); text-shadow: 0 2px 6px rgba(0,0,0,.8); line-height: 1; }
+.mapcard-lg .map-rate { position: absolute; top: 8px; right: 10px; font-size: 11px; }
+.map-body { padding: 10px 14px 6px; position: relative; }
+.mapcard-lg h3 { font-size: 16px; margin-bottom: 6px; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
+.map-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 7px; }
+.mtag { font-size: 10px; padding: 2px 7px; border-radius: 9px; background: #1b1a16;
+  border: 1px solid var(--line); color: var(--dim); letter-spacing: .2px; }
+.mtag.loot { color: var(--gold); border-color: rgba(217,164,65,.45); }
+.mtag.cleared { color: var(--gold); border-color: rgba(217,164,65,.45); background: #2a2214; }
+.mapcard-lg p { min-height: 46px; font-size: 12px; line-height: 1.45; color: #a49b86; }
+.map-foes { display: flex; flex-direction: column; gap: 2px; margin: 6px 0 2px;
+  padding-top: 7px; border-top: 1px solid rgba(217,164,65,.12); }
+.map-foes .sigfoe, .map-foes .bossfoe { margin: 0; font-size: 10.5px; letter-spacing: .2px; }
+.map-foes .bossfoe { color: #b06a5a; } .map-foes .bossfoe b { color: #e08a72; }
+.mapcard-lg .playbtn { margin: 8px 12px 12px; width: calc(100% - 24px); }
+.mapcard-lg.is-cleared { border-color: rgba(217,164,65,.4); }
+.mapcard-lg.is-cleared::after { content: '✓'; position: absolute; top: 30px; right: 12px;
+  font-size: 12px; font-weight: 800; color: var(--gold); text-shadow: 0 0 8px rgba(217,164,65,.8); }
+/* biome-tinted top glow so each card reads at a glance */
+.biome-rain .map-thumb, .biome-bog .map-thumb { box-shadow: inset 0 0 30px rgba(60,120,150,.35); }
+.biome-canopy .map-thumb { box-shadow: inset 0 0 30px rgba(40,90,40,.45); }
+.biome-ice .map-thumb, .biome-winter .map-thumb { box-shadow: inset 0 0 30px rgba(150,200,230,.4); }
+.biome-lava .map-thumb, .biome-craters .map-thumb, .biome-finale .map-thumb { box-shadow: inset 0 0 30px rgba(190,80,30,.4); }
+.biome-holyground .map-thumb { box-shadow: inset 0 0 30px rgba(230,210,150,.35); }
+.biome-wallmount .map-thumb, .biome-rubble .map-thumb, .biome-wind .map-thumb { box-shadow: inset 0 0 30px rgba(140,140,130,.3); }

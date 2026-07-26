@@ -1022,17 +1022,36 @@
         if (s.kind === 'falcon') { ctx.save(); ctx.translate(s.x, s.y); const f = Math.sin(this.clock * 18) * 3; S.facet(ctx, [[-7, 0], [0, 3], [7, 0], [0, -3 - f]], '#d9cba0', '#fff'); ctx.restore(); }
         else if (s.kind === 'wraith') { ctx.globalAlpha = 0.8; S.circ(ctx, s.x, s.y, 6, A.alpha('#7d5fa0', 0.9), '#9fe0b8'); S.circ(ctx, s.x - 1.5, s.y - 1, 1, '#7bff9f'); S.circ(ctx, s.x + 1.5, s.y - 1, 1, '#7bff9f'); ctx.globalAlpha = 1; }
         else if (s.kind === 'legionary') {
-          // Roman legionary: scutum + gladius, marching down the road
+          // Peasant Levy vs Legionary is a real visual difference: the levy has
+          // no helm, a plank shield and a spear; the legionary gets a crested
+          // helm, a gold scutum and a gladius. Armour earned by surviving is
+          // drawn as a brightening rim so a veteran reads at a glance.
           const bob = Math.sin(this.clock * 8 + s.x * 0.1) * 1.2;
+          const levy = s.levy;
+          const vet = Math.min(1, ((s.armor || 0) - (s.baseArmor || 0)) / 26);
           ctx.save(); ctx.translate(s.x, s.y + bob);
           ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(0, 7, 6, 2.4, 0, 0, TAU); ctx.fill();
-          S.facet(ctx, [[-3, 6], [-3, -5], [3, -5], [3, 6]], '#a8483a', '#d07a5a');       // tunic
-          S.facet(ctx, [[-5, -4], [-5, 5], [-1, 5], [-1, -4]], RS.RAMP.gold.mid, RS.RAMP.gold.rim); // scutum
-          S.circ(ctx, 0, -7, 2.6, RS.RAMP.gold.light, RS.RAMP.gold.rim);                   // helm
-          S.facet(ctx, [[-1, -10], [1, -10], [0, -13]], '#c0392b');                        // crest
-          ctx.strokeStyle = RS.RAMP.steel.light; ctx.lineWidth = 1.2;
-          ctx.beginPath(); ctx.moveTo(3, 1); ctx.lineTo(7, -5); ctx.stroke();              // gladius
-          // health pip so losses read
+          if (levy) {
+            S.facet(ctx, [[-3, 6], [-3, -5], [3, -5], [3, 6]], '#7a6a4a', '#a89878');      // roughspun tunic
+            S.facet(ctx, [[-5, -3], [-5, 5], [-1, 5], [-1, -3]], RS.RAMP.timber.mid, RS.RAMP.timber.light); // plank shield
+            S.circ(ctx, 0, -7, 2.5, RS.RAMP.flesh.mid);                                     // bare head
+            ctx.strokeStyle = RS.RAMP.timber.shadow; ctx.lineWidth = 1.2;
+            ctx.beginPath(); ctx.moveTo(3, 2); ctx.lineTo(6, -9); ctx.stroke();              // spear
+          } else {
+            S.facet(ctx, [[-3, 6], [-3, -5], [3, -5], [3, 6]], '#a8483a', '#d07a5a');       // red tunic
+            S.facet(ctx, [[-5, -4], [-5, 5], [-1, 5], [-1, -4]], RS.RAMP.gold.mid, RS.RAMP.gold.rim); // scutum
+            S.circ(ctx, 0, -7, 2.6, RS.RAMP.gold.light, RS.RAMP.gold.rim);                   // helm
+            S.facet(ctx, [[-1, -10], [1, -10], [0, -13]], '#c0392b');                        // crest
+            ctx.strokeStyle = RS.RAMP.steel.light; ctx.lineWidth = 1.2;
+            ctx.beginPath(); ctx.moveTo(3, 1); ctx.lineTo(7, -5); ctx.stroke();              // gladius
+          }
+          // veterancy rim: brightens as ramped armour accumulates
+          if (vet > 0.05) {
+            ctx.save(); ctx.globalCompositeOperation = 'lighter';
+            ctx.strokeStyle = A.alpha('#cfe0ff', 0.22 + vet * 0.42); ctx.lineWidth = 1.3;
+            ctx.beginPath(); ctx.ellipse(0, -1, 7.5, 9.5, 0, 0, TAU); ctx.stroke();
+            ctx.restore();
+          }
           if (s.maxHp) { const f = Math.max(0, s.hp / s.maxHp);
             ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(-5, -15, 10, 2);
             ctx.fillStyle = f > 0.4 ? RS.PALETTE.good : RS.PALETTE.bad; ctx.fillRect(-5, -15, 10 * f, 2); }

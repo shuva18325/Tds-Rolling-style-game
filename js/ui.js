@@ -271,12 +271,27 @@
           ${maps.map((m) => {
             const comp = Meta.p.completions[m.id] || {};
             const s = comp[this.globalDiff] ? comp[this.globalDiff].stars : 0;
-            return `<div class="mapcard mapcard-lg" data-play="${m.id}">
+            const boss = m.boss && RS.ENEMY_BY_ID[m.boss];
+            const wx = (m.env.weather || []).filter((w) => w !== 'Clear')[0];
+            const WICON = { Rain: '🌧', Fog: '🌫', Blizzard: '❄', Ashfall: '🌋', Storm: '⛈' };
+            return `<div class="mapcard mapcard-lg biome-${m.env.gimmick || 'none'} ${s ? 'is-cleared' : ''}" data-play="${m.id}">
+              <canvas class="map-thumb" data-thumb="${m.id}" width="240" height="96"></canvas>
+              <div class="map-ord">${String(m.order).padStart(2, '0')}</div>
               <div class="map-rate" title="Map difficulty ${m.rating}/6">${skulls(m.rating)}</div>
-              <h3>${m.name}</h3>
-              <div class="map-loot">+${Math.round((m.rewardMult - 1) * 100)}% loot${s ? ` · <span class="cleared">${star(s)}</span>` : ''}</div>
-              <p>${m.desc}</p>
-              ${m.signature && RS.ENEMY_BY_ID[m.signature] ? `<div class="sigfoe">☠ Signature foe: <b>${RS.ENEMY_BY_ID[m.signature].name}</b></div>` : ''}
+              <div class="map-body">
+                <h3>${m.name}</h3>
+                <div class="map-tags">
+                  <span class="mtag loot">+${Math.round((m.rewardMult - 1) * 100)}% loot</span>
+                  ${m.env.dayNight ? '<span class="mtag">🌙 night</span>' : ''}
+                  ${wx ? `<span class="mtag">${WICON[wx] || '☁'} ${wx.toLowerCase()}</span>` : ''}
+                  ${s ? `<span class="mtag cleared">${star(s)}</span>` : ''}
+                </div>
+                <p>${m.desc}</p>
+                <div class="map-foes">
+                  ${m.signature && RS.ENEMY_BY_ID[m.signature] ? `<div class="sigfoe">☠ <b>${RS.ENEMY_BY_ID[m.signature].name}</b></div>` : ''}
+                  ${boss ? `<div class="bossfoe">💀 <b>${boss.name}</b></div>` : ''}
+                </div>
+              </div>
               <button class="playbtn d-${this.globalDiff.toLowerCase()}" data-play="${m.id}">▶ Play · ${this.globalDiff}</button>
             </div>`;
           }).join('')}
@@ -295,6 +310,7 @@
           </div>
         </div>`;
       this._wireGo();
+      this._drawMapThumbs();
       $$('[data-gdiff]', this.root).forEach((b) => b.onclick = () => { if (!b.disabled) { this.globalDiff = b.dataset.gdiff; this.renderMapSelect(); } });
       $$('[data-play]', this.root).forEach((b) => b.onclick = (e) => {
         e.stopPropagation();
@@ -312,6 +328,60 @@
       $$('[data-endless="1"]', this.root).forEach((el) => el.onclick = (e) => {
         e.stopPropagation();
         this.selectedMap = RS.MAP_BY_ID.emberthrone; this.selectedDiff = RS.DIFF_BY_ID.Hardcore; this.endless = true; this.show('loadout');
+      });
+    },
+
+    // Miniature of each map's actual layout: real terrain tints, the real
+    // path, spawn and keep. Drawn from map DATA, so a layout change can never
+    // leave a stale hand-made preview behind.
+    _drawMapThumbs() {
+      const TINT = { water: '#3f7f9c', highground: '#8b8880', hazard: '#a8431e',
+        holy: '#e8dba8', cursed: '#5b3f7a', unbuildable: '#3d4230', house: '#6a5540' };
+      $$('canvas[data-thumb]', this.root).forEach((cv) => {
+        const map = RS.MAP_BY_ID[cv.dataset.thumb]; if (!map) return;
+        const c = cv.getContext('2d');
+        const W = cv.width, H = cv.height;
+        const sx = W / RS.GRID.cols, sy = H / RS.GRID.rows;
+        const winter = !!map.winter;
+        const g = c.createLinearGradient(0, 0, 0, H);
+        if (winter) { g.addColorStop(0, '#cfdce9'); g.addColorStop(1, '#93a4b8'); }
+        else { g.addColorStop(0, '#5f8f3c'); g.addColorStop(1, '#3c6428'); }
+        c.fillStyle = g; c.fillRect(0, 0, W, H);
+        // special terrain blocks
+        const paint = (list, col) => { if (!list) return; c.fillStyle = col;
+          list.forEach(([col2, row]) => c.fillRect(col2 * sx, row * sy, sx + 0.6, sy + 0.6)); };
+        paint(map.unbuildable, TINT.unbuildable); paint(map.water, TINT.water);
+        paint(map.highground, TINT.highground); paint(map.holy, TINT.holy);
+        paint(map.cursed, TINT.cursed); paint(map.hazard, TINT.hazard);
+        paint(map.houses, TINT.house);
+        // the roads
+        c.lineCap = 'round'; c.lineJoin = 'round';
+        for (const pts of map.paths) {
+          const trace = () => { c.beginPath();
+            pts.forEach(([col2, row], i) => { const x = (col2 + 0.5) * sx, y = (row + 0.5) * sy;
+              i ? c.lineTo(x, y) : c.moveTo(x, y); }); };
+          c.strokeStyle = 'rgba(0,0,0,0.35)'; c.lineWidth = sy * 0.95; trace(); c.stroke();
+          c.strokeStyle = '#5a4a38'; c.lineWidth = sy * 0.62; trace(); c.stroke();
+          c.strokeStyle = 'rgba(190,160,120,0.28)'; c.lineWidth = sy * 0.2; trace(); c.stroke();
+        }
+        // spawn + keep markers
+        const diamond = (x, y, r, col) => { c.fillStyle = col; c.beginPath();
+          c.moveTo(x, y - r); c.lineTo(x + r, y); c.lineTo(x, y + r); c.lineTo(x - r, y); c.closePath(); c.fill(); };
+        for (const pts of map.paths) {
+          const [c0, r0] = pts[0];
+          diamond((c0 + 0.5) * sx, (r0 + 0.5) * sy, 3.2, '#c0392b');
+        }
+        const goal = map.goalOverride || map.paths[0][map.paths[0].length - 1];
+        diamond((goal[0] + 0.5) * sx, (goal[1] + 0.5) * sy, 4.2, '#e8c05a');
+        // gentle bottom fade so the canvas blends into the card body without
+        // swallowing the lower third of the layout
+        const v = c.createLinearGradient(0, H * 0.62, 0, H);
+        v.addColorStop(0, 'rgba(20,18,14,0)'); v.addColorStop(1, 'rgba(20,18,14,0.62)');
+        c.fillStyle = v; c.fillRect(0, 0, W, H);
+        // subtle top sheen, like light falling across a painted map
+        const sh = c.createLinearGradient(0, 0, 0, H * 0.4);
+        sh.addColorStop(0, 'rgba(255,246,220,0.10)'); sh.addColorStop(1, 'rgba(255,246,220,0)');
+        c.fillStyle = sh; c.fillRect(0, 0, W, H * 0.4);
       });
     },
 

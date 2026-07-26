@@ -66,6 +66,55 @@
     },
 
     /* ------------------------------ commands -------------------------- */
+    // One spec table feeds the autocomplete AND /help, so a command can never
+    // exist in one and be missing from the other. `args` describes each
+    // positional slot; `values` yields live completions for that slot.
+    SPEC: [
+      { cmd: '/give', usage: '/give [amount]', desc: 'Add gold (or copper outside a match)',
+        args: [{ name: 'amount', values: () => ['1000', '10000', '100000', '1000000'] }] },
+      { cmd: '/spawn', usage: '/spawn <enemy> [count]', desc: 'Spawn enemies on the path',
+        args: [{ name: 'enemy', values: () => RS.ENEMIES.filter((e) => !e.hidden).map((e) => e.id) },
+               { name: 'count', values: () => ['1', '5', '10', '25'] }] },
+      { cmd: '/spawntower', usage: '/spawntower <tower> [col] [row]', desc: 'Place any tower on the field',
+        args: [{ name: 'tower', values: () => RS.TOWERS.map((t) => t.id) },
+               { name: 'col', values: () => [] }, { name: 'row', values: () => [] }] },
+      { cmd: '/clear', usage: '/clear <what>', desc: 'Remove enemies, towers or both',
+        args: [{ name: 'what', values: () => ['enemies', 'towers', 'all'] }] },
+      { cmd: '/rankup', usage: '/rankup [level]', desc: 'Upgrade selected tower (or all) for free',
+        args: [{ name: 'level', values: () => ['2', '3', '4', '5'] }] },
+      { cmd: '/wave', usage: '/wave [n]', desc: 'Jump to a wave number',
+        args: [{ name: 'n', values: () => ['5', '10', '20', '30'] }] },
+      { cmd: '/help', usage: '/help', desc: 'List every command', args: [] },
+    ],
+
+    // Minecraft-style completions for the text currently in the box.
+    // Returns { items:[{value,label,hint}], replaceFrom } — replaceFrom is the
+    // index in `raw` where the accepted completion should be spliced in.
+    complete(raw) {
+      const txt = raw || '';
+      const endsSpace = /\s$/.test(txt);
+      const parts = txt.trim().length ? txt.trim().split(/\s+/) : [];
+      // still typing the command word itself
+      if (parts.length === 0 || (parts.length === 1 && !endsSpace)) {
+        const q = (parts[0] || '').toLowerCase();
+        const items = this.SPEC
+          .filter((sp) => sp.cmd.startsWith(q) || !q)
+          .map((sp) => ({ value: sp.cmd, label: sp.cmd, hint: sp.desc }));
+        return { items, replaceFrom: 0 };
+      }
+      const sp = this.SPEC.find((x) => x.cmd === parts[0].toLowerCase());
+      if (!sp) return { items: [], replaceFrom: 0 };
+      // which positional slot are we on?
+      const idx = endsSpace ? parts.length - 1 : parts.length - 2;
+      const slot = sp.args[idx];
+      if (!slot) return { items: [], replaceFrom: 0 };
+      const q = endsSpace ? '' : (parts[parts.length - 1] || '').toLowerCase();
+      const vals = (slot.values() || []).filter((v) => v.toLowerCase().indexOf(q) === 0);
+      const items = vals.slice(0, 40).map((v) => ({ value: v, label: v, hint: slot.name }));
+      const replaceFrom = endsSpace ? txt.length : txt.lastIndexOf(parts[parts.length - 1]);
+      return { items, replaceFrom };
+    },
+
     // Every command is sandbox-only. Returns { ok, msg }.
     run(line) {
       const raw = (line || '').trim();
@@ -147,7 +196,7 @@
           return { ok: true, msg: `Cleared ${what} (${n} removed)` };
         }
         case '/help':
-          return { ok: true, msg: '/give [n] · /spawn [enemyId] [n] · /spawntower [towerId] [c] [r] · /clear [enemies|towers|all] · /rankup [level] · /wave [n]' };
+          return { ok: true, msg: this.SPEC.map((sp) => sp.usage + '  — ' + sp.desc).join('\n') };
         default:
           return { ok: false, msg: `Unknown command "${cmd}". Try /help` };
       }
@@ -201,8 +250,9 @@
           <span class="cmd-mode ${this.active ? 'on' : ''}">${this.active ? '● SANDBOX' : '○ NORMAL — commands disabled'}</span>
           <button class="cmd-x" id="cmdClose">✕</button>
         </div>
-        <div class="cmd-log" id="cmdLog"><div class="cmd-line dim">root@sandbox:~$ type /help for the command list</div></div>
-        <div class="cmd-inrow"><span class="cmd-prompt">&gt;</span><input class="cmd-in" id="cmdIn" placeholder="/give 50000" spellcheck="false" autocomplete="off"></div>`;
+        <div class="cmd-log" id="cmdLog"><div class="cmd-line dim">root@sandbox:~$ type / to see every command</div></div>
+        <div class="cmd-ac" id="cmdAc" hidden></div>
+        <div class="cmd-inrow"><span class="cmd-prompt">&gt;</span><input class="cmd-in" id="cmdIn" placeholder="type / for commands" spellcheck="false" autocomplete="off"></div>`;
       document.body.appendChild(el);
       this._panel = el;
       const log = el.querySelector('#cmdLog');
@@ -215,18 +265,65 @@
         d.textContent = txt;
         log.appendChild(d); log.scrollTop = log.scrollHeight;
       };
+      const ac = el.querySelector('#cmdAc');
+      // ---- Minecraft-style completion list -------------------------------
+      let acItems = [], acSel = 0, acFrom = 0;
+      const renderAc = () => {
+        const r = this.complete(input.value);
+        acItems = r.items; acFrom = r.replaceFrom;
+        // only offer suggestions once a slash is in play, like the game does
+        if (!input.value.startsWith('/') || !acItems.length) { ac.hidden = true; ac.innerHTML = ''; return; }
+        if (acSel >= acItems.length) acSel = acItems.length - 1;
+        if (acSel < 0) acSel = 0;
+        ac.hidden = false;
+        ac.innerHTML = acItems.map((it, i) =>
+          `<div class="cmd-ac-row ${i === acSel ? 'sel' : ''}" data-i="${i}">
+             <span class="cmd-ac-v">${it.label}</span><span class="cmd-ac-h">${it.hint || ''}</span>
+           </div>`).join('');
+        const selEl = ac.querySelector('.cmd-ac-row.sel');
+        if (selEl) selEl.scrollIntoView({ block: 'nearest' });
+        ac.querySelectorAll('.cmd-ac-row').forEach((row) => {
+          row.onmousedown = (ev) => { ev.preventDefault(); acSel = +row.dataset.i; accept(); };
+        });
+      };
+      const accept = () => {
+        const it = acItems[acSel]; if (!it) return;
+        input.value = input.value.slice(0, acFrom) + it.value + ' ';
+        acSel = 0; renderAc(); input.focus();
+      };
+      const hideAc = () => { ac.hidden = true; ac.innerHTML = ''; acItems = []; };
+      input.oninput = () => { acSel = 0; renderAc(); };
+      input.onblur = () => setTimeout(hideAc, 120);
+
       let hi = this._history.length;
       input.onkeydown = (e) => {
         e.stopPropagation();                    // don't leak into the match hotkeys
         // Swallow the toggle key so it never types itself into the box.
         if (e.key === '`' || e.key === '~') { e.preventDefault(); this.hidePanel(); return; }
-        if (e.key === 'Escape') { e.preventDefault(); this.hidePanel(); return; }
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          if (!ac.hidden) { hideAc(); return; }    // first Esc closes the list
+          this.hidePanel(); return;
+        }
+        // While the completion list is open it owns the arrows and Tab.
+        if (!ac.hidden && acItems.length) {
+          if (e.key === 'ArrowDown') { e.preventDefault(); acSel = (acSel + 1) % acItems.length; renderAc(); return; }
+          if (e.key === 'ArrowUp') { e.preventDefault(); acSel = (acSel - 1 + acItems.length) % acItems.length; renderAc(); return; }
+          if (e.key === 'Tab') { e.preventDefault(); accept(); return; }
+          if (e.key === 'Enter' && acItems.length && input.value.trim() !== acItems[acSel].value) {
+            // Enter completes first; a second Enter submits the finished line.
+            const exact = this.SPEC.some((sp) => sp.cmd === input.value.trim().toLowerCase());
+            if (!exact) { e.preventDefault(); accept(); return; }
+          }
+        }
+        if (e.key === 'Tab') { e.preventDefault(); return; }
         if (e.key === 'Enter') {
           const v = input.value; input.value = '';
           if (!v.trim()) return;
+          hideAc();
           push('> ' + v, 'you');
           const r = this.run(v);
-          if (r.msg) push(r.msg, r.ok ? 'ok' : 'err');
+          if (r.msg) String(r.msg).split('\n').forEach((ln) => push(ln, r.ok ? 'ok' : 'err'));
           hi = this._history.length;
           if (RS.UI && RS.UI.match) RS.UI.refreshHud();
         } else if (e.key === 'ArrowUp') {

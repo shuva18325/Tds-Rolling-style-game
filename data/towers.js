@@ -320,12 +320,23 @@
       splashT: 0, status: [], placement: 'Path-adjacent-only',
       traits: { melee: true,
         imperialSlash: { radiusT: 2.2, arc: 3.0 },        // Imperial Slash
-        legion: { every: 12, max: 4, dps: 70, hp: 900 },   // Legionary Summon
+        // Legionary Muster is now an ACTIVE you press, not a free auto-summon.
+        // At tower level 1 it musters Peasant Levies — cheap, unarmoured,
+        // barely soldiers. Every upgrade level trades levies for real
+        // legionaries: more damage, more health, and a bit more armour each
+        // time. They march ON the road toward the horde and thicken up as
+        // they hold the line (armourRamp), so a fresh muster is fragile and a
+        // surviving one is a wall.
+        active: { name: 'Legionary Muster', cd: 16, kind: 'legion' },
+        legion: { perMuster: 2, max: 5, speed: 54,
+          levy: { name: 'Peasant Levy', dps: 26, hp: 260, armor: 0 },
+          perLevel: { dps: 22, hp: 190, armor: 7 },
+          armorRamp: { per: 1.6, cap: 26 } },
         imperialCommand: { radiusT: 4, dmg: 0.20 } },      // Imperial Command
       upgrades: { branch: [
-        { name: 'Praetorian Guard', desc: 'tougher, deadlier legionaries', mods: { legionDps: 45, legionMax: 2 } },
+        { name: 'Praetorian Guard', desc: 'tougher, better-armoured legionaries', mods: { legionDps: 30, legionMax: 2, legionArmor: 10 } },
         { name: 'Triumph', desc: 'stronger Imperial Command', mods: { commandDmg: 0.15, commandRadiusT: 1.5 } } ] },
-      ascend: { desc: 'The legion never dwindles: instant re-muster and +50% legionary damage.' },
+      ascend: { desc: 'The legion never dwindles: muster costs no cooldown and every soldier is Praetorian-grade.' },
       lore: 'He does not hold the road. The road is already his.' }),
 
     /* ------------------------------ MYTHIC ----------------------------- */
