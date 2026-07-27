@@ -95,4 +95,22 @@
     ladder2:    { icon: '⚔️', name: 'Challenger',       desc: 'Reached rank 2 — only Claude stands above.' },
     firstblood: { icon: '🥇', name: 'First Ascent',     desc: 'Defeated your first rival champion.' },
   };
+
+  // Equippable name effects, worn on the profile chip. Unlock predicates read
+  // live off the profile (badges/completions/roster are all one-way — a
+  // dismantle always keeps your last copy of a tower, so "own every Ancient
+  // tower" can never regress once true) so there's nothing separate to persist.
+  // Sandbox mode short-circuits every check to true, per design: testers get
+  // every title to preview without having to actually earn them.
+  RS.TITLES = {
+    icebound: { name: 'Icebound', cls: 'title-icebound',
+      desc: 'Cleared Winterhold Ruins on Purple Nightmare.',
+      unlocked: (p) => RS.Sandbox.active || !!p.badges.frostcrown },
+    gilded: { name: 'Gilded', cls: 'title-gilded',
+      desc: 'Cleared The Ember Throne on Hardcore.',
+      unlocked: (p) => RS.Sandbox.active || !!(p.completions.emberthrone && p.completions.emberthrone.Hardcore) },
+    ancientscript: { name: 'Ancient Script', cls: 'title-ancient',
+      desc: 'Collected every Ancient-tier tower.',
+      unlocked: (p) => RS.Sandbox.active || RS.TOWERS.filter((t) => t.rarity === 'Ancient').every((t) => (p.roster[t.id] || 0) > 0) },
+  };
 })();

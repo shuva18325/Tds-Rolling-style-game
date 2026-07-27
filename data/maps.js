@@ -149,6 +149,6 @@
 
   // Each map carries its OWN difficulty rating (1-6, harder = more reward),
   // independent of the chosen game difficulty. (Presentational + reward mult.)
-  const RATING = { farmstead: 1, riverford: 2, blackforest: 2, highkeep: 3, frostvale: 3, sunkenbog: 3, ashen: 4, aldermere: 4, dragonspine: 4, cathedral: 5, obsidian: 5, emberthrone: 6, winterhold: 6 };
+  const RATING = { farmstead: 1, riverford: 2, blackforest: 2, highkeep: 3, frostvale: 3, sunkenbog: 3, ashen: 4, aldermere: 4, dragonspine: 4, cathedral: 5, obsidian: 5, emberthrone: 6, winterhold: 6, sandbox_range: 1 };
   RS.MAPS.forEach((m) => { m.rating = RATING[m.id] || Math.max(1, Math.ceil(m.order / 2)); m.rewardMult = +(1 + (m.rating - 1) * 0.14).toFixed(2); });
 })();

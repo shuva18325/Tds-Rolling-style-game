@@ -31,6 +31,7 @@
       stats: { rolls: 0, kills: 0, mapsCleared: 0, mythicPlus: 0 },
       rollHistory: [],
       profile: { name: '', avatar: '⚔️', createdAt: 0 },
+      title: null,   // equipped id into RS.TITLES, or null for none
       // Champions' Ladder personal-best records (all derived at match end).
       records: { highestWave: 0, kills: 0, fastestVictory: 0, goldBanked: 0, topTowerDamage: 0, totalRolls: 0 },
       // First-battle walkthrough + one-shot field tips (js/tutorial.js).
@@ -73,6 +74,7 @@
       out.settings = Object.assign({}, base.settings, s.settings);
       out.tutorial = Object.assign({}, base.tutorial, s.tutorial);
       out.tutorial.tips = Object.assign({}, s.tutorial && s.tutorial.tips);
+      out.title = (s.title && RS.TITLES[s.title]) ? s.title : null;
       out.shards = Object.assign({}, base.shards, s.shards);
       out.account = Object.assign({}, base.account, s.account);
       out.settings = Object.assign({}, base.settings, s.settings);
@@ -348,6 +350,13 @@
       name = ('' + name).trim().slice(0, 18) || 'Champion';
       this.p.profile = { name, avatar: avatar || '⚔️', createdAt: this.p.profile.createdAt || Date.now() };
       this.save();
+    },
+    // Equip a name effect. `id` must be unlocked (or null to wear nothing).
+    equipTitle(id) {
+      if (id && (!RS.TITLES[id] || !RS.TITLES[id].unlocked(this.p))) return false;
+      this.p.title = id || null;
+      this.save();
+      return true;
     },
     // Ladder power score — the single number the Champions' Ladder ranks on.
     // Identical formula for the player and every rival, so the table is fair.

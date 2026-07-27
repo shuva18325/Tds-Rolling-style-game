@@ -780,6 +780,37 @@ button:hover::after { transform: translateX(120%); }
 .biome-holyground .map-thumb { box-shadow: inset 0 0 30px rgba(230,210,150,.35); }
 .biome-wallmount .map-thumb, .biome-rubble .map-thumb, .biome-wind .map-thumb { box-shadow: inset 0 0 30px rgba(140,140,130,.3); }
 
+/* ===== equippable title effects (worn on the profile name) ===== */
+.titlegrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; margin-bottom: 20px; }
+.titlecard { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 10px 12px;
+  text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+.titlecard.on { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold), 0 0 12px -4px var(--gold); }
+.titlecard.locked { opacity: .55; }
+.titlecard span { font-size: 11px; color: var(--dim); }
+.tt-preview { font-size: 14px; }
+
+/* Icebound — frosty gradient text with a slow shimmer sweep */
+.title-icebound { color: #dff6ff; font-weight: 700;
+  background: linear-gradient(100deg, #bfe8ff 0%, #ffffff 18%, #8fd4e8 36%, #dff6ff 60%, #ffffff 78%, #9fe0f0 100%);
+  background-size: 240% 100%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 10px rgba(140,210,255,.55); animation: titleFrost 4.5s linear infinite; }
+@keyframes titleFrost { to { background-position: -240% 0; } }
+
+/* Gilded — legendary-gold shimmer, echoes .rarShimmer elsewhere */
+.title-gilded { font-weight: 700;
+  background: linear-gradient(100deg, #b3801f 0%, #ffe9a8 20%, #f0a92e 40%, #fff2c0 58%, #d9a441 76%, #ffe9a8 100%);
+  background-size: 240% 100%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 10px rgba(240,169,46,.55); animation: titleFrost 3.2s linear infinite; }
+
+/* Ancient Script — an antique inscribed look using only local system fonts
+   (no @font-face / network fetch — the artifact CSP forbids it). Degrades
+   gracefully to the serif fallback on systems without the named faces. */
+.title-ancient { font-family: 'Copperplate', 'Cinzel', 'Trajan Pro', 'Papyrus', Georgia, 'Times New Roman', serif;
+  font-variant: small-caps; letter-spacing: 1.6px; color: #d8c9a0;
+  text-shadow: 0 0 8px rgba(63,224,204,.45), 0 1px 0 rgba(0,0,0,.6); }
+
+.pname, .binaryname { display: inline; }
+
 </style>
 
 <!-- REALM SIEGE — single-file build. Play: rolls, 12 maps, 4 difficulties. -->
@@ -2212,7 +2243,7 @@ button:hover::after { transform: translateX(120%); }
 
   // Each map carries its OWN difficulty rating (1-6, harder = more reward),
   // independent of the chosen game difficulty. (Presentational + reward mult.)
-  const RATING = { farmstead: 1, riverford: 2, blackforest: 2, highkeep: 3, frostvale: 3, sunkenbog: 3, ashen: 4, aldermere: 4, dragonspine: 4, cathedral: 5, obsidian: 5, emberthrone: 6, winterhold: 6 };
+  const RATING = { farmstead: 1, riverford: 2, blackforest: 2, highkeep: 3, frostvale: 3, sunkenbog: 3, ashen: 4, aldermere: 4, dragonspine: 4, cathedral: 5, obsidian: 5, emberthrone: 6, winterhold: 6, sandbox_range: 1 };
   RS.MAPS.forEach((m) => { m.rating = RATING[m.id] || Math.max(1, Math.ceil(m.order / 2)); m.rewardMult = +(1 + (m.rating - 1) * 0.14).toFixed(2); });
 })();
 
@@ -2314,6 +2345,24 @@ button:hover::after { transform: translateX(120%); }
     ladder5:    { icon: '🛡️', name: 'Contender',        desc: 'Climbed into the top 5 of the Champions\' Ladder.' },
     ladder2:    { icon: '⚔️', name: 'Challenger',       desc: 'Reached rank 2 — only Claude stands above.' },
     firstblood: { icon: '🥇', name: 'First Ascent',     desc: 'Defeated your first rival champion.' },
+  };
+
+  // Equippable name effects, worn on the profile chip. Unlock predicates read
+  // live off the profile (badges/completions/roster are all one-way — a
+  // dismantle always keeps your last copy of a tower, so "own every Ancient
+  // tower" can never regress once true) so there's nothing separate to persist.
+  // Sandbox mode short-circuits every check to true, per design: testers get
+  // every title to preview without having to actually earn them.
+  RS.TITLES = {
+    icebound: { name: 'Icebound', cls: 'title-icebound',
+      desc: 'Cleared Winterhold Ruins on Purple Nightmare.',
+      unlocked: (p) => RS.Sandbox.active || !!p.badges.frostcrown },
+    gilded: { name: 'Gilded', cls: 'title-gilded',
+      desc: 'Cleared The Ember Throne on Hardcore.',
+      unlocked: (p) => RS.Sandbox.active || !!(p.completions.emberthrone && p.completions.emberthrone.Hardcore) },
+    ancientscript: { name: 'Ancient Script', cls: 'title-ancient',
+      desc: 'Collected every Ancient-tier tower.',
+      unlocked: (p) => RS.Sandbox.active || RS.TOWERS.filter((t) => t.rarity === 'Ancient').every((t) => (p.roster[t.id] || 0) > 0) },
   };
 })();
 
@@ -4283,6 +4332,7 @@ button:hover::after { transform: translateX(120%); }
       stats: { rolls: 0, kills: 0, mapsCleared: 0, mythicPlus: 0 },
       rollHistory: [],
       profile: { name: '', avatar: '⚔️', createdAt: 0 },
+      title: null,   // equipped id into RS.TITLES, or null for none
       // Champions' Ladder personal-best records (all derived at match end).
       records: { highestWave: 0, kills: 0, fastestVictory: 0, goldBanked: 0, topTowerDamage: 0, totalRolls: 0 },
       // First-battle walkthrough + one-shot field tips (js/tutorial.js).
@@ -4325,6 +4375,7 @@ button:hover::after { transform: translateX(120%); }
       out.settings = Object.assign({}, base.settings, s.settings);
       out.tutorial = Object.assign({}, base.tutorial, s.tutorial);
       out.tutorial.tips = Object.assign({}, s.tutorial && s.tutorial.tips);
+      out.title = (s.title && RS.TITLES[s.title]) ? s.title : null;
       out.shards = Object.assign({}, base.shards, s.shards);
       out.account = Object.assign({}, base.account, s.account);
       out.settings = Object.assign({}, base.settings, s.settings);
@@ -4600,6 +4651,13 @@ button:hover::after { transform: translateX(120%); }
       name = ('' + name).trim().slice(0, 18) || 'Champion';
       this.p.profile = { name, avatar: avatar || '⚔️', createdAt: this.p.profile.createdAt || Date.now() };
       this.save();
+    },
+    // Equip a name effect. `id` must be unlocked (or null to wear nothing).
+    equipTitle(id) {
+      if (id && (!RS.TITLES[id] || !RS.TITLES[id].unlocked(this.p))) return false;
+      this.p.title = id || null;
+      this.save();
+      return true;
     },
     // Ladder power score — the single number the Champions' Ladder ranks on.
     // Identical formula for the player and every rival, so the table is fair.
@@ -8312,9 +8370,13 @@ button:hover::after { transform: translateX(120%); }
       // touched, so exiting sandbox restores the real name/avatar untouched.
       const sb = RS.Sandbox && RS.Sandbox.active;
       const avatar = sb ? '🔬' : (p.avatar || '⚔️');
+      // NOTE: `p` above is Meta.p.profile (name/avatar), not Meta.p itself —
+      // the equipped title lives on Meta.p.title, one level up.
+      const td = Meta.p.title && RS.TITLES[Meta.p.title] ? RS.TITLES[Meta.p.title] : null;
+      const titleCls = td ? td.cls : '';
       const nameHtml = sb
-        ? `<span class="binaryname" id="binName" data-target="ILOVECODING">ILOVECODING</span>`
-        : (p.name || 'Set Name');
+        ? `<span class="binaryname ${titleCls}" id="binName" data-target="ILOVECODING">ILOVECODING</span>`
+        : `<span class="pname ${titleCls}">${p.name || 'Set Name'}</span>`;
       return `<div class="topbar">
         <div class="brand">⚔ REALM SIEGE</div>
         <div class="tokens">
@@ -8368,10 +8430,11 @@ button:hover::after { transform: translateX(120%); }
       const rows = entries.map((en, i) => {
         const pos = i + 1;
         if (en.kind === 'me') {
+          const td = Meta.p.title && RS.TITLES[Meta.p.title] ? RS.TITLES[Meta.p.title] : null;
           return `<div class="ladrow me ${this._rankJump ? 'climbed' : ''}">
             <div class="ladpos">#${pos}</div>
             <div class="ladwho"><span class="ladav">${prof.avatar || '⚔️'}</span>
-              <div><b>${prof.name || 'You'}</b><span class="ladtitle">${Meta.rankTitle(myRank)}${badges.length ? ' · ' + badges.map((b) => b.icon).join('') : ''}</span></div></div>
+              <div><b class="pname ${td ? td.cls : ''}">${prof.name || 'You'}</b><span class="ladtitle">${Meta.rankTitle(myRank)}${badges.length ? ' · ' + badges.map((b) => b.icon).join('') : ''}</span></div></div>
             <div class="ladscore">${myScore.toLocaleString()}</div>
           </div>`;
         }
@@ -8493,13 +8556,19 @@ button:hover::after { transform: translateX(120%); }
     renderMapSelect() {
       const clearedAt = (did) => RS.MAPS.some((mm) => Meta.p.completions[mm.id] && Meta.p.completions[mm.id][did]);
       const tiers = RS.DIFFICULTY.filter((d) => !d.purple); // Easy..Hardcore in the selector
-      const diffUnlocked = (d) => d.order === 0 || clearedAt(RS.DIFFICULTY[d.order - 1].id);
+      // Sandbox is meant to test everything, so every difficulty tier and
+      // every special/endless challenge is open regardless of what the real
+      // (snapshotted) profile has actually cleared.
+      const diffUnlocked = (d) => RS.Sandbox.active || d.order === 0 || clearedAt(RS.DIFFICULTY[d.order - 1].id);
       if (!this.globalDiff || !RS.DIFF_BY_ID[this.globalDiff] || RS.DIFF_BY_ID[this.globalDiff].purple) this.globalDiff = 'Easy';
       if (!diffUnlocked(RS.DIFF_BY_ID[this.globalDiff])) this.globalDiff = 'Easy';
       const gd = RS.DIFF_BY_ID[this.globalDiff];
-      const hardcoreDone = clearedAt('Hardcore');
-      const skulls = (n) => '💀'.repeat(n) + '<span class="sk-off">💀</span>'.repeat(6 - n);
-      const maps = RS.MAPS.filter((m) => !m.winter && !m.sandboxOnly);
+      const hardcoreDone = RS.Sandbox.active || clearedAt('Hardcore');
+      // clamp: any map without an explicit RATING entry falls back to a
+      // formula that can exceed 6 (e.g. the hidden sandbox map's order:99),
+      // and String.repeat() throws on a negative count.
+      const skulls = (n) => { n = Math.max(0, Math.min(6, n | 0)); return '💀'.repeat(n) + '<span class="sk-off">💀</span>'.repeat(6 - n); };
+      const maps = RS.MAPS.filter((m) => !m.winter && (!m.sandboxOnly || RS.Sandbox.active));
       this.root.innerHTML = this._topbar() + `
         <div class="page">
           <div class="page-head"><button class="back" data-go="menu">← Menu</button><h2>Choose Your Battlefield</h2></div>
@@ -8974,6 +9043,18 @@ button:hover::after { transform: translateX(120%); }
           <div class="page-head"><button class="back" data-go="menu">← Menu</button><h2>Settings & Save</h2></div>
           <h3>Profile</h3>
           <div class="profrow"><span class="pav-lg">${prof.avatar || '⚔️'}</span><b>${prof.name || 'Unnamed Champion'}</b><button class="bigbtn" id="editProfBtn">Edit Profile</button></div>
+          <h3>Titles <small>${RS.Sandbox.active ? 'sandbox: every title unlocked' : 'worn on your name'}</small></h3>
+          <div class="titlegrid">
+            <button class="titlecard ${!Meta.p.title ? 'on' : ''}" data-title="">
+              <b class="tt-preview">No Title</b><span>Wear nothing</span>
+            </button>
+            ${Object.entries(RS.TITLES).map(([id, td]) => {
+              const un = td.unlocked(Meta.p);
+              return `<button class="titlecard ${Meta.p.title === id ? 'on' : ''} ${un ? '' : 'locked'}" data-title="${id}" ${un ? '' : 'disabled'}>
+                <b class="tt-preview ${td.cls}">${td.name}</b><span>${un ? td.desc : '🔒 ' + td.desc}</span>
+              </button>`;
+            }).join('')}
+          </div>
           <div class="settings">
             <label class="toggle"><input type="checkbox" id="setRange" ${s.showRange ? 'checked' : ''}> Show range overlays by default</label>
             <label class="toggle"><input type="checkbox" id="setPart" ${s.particles ? 'checked' : ''}> Particles</label>
@@ -8990,6 +9071,7 @@ button:hover::after { transform: translateX(120%); }
         </div>`;
       this._wireGo();
       $('#editProfBtn').onclick = () => this._showProfileModal(true);
+      $$('[data-title]', this.root).forEach((b) => b.onclick = () => { if (Meta.equipTitle(b.dataset.title || null)) this.renderSettings(); });
       $('#setRange').onchange = (e) => { s.showRange = e.target.checked; Meta.save(); };
       $('#setPart').onchange = (e) => { s.particles = e.target.checked; Meta.save(); };
       $('#setSfx').onchange = (e) => { s.sfx = e.target.checked; Meta.save(); };

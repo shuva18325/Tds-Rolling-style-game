@@ -71,9 +71,13 @@
       // touched, so exiting sandbox restores the real name/avatar untouched.
       const sb = RS.Sandbox && RS.Sandbox.active;
       const avatar = sb ? '🔬' : (p.avatar || '⚔️');
+      // NOTE: `p` above is Meta.p.profile (name/avatar), not Meta.p itself —
+      // the equipped title lives on Meta.p.title, one level up.
+      const td = Meta.p.title && RS.TITLES[Meta.p.title] ? RS.TITLES[Meta.p.title] : null;
+      const titleCls = td ? td.cls : '';
       const nameHtml = sb
-        ? `<span class="binaryname" id="binName" data-target="ILOVECODING">ILOVECODING</span>`
-        : (p.name || 'Set Name');
+        ? `<span class="binaryname ${titleCls}" id="binName" data-target="ILOVECODING">ILOVECODING</span>`
+        : `<span class="pname ${titleCls}">${p.name || 'Set Name'}</span>`;
       return `<div class="topbar">
         <div class="brand">⚔ REALM SIEGE</div>
         <div class="tokens">
@@ -127,10 +131,11 @@
       const rows = entries.map((en, i) => {
         const pos = i + 1;
         if (en.kind === 'me') {
+          const td = Meta.p.title && RS.TITLES[Meta.p.title] ? RS.TITLES[Meta.p.title] : null;
           return `<div class="ladrow me ${this._rankJump ? 'climbed' : ''}">
             <div class="ladpos">#${pos}</div>
             <div class="ladwho"><span class="ladav">${prof.avatar || '⚔️'}</span>
-              <div><b>${prof.name || 'You'}</b><span class="ladtitle">${Meta.rankTitle(myRank)}${badges.length ? ' · ' + badges.map((b) => b.icon).join('') : ''}</span></div></div>
+              <div><b class="pname ${td ? td.cls : ''}">${prof.name || 'You'}</b><span class="ladtitle">${Meta.rankTitle(myRank)}${badges.length ? ' · ' + badges.map((b) => b.icon).join('') : ''}</span></div></div>
             <div class="ladscore">${myScore.toLocaleString()}</div>
           </div>`;
         }
@@ -252,13 +257,19 @@
     renderMapSelect() {
       const clearedAt = (did) => RS.MAPS.some((mm) => Meta.p.completions[mm.id] && Meta.p.completions[mm.id][did]);
       const tiers = RS.DIFFICULTY.filter((d) => !d.purple); // Easy..Hardcore in the selector
-      const diffUnlocked = (d) => d.order === 0 || clearedAt(RS.DIFFICULTY[d.order - 1].id);
+      // Sandbox is meant to test everything, so every difficulty tier and
+      // every special/endless challenge is open regardless of what the real
+      // (snapshotted) profile has actually cleared.
+      const diffUnlocked = (d) => RS.Sandbox.active || d.order === 0 || clearedAt(RS.DIFFICULTY[d.order - 1].id);
       if (!this.globalDiff || !RS.DIFF_BY_ID[this.globalDiff] || RS.DIFF_BY_ID[this.globalDiff].purple) this.globalDiff = 'Easy';
       if (!diffUnlocked(RS.DIFF_BY_ID[this.globalDiff])) this.globalDiff = 'Easy';
       const gd = RS.DIFF_BY_ID[this.globalDiff];
-      const hardcoreDone = clearedAt('Hardcore');
-      const skulls = (n) => '💀'.repeat(n) + '<span class="sk-off">💀</span>'.repeat(6 - n);
-      const maps = RS.MAPS.filter((m) => !m.winter && !m.sandboxOnly);
+      const hardcoreDone = RS.Sandbox.active || clearedAt('Hardcore');
+      // clamp: any map without an explicit RATING entry falls back to a
+      // formula that can exceed 6 (e.g. the hidden sandbox map's order:99),
+      // and String.repeat() throws on a negative count.
+      const skulls = (n) => { n = Math.max(0, Math.min(6, n | 0)); return '💀'.repeat(n) + '<span class="sk-off">💀</span>'.repeat(6 - n); };
+      const maps = RS.MAPS.filter((m) => !m.winter && (!m.sandboxOnly || RS.Sandbox.active));
       this.root.innerHTML = this._topbar() + `
         <div class="page">
           <div class="page-head"><button class="back" data-go="menu">← Menu</button><h2>Choose Your Battlefield</h2></div>
@@ -733,6 +744,18 @@
           <div class="page-head"><button class="back" data-go="menu">← Menu</button><h2>Settings & Save</h2></div>
           <h3>Profile</h3>
           <div class="profrow"><span class="pav-lg">${prof.avatar || '⚔️'}</span><b>${prof.name || 'Unnamed Champion'}</b><button class="bigbtn" id="editProfBtn">Edit Profile</button></div>
+          <h3>Titles <small>${RS.Sandbox.active ? 'sandbox: every title unlocked' : 'worn on your name'}</small></h3>
+          <div class="titlegrid">
+            <button class="titlecard ${!Meta.p.title ? 'on' : ''}" data-title="">
+              <b class="tt-preview">No Title</b><span>Wear nothing</span>
+            </button>
+            ${Object.entries(RS.TITLES).map(([id, td]) => {
+              const un = td.unlocked(Meta.p);
+              return `<button class="titlecard ${Meta.p.title === id ? 'on' : ''} ${un ? '' : 'locked'}" data-title="${id}" ${un ? '' : 'disabled'}>
+                <b class="tt-preview ${td.cls}">${td.name}</b><span>${un ? td.desc : '🔒 ' + td.desc}</span>
+              </button>`;
+            }).join('')}
+          </div>
           <div class="settings">
             <label class="toggle"><input type="checkbox" id="setRange" ${s.showRange ? 'checked' : ''}> Show range overlays by default</label>
             <label class="toggle"><input type="checkbox" id="setPart" ${s.particles ? 'checked' : ''}> Particles</label>
@@ -749,6 +772,7 @@
         </div>`;
       this._wireGo();
       $('#editProfBtn').onclick = () => this._showProfileModal(true);
+      $$('[data-title]', this.root).forEach((b) => b.onclick = () => { if (Meta.equipTitle(b.dataset.title || null)) this.renderSettings(); });
       $('#setRange').onchange = (e) => { s.showRange = e.target.checked; Meta.save(); };
       $('#setPart').onchange = (e) => { s.particles = e.target.checked; Meta.save(); };
       $('#setSfx').onchange = (e) => { s.sfx = e.target.checked; Meta.save(); };

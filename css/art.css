@@ -549,3 +549,34 @@ button:hover::after { transform: translateX(120%); }
 .biome-lava .map-thumb, .biome-craters .map-thumb, .biome-finale .map-thumb { box-shadow: inset 0 0 30px rgba(190,80,30,.4); }
 .biome-holyground .map-thumb { box-shadow: inset 0 0 30px rgba(230,210,150,.35); }
 .biome-wallmount .map-thumb, .biome-rubble .map-thumb, .biome-wind .map-thumb { box-shadow: inset 0 0 30px rgba(140,140,130,.3); }
+
+/* ===== equippable title effects (worn on the profile name) ===== */
+.titlegrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; margin-bottom: 20px; }
+.titlecard { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 10px 12px;
+  text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+.titlecard.on { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold), 0 0 12px -4px var(--gold); }
+.titlecard.locked { opacity: .55; }
+.titlecard span { font-size: 11px; color: var(--dim); }
+.tt-preview { font-size: 14px; }
+
+/* Icebound — frosty gradient text with a slow shimmer sweep */
+.title-icebound { color: #dff6ff; font-weight: 700;
+  background: linear-gradient(100deg, #bfe8ff 0%, #ffffff 18%, #8fd4e8 36%, #dff6ff 60%, #ffffff 78%, #9fe0f0 100%);
+  background-size: 240% 100%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 10px rgba(140,210,255,.55); animation: titleFrost 4.5s linear infinite; }
+@keyframes titleFrost { to { background-position: -240% 0; } }
+
+/* Gilded — legendary-gold shimmer, echoes .rarShimmer elsewhere */
+.title-gilded { font-weight: 700;
+  background: linear-gradient(100deg, #b3801f 0%, #ffe9a8 20%, #f0a92e 40%, #fff2c0 58%, #d9a441 76%, #ffe9a8 100%);
+  background-size: 240% 100%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 10px rgba(240,169,46,.55); animation: titleFrost 3.2s linear infinite; }
+
+/* Ancient Script — an antique inscribed look using only local system fonts
+   (no @font-face / network fetch — the artifact CSP forbids it). Degrades
+   gracefully to the serif fallback on systems without the named faces. */
+.title-ancient { font-family: 'Copperplate', 'Cinzel', 'Trajan Pro', 'Papyrus', Georgia, 'Times New Roman', serif;
+  font-variant: small-caps; letter-spacing: 1.6px; color: #d8c9a0;
+  text-shadow: 0 0 8px rgba(63,224,204,.45), 0 1px 0 rgba(0,0,0,.6); }
+
+.pname, .binaryname { display: inline; }
